@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin } from 'lucide-react'
+import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree } from 'lucide-react'
+import AccountDataModal from './AccountDataModal'
 import pokedexData from './pokemonData'
 import GOLPES_DATA_IMPORTED from './golpesData'
 import HABILIDADES_DATA_IMPORTED, { HABILIDADES_NAMES as HABILIDADES_NAMES_IMPORTED } from './habilidadesData'
 import CARACTERISTICAS_DATA_IMPORTED, { TALENTOS_DATA as TALENTOS_DATA_IMPORTED, TALENTOS_NAMES as TALENTOS_NAMES_IMPORTED } from './caracteristicasETalentosData'
+import POKEMON_ABILITIES from './pokemonAbilities'
 
 // Cores dos tipos de Pokémon
 const TYPE_COLORS = {
@@ -27,7 +29,9 @@ const TYPE_COLORS = {
   'Fada': '#EE99AC'
 }
 
-// Tabela XP por nível (1-100)
+// Tabela de XP necessária para alcançar o próximo nível
+// Exemplo: Nível 1→2 precisa de 25 XP, Nível 2→3 precisa de 50 XP, Nível 3→4 precisa de 100 XP
+// XP Total acumulada: Nível 1=0, Nível 2=25, Nível 3=75, Nível 4=175, etc.
 const XP_TABLE = {
   1: 0, 2: 25, 3: 50, 4: 100, 5: 150, 6: 200, 7: 400, 8: 600, 9: 800, 10: 1000,
   11: 1500, 12: 2000, 13: 3000, 14: 4000, 15: 5000, 16: 6000, 17: 7000, 18: 8000, 19: 9000, 20: 10000,
@@ -39,6 +43,57 @@ const XP_TABLE = {
   71: 310000, 72: 320000, 73: 330000, 74: 340000, 75: 350000, 76: 360000, 77: 370000, 78: 380000, 79: 390000, 80: 400000,
   81: 410000, 82: 420000, 83: 430000, 84: 440000, 85: 450000, 86: 460000, 87: 470000, 88: 480000, 89: 490000, 90: 500000,
   91: 510000, 92: 520000, 93: 530000, 94: 540000, 95: 550000, 96: 560000, 97: 570000, 98: 580000, 99: 590000, 100: 600000
+}
+
+// Calcula XP total acumulada necessária para alcançar determinado nível
+const getTotalXPForLevel = (level) => {
+  let total = 0
+  for (let i = 2; i <= level; i++) {
+    total += XP_TABLE[i] || 0
+  }
+  return total
+}
+
+// Migração: Corrige totalXP de Pokémon de backups antigos
+const migratePokemonXP = (pokemon) => {
+  if (!pokemon || !pokemon.level) return pokemon
+
+  const expectedMinXP = getTotalXPForLevel(pokemon.level)
+  const currentTotalXP = pokemon.totalXP || 0
+
+  // Se totalXP é menor que o mínimo esperado para o nível, está usando sistema antigo
+  if (currentTotalXP < expectedMinXP) {
+    return {
+      ...pokemon,
+      totalXP: expectedMinXP // Reseta para o mínimo do nível (0/X progresso)
+    }
+  }
+
+  return pokemon
+}
+
+// Funções auxiliares para XP
+// Retorna XP necessária para ir do nível atual para o próximo
+const getXPForNextLevel = (currentLevel) => {
+  if (currentLevel >= 100) return 0
+  return XP_TABLE[currentLevel + 1] || 0
+}
+
+// Retorna XP atual no nível (progresso no nível atual)
+// totalXP armazena XP total acumulada, então subtraímos a XP total do nível atual
+const getCurrentLevelXP = (pokemon) => {
+  const totalXP = pokemon.totalXP || 0
+  const level = pokemon.level || 1
+  const xpForCurrentLevel = getTotalXPForLevel(level)
+  return totalXP - xpForCurrentLevel
+}
+
+// Retorna progresso em porcentagem (0-100%)
+const getXPProgress = (pokemon) => {
+  const currentXP = getCurrentLevelXP(pokemon)
+  const neededXP = getXPForNextLevel(pokemon.level)
+  if (neededXP === 0) return 100 // Nível 100
+  return Math.min(100, (currentXP / neededXP) * 100)
 }
 
 // Mapeamento de estilos de tipos Pokémon
@@ -406,8 +461,8 @@ const GOLPES_DATA = GOLPES_DATA_IMPORTED
 const GOLPES_NAMES = Object.keys(GOLPES_DATA).sort()
 
 // Dados de Habilidades - importados do arquivo habilidadesData.js
-const HABILIDADES_DATA = HABILIDADES_DATA_IMPORTED
-const HABILIDADES_NAMES = HABILIDADES_NAMES_IMPORTED
+const HABILIDADES_DATA = HABILIDADES_DATA_IMPORTED || {}
+const HABILIDADES_NAMES = HABILIDADES_NAMES_IMPORTED || []
 
 // Dados de Características e Talentos - importados do arquivo caracteristicasETalentosData.js
 const CARACTERISTICAS_DATA = CARACTERISTICAS_DATA_IMPORTED
@@ -572,6 +627,8 @@ function App() {
   const [sendPokemonNature, setSendPokemonNature] = useState(null) // Natureza do pokémon a enviar (editável)
   const [speciesSearchSend, setSpeciesSearchSend] = useState('') // Busca de espécie no modal de envio
   const [natureSearchSend, setNatureSearchSend] = useState('') // Busca de natureza no modal de envio
+  const [showAbilityModal, setShowAbilityModal] = useState(false) // Modal de detalhes da habilidade
+  const [selectedAbility, setSelectedAbility] = useState(null) // Habilidade selecionada para ver detalhes
 
   // Estados para área de Batalha
   const [battleTrainers, setBattleTrainers] = useState([]) // Treinadores enviados para batalha
@@ -744,13 +801,17 @@ function App() {
   const [captureForm, setCaptureForm] = useState({ nickname: '', level: 5 })
   const [pokemonToCapture, setPokemonToCapture] = useState(null)
   const [fullPokedexData, setFullPokedexData] = useState([])
+  const [globalExoticSpecies, setGlobalExoticSpecies] = useState(() => {
+    const saved = localStorage.getItem('globalExoticSpecies')
+    return saved ? JSON.parse(saved) : []
+  })
   const [showExoticDataModal, setShowExoticDataModal] = useState(false)
   const [exoticDataForm, setExoticDataForm] = useState({
     dexNumber: '',
     altura: '',
     peso: '',
     genero: '',
-    tipos: [''],
+    tipos: [],
     habitats: [''],
     catchRate: '',
     baseExp: '',
@@ -837,18 +898,42 @@ function App() {
   const [selectedPokemonHP, setSelectedPokemonHP] = useState(null)
 
   // Estados para Enciclopédia (Treinador)
-  const [encyclopediaSection, setEncyclopediaSection] = useState('Golpedex') // 'Golpedex', 'Descritordex', 'Tag de Concursodex', 'Períciadex'
+  const [encyclopediaSection, setEncyclopediaSection] = useState('Golpedex') // 'Golpedex', 'Descritordex', 'Tag de Concursodex', 'Períciadex', 'Habilidadedex', 'Capacidadex', 'Condiçõesdex'
   const [golpedexSearches, setGolpedexSearches] = useState(['', '', '', '', '', '', '', '']) // 8 barras de pesquisa
+  const [habilidadedexSearches, setHabilidadedexSearches] = useState(['', '', '', '', '', '', '', '']) // 8 barras de pesquisa para habilidades
+  const [capacidadexSearches, setCapacidadexSearches] = useState(['', '', '', '', '', '', '', '']) // 8 barras de pesquisa para capacidades
   const [expandedDescritor, setExpandedDescritor] = useState(null) // Nome do descritor expandido ou null
   const [expandedTagConcurso, setExpandedTagConcurso] = useState(null) // Nome da tag de concurso expandida ou null
   const [expandedAtributo, setExpandedAtributo] = useState(null) // Nome do atributo expandido ou null
+  const [expandedCondicoes, setExpandedCondicoes] = useState([]) // Array de nomes de condições expandidas
 
   // Estados para Enciclopédia M (Mestre)
-  const [encyclopediaMSection, setEncyclopediaMSection] = useState('Golpedex M') // 'Golpedex M', 'Descritordex M', 'Tag de Concursodex M', 'Períciadex M'
+  const [encyclopediaMSection, setEncyclopediaMSection] = useState('Golpedex M') // 'Golpedex M', 'Descritordex M', 'Tag de Concursodex M', 'Períciadex M', 'Habilidadedex M', 'Capacidadex M', 'Condiçõesdex M'
   const [golpedexMSearches, setGolpedexMSearches] = useState(['', '', '', '', '', '', '', '']) // 8 barras de pesquisa
+  const [habilidadedexMSearches, setHabilidadedexMSearches] = useState(['', '', '', '', '', '', '', '']) // 8 barras de pesquisa para habilidades
+  const [capacidadexMSearches, setCapacidadexMSearches] = useState(['', '', '', '', '', '', '', '']) // 8 barras de pesquisa para capacidades
   const [expandedDescritorM, setExpandedDescritorM] = useState(null) // Nome do descritor expandido ou null
   const [expandedTagConcursoM, setExpandedTagConcursoM] = useState(null) // Nome da tag de concurso expandida ou null
   const [expandedAtributoM, setExpandedAtributoM] = useState(null) // Nome do atributo expandido ou null
+  const [expandedCondicoesM, setExpandedCondicoesM] = useState([]) // Array de nomes de condições expandidas
+
+  // Estados para Progressão (Treinador)
+  const [progressaoSection, setProgressaoSection] = useState('Vivências') // 'Vivências', 'Diário da Jornada'
+  const [vivencias, setVivencias] = useState([]) // Lista de vivências
+  const [showNovaVivenciaModal, setShowNovaVivenciaModal] = useState(false)
+  const [novaVivenciaNome, setNovaVivenciaNome] = useState('')
+  const [novaVivenciaFrequencia, setNovaVivenciaFrequencia] = useState('')
+  const [novaVivenciaAlvo, setNovaVivenciaAlvo] = useState('')
+  const [novaVivenciaGatilho, setNovaVivenciaGatilho] = useState('')
+  const [novaVivenciaEfeito, setNovaVivenciaEfeito] = useState('')
+  const [expandedVivencia, setExpandedVivencia] = useState(null) // ID da vivência expandida ou null
+  const [conquistas, setConquistas] = useState([]) // Lista de conquistas
+  const [showNovaConquistaModal, setShowNovaConquistaModal] = useState(false)
+  const [novaConquistaNome, setNovaConquistaNome] = useState('')
+  const [novaConquistaLevelUp, setNovaConquistaLevelUp] = useState(false)
+  const [novaConquistaDescricao, setNovaConquistaDescricao] = useState('')
+  const [selectedConquista, setSelectedConquista] = useState(null) // Conquista selecionada para ver detalhes
+  const [conquistaEditando, setConquistaEditando] = useState(null) // Conquista sendo editada (ID)
 
   // Estados para Visão do Mestre
   const [visaoMestreSection, setVisaoMestreSection] = useState('Perfis') // 'Perfis', 'Pokéloja Config'
@@ -856,6 +941,7 @@ function App() {
   const [expandedTeamPokemon, setExpandedTeamPokemon] = useState(null) // Index do pokémon do time expandido ou null
   const [showCaracTaleModal, setShowCaracTaleModal] = useState(false) // Modal de Características & Talentos
   const [showMochilaModal, setShowMochilaModal] = useState(false) // Modal da Mochila
+  const [showVivenciasModal, setShowVivenciasModal] = useState(false) // Modal de Vivências
   const [hiddenPokelojaItems, setHiddenPokelojaItems] = useState([]) // Array de nomes de itens ocultos na Pokéloja
 
   const [selectedPokemonHPIndex, setSelectedPokemonHPIndex] = useState(null)
@@ -865,6 +951,77 @@ function App() {
   const [selectedPokemonForTempHP, setSelectedPokemonForTempHP] = useState(null)
   const [selectedPokemonTempHPIndex, setSelectedPokemonTempHPIndex] = useState(null)
   const [tempHPAmount, setTempHPAmount] = useState('')
+
+  // Lista de espécies combinando pokémon normais e exóticos globais
+  const allSpecies = [
+    ...POKEMON_SPECIES,
+    ...globalExoticSpecies.map(e => e.nome)
+  ].sort()
+
+  // Estado para modal de Account Data
+  const [showAccountDataModal, setShowAccountDataModal] = useState(false)
+
+  // Estados para Insígnias
+  const [selectedRegion, setSelectedRegion] = useState(null) // Região selecionada: 'Kanto', 'Johto', etc.
+  const [badges, setBadges] = useState({
+    Kanto: [false, false, false, false, false, false, false, false, false],
+    Johto: [false, false, false, false, false, false, false, false, false],
+    Hoenn: [false, false, false, false, false, false, false, false, false],
+    Sinnoh: [false, false, false, false, false, false, false, false, false],
+    Unova: [false, false, false, false, false, false, false, false, false, false, false, false], // 12 insígnias (grid 3x4)
+    Kalos: [false, false, false, false, false, false, false, false, false]
+  })
+
+  // Estados para modal de Configuração Pokémon Exótico
+  const [showExoticConfigModal, setShowExoticConfigModal] = useState(false)
+  const [exoticConfigSearch, setExoticConfigSearch] = useState('')
+  const [selectedExoticConfig, setSelectedExoticConfig] = useState(null)
+  const [exoticConfigForm, setExoticConfigForm] = useState({
+    dexNumber: '',
+    altura: '',
+    peso: '',
+    genero: '',
+    tipos: [],
+    habitats: [],
+    statusBasais: { saude: '', ataque: '', defesa: '', ataqueEsp: '', defesaEsp: '', velocidade: '' },
+    habilidades: [],
+    habilidadesAltas: [],
+    habilidadesOcultas: [],
+    minimoLevel: '',
+    estagio: 'Básico',
+    evolucaoDe: '',
+    evolucaoModo: '',
+    evolucaoLevel: '',
+    evolucaoItem: ''
+  })
+
+  // Estados para PokeApp
+  const [pokeAppSubArea, setPokeAppSubArea] = useState('') // 'Concurso', 'Encontro', 'Sorteador'
+  const [numPokemons, setNumPokemons] = useState(3)
+  const [numAppealRounds, setNumAppealRounds] = useState(3)
+  const [contestPokemons, setContestPokemons] = useState([])
+  const [showContestResults, setShowContestResults] = useState(false)
+
+  // Estados para Encontro Pokémon
+  const [encounterHours, setEncounterHours] = useState(0)
+  const [encounterInvestigation, setEncounterInvestigation] = useState(0)
+  const [encounterHelpers, setEncounterHelpers] = useState(0)
+  const [encounterBait, setEncounterBait] = useState(false)
+  const [encounterPokemonAttack, setEncounterPokemonAttack] = useState(false)
+  const [encounterSpecific, setEncounterSpecific] = useState(false)
+  const [encounterResult, setEncounterResult] = useState(null)
+
+  // Estados para Sorteador de Itens
+  const [sortedItems, setSortedItems] = useState({
+    frutos: null,
+    itensMantidos: null,
+    melhoradores: null,
+    pedrasEvolucao: null,
+    itensCura: null,
+    pokebolas: null,
+    vitaminas: null,
+    tms: null
+  })
 
   // Estado do formulário de adicionar Pokémon
   const [pokemonForm, setPokemonForm] = useState({
@@ -912,9 +1069,109 @@ function App() {
     {nome:"Ingênua", up:"Velocidade", down:"Defesa Especial", gosto:"Doce", desgosto:"Amargo"},
     {nome:"Comedida", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"},
     {nome:"Chata", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"},
-    {nome:"Séria", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"},
-    {nome:"Tola", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"},
-    {nome:"Passiva", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"}
+    {nome:"Paciente", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"},
+    {nome:"Sensata", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"},
+    {nome:"Estóica", up:"Nenhum", down:"Nenhum", gosto:"Nenhum", desgosto:"Nenhum"}
+  ]
+
+  // Lista de condições
+  const condicoes = [
+    {
+      nome: "Atordoamento",
+      descricao: "Esta Condição só dura uma rodada. Durante a rodada em que dura, o pokémon ou o humano não podem executar nenhuma Ação."
+    },
+    {
+      nome: "Confusão",
+      descricao: "Esta Condição afeta pokémons e humanos de maneiras diferentes. Para humanos, quando o turno do Humano Confuso começar, role 1d20. Um resultado menor que 11 indica que o humano não faz nenhuma Ação. Se o resultado for 11 ou mais, ele age normalmente naquela rodada. A Confusão é curada quando o humano repousar.",
+      tabela: {
+        titulo: "Confusão - Pokémon",
+        colunas: ["Resultado da Rolagem", "Efeito"],
+        linhas: [
+          ["1 a 10", "O pokémon sofre dano (ignorando resistências, imunidades e vulnerabilidades, e sem aplicar Atributos) igual ao dobro de seu próprio Bônus Elemental."],
+          ["11 a 15", "O pokémon executa aquela Ação normalmente."],
+          ["16 a 20", "O pokémon está curado da Confusão."]
+        ]
+      }
+    },
+    {
+      nome: "Congelamento",
+      descricao: "Quando Congelado, não é possível fazer nenhuma Ação. Uma vez por rodada, você pode tentar se curar desta Condição rolando 1d20. Se o resultado for 16 ou mais, não se está mais Congelado. Um pokémon de Fogo, de Gelo ou Lutador só precisa de um resultado 11 ou mais neste teste para não estar mais com Congelamento. Um pokémon ou um humano Congelado atingido por um Golpe causador de dano de Fogo, Lutador, Metálico ou de Pedra é descongelado."
+    },
+    {
+      nome: "Crítico",
+      descricao: "O Crítico só dura por uma rolagem de dano e a Condição Crítico pode se acumular com outras duas Condições. Para a rolagem de dano Crítico, todo o Dano Basal da rolagem é feito duas vezes. Por exemplo, o Golpe Pulso do Dragão causa 3d12+10 de dano duas vezes quando se trata de um Crítico, para um total de 6d12+20."
+    },
+    {
+      nome: "Paixão",
+      descricao: "Apenas pokémons recebem esta Condição. Antes de usar um Golpe, role 1d20 e confira a tabela abaixo:",
+      tabela: {
+        titulo: "Paixão",
+        colunas: ["Resultado da Rolagem", "Efeito"],
+        linhas: [
+          ["1 a 10", "O Golpe não pode ser mirado no pokémon ao qual está apaixonado (a menos que seja benéfico a ele)."],
+          ["11 a 19", "O pokémon executa o Golpe normalmente."],
+          ["20", "O pokémon está curado da Paixão."]
+        ]
+      }
+    },
+    {
+      nome: "Paralisia",
+      descricao: "Quando Paralisado, seu Atributo Velocidade é reduzido pela metade. A cada rodada Paralisado, role 1d20. Dependendo do resultado, você poderá agir ou não, conforme a quantidade de rodadas Paralisado:",
+      tabela: {
+        titulo: "Paralisia",
+        colunas: ["Rodada Paralisado", "Resultado Mínimo para Agir"],
+        linhas: [
+          ["Primeira", "6"],
+          ["Segunda", "7"],
+          ["Terceira", "8"],
+          ["Quarta", "9"],
+          ["Quinta", "10"],
+          ["Sexta", "11"],
+          ["Sétima", "12"],
+          ["Oitava", "13"],
+          ["Nona", "14"],
+          ["Décima", "15"],
+          ["Rodadas Adiante", "16"]
+        ]
+      }
+    },
+    {
+      nome: "Queimadura",
+      descricao: "Um humano ou pokémon Queimado perde duas Fases de Defesa. Uma vez por turno, ele pode tentar rolar no chão para parar de se queimar, gastando sua Ação Padrão se for humano ou sua Ação de Golpe se for pokémon. Se optar por isso, ele rola 1d20. Se o resultado for 17 ou mais, ele não está mais Queimado. Um pokémon de Fogo só precisa de um resultado 13 ou mais neste teste para não estar mais Queimado. No final de cada rodada, um pokémon Queimado perde um décimo de seus Pontos de Vida máximos. Um humano perde apenas metade disso. Pokémons dentro da pokébola não sofrem os efeitos da Queimadura."
+    },
+    {
+      nome: "Sono",
+      descricao: "Se não conseguir acordar, o personagem com Sono simplesmente não faz nenhuma Ação. Se um pokémon for enviado para fora da pokébola com Sono, ele será considerado começando na Terceira rodada para fins da tabela acima. Note que um personagem que ganhou a Condição Sono em virtude do uso do Golpe Descansar sempre dorme por duas rodadas, e não faz nenhum teste para acordar. A cada rodada de Sono, role 1d20. Dependendo do resultado, acorda-se, removendo esta Condição, conforme a quantidade de rodadas dormindo:",
+      tabela: {
+        titulo: "Sono",
+        colunas: ["Rodada com Sono", "Resultado Mínimo para Acordar"],
+        linhas: [
+          ["Primeira", "16"],
+          ["Segunda", "14"],
+          ["Terceira", "12"],
+          ["Quarta", "10"],
+          ["Quinta", "8"],
+          ["Rodadas Adiante", "6"]
+        ]
+      }
+    },
+    {
+      nome: "Veneno",
+      descricao: "Enquanto na segurança da pokébola, um pokémon não sofre os efeitos do Veneno. Nem humanos nem pokémons sofrem os efeitos de Veneno se estiverem em repouso completo. Um humano ou pokémon Envenenado perde duas Fases de Defesa Especial. Uma vez por turno, ele pode tentar se curar do Veneno gastando sua Ação Padrão se for humano ou sua Ação de Golpe se for pokémon. Se optar por isso, ele rola 1d20. Se o resultado for 17 ou mais, ele não está mais Envenenado. Este teste para se curar é impossível se o Veneno for descrito como Mortal. Pokémons Metálicos e Venenosos são imunes a todos os Venenos. No final de cada rodada, um pokémon Envenenado perde um décimo de seus Pontos de Vida máximos. Um humano perde apenas metade disso. Se for um Veneno Mortal, a cada rodada há uma quantidade extra de Pontos de Vida perdidos, conforme a tabela abaixo:",
+      tabela: {
+        titulo: "Veneno Mortal",
+        colunas: ["Rodada com Veneno Mortal", "Pontos de Vida Perdidos A Mais"],
+        linhas: [
+          ["Primeira", "5"],
+          ["Segunda", "10"],
+          ["Terceira", "20"],
+          ["Quarta", "40"],
+          ["Quinta", "80"],
+          ["Sexta", "160"],
+          ["Rodadas Adiante", "Dobre o número da rodada anterior."]
+        ]
+      }
+    }
   ]
 
   const users = [
@@ -926,8 +1183,8 @@ function App() {
     { username: 'Pedro', type: 'treinador', gradient: 'linear-gradient(135deg, #0000CD, #4169E1, #00CED1, #32CD32)' }
   ]
 
-  const mestreAreas = ['Gerador Pokémon', 'Treinador NPC', 'Pokémon NPC', 'Batalha', 'Enciclopédia M', 'Visão do Mestre']
-  const treinadorAreas = ['Treinador', 'PC', 'Pokédex', 'Mochila', 'Características & Talentos', 'Pokéloja', 'Enciclopédia']
+  const mestreAreas = ['Gerador Pokémon', 'Treinador NPC', 'Pokémon NPC', 'Batalha', 'Enciclopédia M', 'Visão do Mestre', 'PokeApp']
+  const treinadorAreas = ['Treinador', 'PC', 'Pokédex', 'Mochila', 'Características & Talentos', 'Pokéloja', 'Insígnias', 'Enciclopédia', 'Progressão']
 
   const allClasses = [
     { name: 'Artista', color: '#87CEEB', isMaster: true }, { name: 'Beldade', color: '#87CEEB' },
@@ -1100,21 +1357,9 @@ function App() {
     setSkills({ ...skills, [attr]: newSkills })
   }
 
-  const filteredSpecies = POKEMON_SPECIES.filter(s => 
+  const filteredSpecies = allSpecies.filter(s =>
     s.toLowerCase().includes(speciesSearch.toLowerCase())
   )
-
-  // Calcular níveis automaticamente baseado em XP
-  const calculateLevel = (currentXP) => {
-    let level = 1
-    for (let lvl = 100; lvl >= 1; lvl--) {
-      if (currentXP >= XP_TABLE[lvl]) {
-        level = lvl
-        break
-      }
-    }
-    return level
-  }
 
   // Funções de cálculo para Treinador NPC
   const calculateModifier = (attributeValue) => {
@@ -1385,6 +1630,172 @@ function App() {
     return matches.map(expression => rollDiceExpression(expression))
   }
 
+  // ==================== FUNÇÕES DE PERSISTÊNCIA ====================
+  // Estas funções facilitam a futura migração para Firebase
+  // Storage Layer - pode ser substituído por Firebase facilmente
+
+  const saveToStorage = (key, value) => {
+    // TODO: Migração Firebase - substituir por firebase.database().ref(key).set(value)
+    try {
+      localStorage.setItem(key, JSON.stringify(value))
+      return true
+    } catch (error) {
+      console.error('Erro ao salvar no storage:', error)
+      return false
+    }
+  }
+
+  const loadFromStorage = (key, defaultValue = null) => {
+    // TODO: Migração Firebase - substituir por firebase.database().ref(key).once('value')
+    try {
+      const item = localStorage.getItem(key)
+      return item ? JSON.parse(item) : defaultValue
+    } catch (error) {
+      console.error('Erro ao carregar do storage:', error)
+      return defaultValue
+    }
+  }
+
+  // Função para salvar espécies exóticas globais
+  const saveGlobalExoticSpecies = (species) => {
+    // TODO: Migração Firebase - salvar em firebase.database().ref('globalExoticSpecies')
+    return saveToStorage('globalExoticSpecies', species)
+  }
+
+  // Função para carregar espécies exóticas globais
+  const loadGlobalExoticSpecies = () => {
+    // TODO: Migração Firebase - carregar de firebase.database().ref('globalExoticSpecies')
+    return loadFromStorage('globalExoticSpecies', [])
+  }
+
+  // Função para salvar dados do usuário
+  const saveUserData = (username, userType, data) => {
+    // TODO: Migração Firebase - salvar em firebase.database().ref(`users/${username}`)
+    const key = userType === 'treinador' ? `trainer_${username}` : `npcTrainers_${username}`
+    return saveToStorage(key, data)
+  }
+
+  // Função para carregar dados do usuário
+  const loadUserData = (username, userType) => {
+    // TODO: Migração Firebase - carregar de firebase.database().ref(`users/${username}`)
+    const key = userType === 'treinador' ? `trainer_${username}` : `npcTrainers_${username}`
+    return loadFromStorage(key, null)
+  }
+
+  // ==================== FIM DAS FUNÇÕES DE PERSISTÊNCIA ====================
+
+  // Handlers para Account Data
+  const handleDownloadAccountData = () => {
+    if (!currentUser) return
+
+    let accountData = null
+    const globalExoticData = localStorage.getItem('globalExoticSpecies')
+
+    if (currentUser.type === 'treinador') {
+      const key = `trainer_${currentUser.username}`
+      const trainerData = localStorage.getItem(key)
+
+      if (trainerData) {
+        const parsedData = JSON.parse(trainerData)
+        // Adicionar globalExoticSpecies aos dados do treinador
+        const combinedData = {
+          ...parsedData,
+          globalExoticSpecies: globalExoticData ? JSON.parse(globalExoticData) : []
+        }
+        accountData = JSON.stringify(combinedData)
+      }
+    } else if (currentUser.type === 'mestre') {
+      // Para mestre, combinar dados de mestre_config, npcTrainers e globalExoticSpecies
+      const mestreConfig = localStorage.getItem('mestre_config')
+      const npcTrainersData = localStorage.getItem(`npcTrainers_${currentUser.username}`)
+
+      if (mestreConfig || npcTrainersData || globalExoticData) {
+        const combinedData = {
+          mestreConfig: mestreConfig ? JSON.parse(mestreConfig) : {},
+          npcTrainers: npcTrainersData ? JSON.parse(npcTrainersData) : [],
+          globalExoticSpecies: globalExoticData ? JSON.parse(globalExoticData) : []
+        }
+        accountData = JSON.stringify(combinedData)
+      }
+    }
+
+    if (!accountData) {
+      alert('Nenhum dado encontrado para download.')
+      return
+    }
+
+    const blob = new Blob([accountData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${currentUser.username}_backup.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    setShowAccountDataModal(false)
+  }
+
+  const handleUploadAccountData = (e) => {
+    const file = e.target.files[0]
+    if (!file || !currentUser) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result)
+
+        // Restaurar globalExoticSpecies se existir nos dados
+        if (data.globalExoticSpecies) {
+          localStorage.setItem('globalExoticSpecies', JSON.stringify(data.globalExoticSpecies))
+        }
+
+        if (currentUser.type === 'treinador') {
+          const key = `trainer_${currentUser.username}`
+          // Remover globalExoticSpecies antes de salvar dados do treinador
+          const { globalExoticSpecies, ...trainerData } = data
+
+          // Migrar XP dos Pokémon no time principal
+          if (trainerData.mainTeam) {
+            trainerData.mainTeam = trainerData.mainTeam.map(migratePokemonXP)
+          }
+
+          // Migrar XP dos Pokémon no PC
+          if (trainerData.pcPokemon) {
+            trainerData.pcPokemon = trainerData.pcPokemon.map(migratePokemonXP)
+          }
+
+          localStorage.setItem(key, JSON.stringify(trainerData))
+        } else if (currentUser.type === 'mestre') {
+          // Para mestre, restaurar dados separados
+          if (data.mestreConfig) {
+            localStorage.setItem('mestre_config', JSON.stringify(data.mestreConfig))
+          }
+          if (data.npcTrainers) {
+            // Migrar XP dos Pokémon dos NPCs
+            const migratedNPCs = data.npcTrainers.map(npc => {
+              if (npc.team) {
+                npc.team = npc.team.map(migratePokemonXP)
+              }
+              return npc
+            })
+            localStorage.setItem(`npcTrainers_${currentUser.username}`, JSON.stringify(migratedNPCs))
+          }
+        }
+
+        alert('Dados restaurados com sucesso! XP dos Pokémon foi atualizado para o novo sistema. A página será recarregada.')
+        window.location.reload()
+      } catch (error) {
+        console.error('Erro ao restaurar dados:', error)
+        alert('Erro ao processar o arquivo. Certifique-se de que é um backup válido.')
+      }
+    }
+    reader.readAsText(file)
+
+    setShowAccountDataModal(false)
+  }
+
   // Handlers para Treinador NPC
   const handleSaveCustomTrainer = () => {
     if (!customTrainerForm.name.trim()) {
@@ -1558,6 +1969,11 @@ function App() {
 
   // Funções de Habilidades
   const handleOpenHabilidades = (pokemon, type) => {
+    // Verificar se os dados estão disponíveis
+    if (!HABILIDADES_DATA || !HABILIDADES_NAMES || HABILIDADES_NAMES.length === 0) {
+      alert('Dados de habilidades não disponíveis. Por favor, recarregue a página.')
+      return
+    }
     setSelectedPokemonForHabilidades(pokemon)
     setSelectedPokemonTypeForHabilidades(type)
     setHabilidadesSelectedList(pokemon.habilidades || [])
@@ -1566,6 +1982,11 @@ function App() {
   }
 
   const handleOpenHabilidadesPC = (pokemon, type) => {
+    // Verificar se os dados estão disponíveis
+    if (!HABILIDADES_DATA || !HABILIDADES_NAMES || HABILIDADES_NAMES.length === 0) {
+      alert('Dados de habilidades não disponíveis. Por favor, recarregue a página.')
+      return
+    }
     setSelectedPokemonForHabilidades(pokemon)
     setSelectedPokemonTypeForHabilidades(type)
     setHabilidadesSelectedList(pokemon.habilidades || [])
@@ -1574,37 +1995,55 @@ function App() {
   }
 
   const handleAddHabilidadeToSelected = (habilidade) => {
-    if (habilidadesSelectedList.length >= 2) {
-      alert('Máximo de 2 habilidades atingido!')
-      return
-    }
-    if (!habilidadesSelectedList.includes(habilidade)) {
-      setHabilidadesSelectedList([...habilidadesSelectedList, habilidade])
+    try {
+      if (habilidadesSelectedList.length >= 2) {
+        alert('Máximo de 2 habilidades atingido!')
+        return
+      }
+      if (!habilidadesSelectedList.includes(habilidade)) {
+        setHabilidadesSelectedList([...habilidadesSelectedList, habilidade])
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar habilidade:', error)
+      alert('Erro ao adicionar habilidade. Por favor, tente novamente.')
     }
   }
 
   const handleRemoveHabilidadeFromSelected = (habilidade) => {
-    setHabilidadesSelectedList(habilidadesSelectedList.filter(h => h !== habilidade))
+    try {
+      setHabilidadesSelectedList(habilidadesSelectedList.filter(h => h !== habilidade))
+    } catch (error) {
+      console.error('Erro ao remover habilidade:', error)
+      alert('Erro ao remover habilidade. Por favor, tente novamente.')
+    }
   }
 
   const handleSaveHabilidades = () => {
-    if (habilidadesSelectedList.length < 1) {
-      alert('Selecione pelo menos 1 habilidade!')
-      return
+    try {
+      if (habilidadesSelectedList.length < 1) {
+        alert('Selecione pelo menos 1 habilidade!')
+        return
+      }
+
+      const updatedPokemon = { ...selectedPokemonForHabilidades, habilidades: habilidadesSelectedList }
+
+      if (selectedPokemonTypeForHabilidades === 'team') {
+        setMainTeam(mainTeam.map(p => p.id === selectedPokemonForHabilidades.id ? updatedPokemon : p))
+      } else {
+        setPcPokemon(pcPokemon.map(p => p.id === selectedPokemonForHabilidades.id ? updatedPokemon : p))
+      }
+
+      setShowHabilidadesModal(false)
+      setShowHabilidadesPCModal(false)
+      setSelectedPokemonForHabilidades(null)
+      setSelectedPokemonTypeForHabilidades(null)
+      setHabilidadesSelectedList([])
+    } catch (error) {
+      console.error('Erro ao salvar habilidades:', error)
+      alert('Erro ao salvar habilidades. Por favor, tente novamente.')
+      setShowHabilidadesModal(false)
+      setShowHabilidadesPCModal(false)
     }
-
-    const updatedPokemon = { ...selectedPokemonForHabilidades, habilidades: habilidadesSelectedList }
-
-    if (selectedPokemonTypeForHabilidades === 'team') {
-      setMainTeam(mainTeam.map(p => p.id === selectedPokemonForHabilidades.id ? updatedPokemon : p))
-    } else {
-      setPcPokemon(pcPokemon.map(p => p.id === selectedPokemonForHabilidades.id ? updatedPokemon : p))
-    }
-
-    setShowHabilidadesModal(false)
-    setSelectedPokemonForHabilidades(null)
-    setSelectedPokemonTypeForHabilidades(null)
-    setHabilidadesSelectedList([])
   }
 
   // Funções para sistema de Pokébolas
@@ -1966,9 +2405,8 @@ function App() {
       return
     }
 
-    // Converter para número para garantir comparação correta
-    const pokemonId = parseInt(selectedPokemonToReceiveItem)
-    const pokemon = mainTeam.find(p => p.id === pokemonId)
+    // Buscar pokémon comparando tanto com string quanto com número
+    const pokemon = mainTeam.find(p => p.id == selectedPokemonToReceiveItem)
     if (!pokemon) {
       alert('Pokémon não encontrado!')
       return
@@ -1982,7 +2420,7 @@ function App() {
       }
     }
 
-    setMainTeam(mainTeam.map(p => p.id === pokemonId ? updatedPokemon : p))
+    setMainTeam(mainTeam.map(p => p.id == selectedPokemonToReceiveItem ? updatedPokemon : p))
 
     // Remover o item da mochila
     const updatedCustomItems = customItems.map(item =>
@@ -2175,31 +2613,89 @@ function App() {
       return
     }
 
-    // Se for exótico, abrir modal para coletar dados completos
+    // Se for exótico, verificar se já existe nos dados globais
     if (pokemonForm.isExotic) {
-      setExoticDataForm({
-        dexNumber: '',
-        altura: '',
-        peso: '',
-        genero: '',
-        tipos: [''],
-        habitats: [''],
-        catchRate: '',
-        baseExp: '',
-        evolucao: '',
-        evolucaoNivel: '',
-        evolucaoItem: '',
-        statusBasais: {
-          saude: '',
-          ataque: '',
-          defesa: '',
-          ataqueEspecial: '',
-          defesaEspecial: '',
-          velocidade: ''
+      const existingExotic = globalExoticSpecies.find(e => e.nome === species)
+
+      if (existingExotic) {
+        // Espécie exótica já existe - usar dados existentes
+        const exoticFullData = existingExotic
+
+        const newPokemon = {
+          id: Date.now(),
+          nickname: pokemonForm.nickname || species,
+          species: species,
+          level: pokemonForm.isCaptured ? pokemonForm.level : 1,
+          totalXP: pokemonForm.isCaptured ? getTotalXPForLevel(pokemonForm.level) : 0,
+          isCaptured: pokemonForm.isCaptured,
+          isExotic: true,
+          golpes: []
         }
-      })
-      setShowExoticDataModal(true)
-      return
+
+        // Adicionar à Pokédex com dados completos
+        if (!pokedex.find(p => p.species === species)) {
+          setPokedex([...pokedex, {
+            species,
+            isCaptured: pokemonForm.isCaptured,
+            isExotic: true,
+            exoticData: exoticFullData
+          }])
+        } else {
+          setPokedex(pokedex.map(p =>
+            p.species === species
+              ? { ...p, isCaptured: pokemonForm.isCaptured, exoticData: exoticFullData }
+              : p
+          ))
+        }
+
+        // Se capturado, adicionar ao time ou PC
+        if (pokemonForm.isCaptured) {
+          if (mainTeam.length < 6) {
+            setMainTeam([...mainTeam, newPokemon])
+          } else {
+            setPcPokemon([...pcPokemon, newPokemon])
+          }
+        }
+
+        // Resetar formulário
+        setPokemonForm({
+          nickname: '',
+          species: '',
+          isCaptured: false,
+          isExotic: false,
+          level: 1,
+          exoticSpecies: '',
+          currentXP: 0
+        })
+        setSpeciesSearch('')
+        setShowAddPokemonModal(false)
+        return
+      } else {
+        // Espécie exótica nova - abrir modal para coletar dados
+        setExoticDataForm({
+          dexNumber: '',
+          altura: '',
+          peso: '',
+          genero: '',
+          tipos: [],
+          habitats: [''],
+          catchRate: '',
+          baseExp: '',
+          evolucao: '',
+          evolucaoNivel: '',
+          evolucaoItem: '',
+          statusBasais: {
+            saude: '',
+            ataque: '',
+            defesa: '',
+            ataqueEspecial: '',
+            defesaEspecial: '',
+            velocidade: ''
+          }
+        })
+        setShowExoticDataModal(true)
+        return
+      }
     }
 
     const newPokemon = {
@@ -2207,7 +2703,7 @@ function App() {
       nickname: pokemonForm.nickname || species,
       species: species,
       level: pokemonForm.isCaptured ? pokemonForm.level : 1,
-      totalXP: pokemonForm.isCaptured ? (XP_TABLE[pokemonForm.level] || 0) : 0,
+      totalXP: pokemonForm.isCaptured ? getTotalXPForLevel(pokemonForm.level) : 0,
       isCaptured: pokemonForm.isCaptured,
       isExotic: pokemonForm.isExotic,
       golpes: []
@@ -2299,28 +2795,72 @@ function App() {
   // Salvar imagem do Pokémon
   const handleSaveImage = () => {
     if (imageUploadType === 'link' && imageUrl.trim()) {
-      setPokemonImages({
-        ...pokemonImages,
-        [selectedPokemonForImage.id]: imageUrl
-      })
-      setShowImageModal(false)
-      setImageUrl('')
-      setSelectedPokemonForImage(null)
+      try {
+        setPokemonImages({
+          ...pokemonImages,
+          [selectedPokemonForImage.id]: imageUrl
+        })
+        setShowImageModal(false)
+        setImageUrl('')
+        setSelectedPokemonForImage(null)
+      } catch (error) {
+        console.error('Erro ao salvar imagem:', error)
+        alert('Erro ao salvar imagem. Tente com uma URL menor.')
+      }
     } else if (imageUploadType === 'file') {
       // Para upload de arquivo local, usamos FileReader
       const fileInput = document.getElementById('pokemon-image-file')
       if (fileInput && fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0]
+
+        // Criar um canvas para redimensionar a imagem
         const reader = new FileReader()
         reader.onload = (e) => {
-          setPokemonImages({
-            ...pokemonImages,
-            [selectedPokemonForImage.id]: e.target.result
-          })
-          setShowImageModal(false)
-          setImageUrl('')
-          setSelectedPokemonForImage(null)
+          const img = new Image()
+          img.onload = () => {
+            // Redimensionar para no máximo 400x400 para economizar espaço
+            const canvas = document.createElement('canvas')
+            let width = img.width
+            let height = img.height
+            const maxSize = 400
+
+            if (width > height && width > maxSize) {
+              height = (height * maxSize) / width
+              width = maxSize
+            } else if (height > maxSize) {
+              width = (width * maxSize) / height
+              height = maxSize
+            }
+
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0, width, height)
+
+            // Converter para base64 com compressão
+            try {
+              const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7)
+              setPokemonImages({
+                ...pokemonImages,
+                [selectedPokemonForImage.id]: compressedDataUrl
+              })
+              setShowImageModal(false)
+              setImageUrl('')
+              setSelectedPokemonForImage(null)
+            } catch (error) {
+              console.error('Erro ao salvar imagem:', error)
+              alert('Erro ao salvar imagem. A imagem pode ser muito grande. Tente uma imagem menor ou use URL.')
+            }
+          }
+          img.onerror = () => {
+            alert('Erro ao carregar a imagem. Tente outro arquivo.')
+          }
+          img.src = e.target.result
         }
-        reader.readAsDataURL(fileInput.files[0])
+        reader.onerror = () => {
+          alert('Erro ao ler o arquivo. Tente novamente.')
+        }
+        reader.readAsDataURL(file)
       }
     }
   }
@@ -2330,7 +2870,8 @@ function App() {
     const species = pokemonForm.exoticSpecies
 
     // Validações básicas
-    if (!exoticDataForm.altura || !exoticDataForm.peso || !exoticDataForm.tipos[0]) {
+    const tiposValidos = exoticDataForm.tipos.filter(t => t && t.trim() !== '')
+    if (!exoticDataForm.altura || !exoticDataForm.peso || tiposValidos.length === 0) {
       alert('Preencha pelo menos Altura, Peso e um Tipo!')
       return
     }
@@ -2359,12 +2900,22 @@ function App() {
       }
     }
 
+    // Adicionar espécie exótica à lista global se ainda não existir
+    if (!globalExoticSpecies.find(e => e.nome === species)) {
+      setGlobalExoticSpecies([...globalExoticSpecies, exoticFullData])
+    } else {
+      // Atualizar dados se já existe
+      setGlobalExoticSpecies(globalExoticSpecies.map(e =>
+        e.nome === species ? exoticFullData : e
+      ))
+    }
+
     const newPokemon = {
       id: Date.now(),
       nickname: pokemonForm.nickname || species,
       species: species,
       level: pokemonForm.isCaptured ? pokemonForm.level : 1,
-      totalXP: pokemonForm.isCaptured ? (XP_TABLE[pokemonForm.level] || 0) : 0,
+      totalXP: pokemonForm.isCaptured ? getTotalXPForLevel(pokemonForm.level) : 0,
       isCaptured: pokemonForm.isCaptured,
       isExotic: true,
       golpes: []
@@ -2410,6 +2961,84 @@ function App() {
     alert(pokemonForm.isCaptured ? `${species} capturado e adicionado!` : `${species} escaneado e adicionado à Pokédex!`)
   }
 
+  // Função para salvar configurações de Pokémon Exótico
+  const handleSaveExoticConfig = () => {
+    if (!selectedExoticConfig) return
+
+    // Update exotic species in global list - usando mesma estrutura do exoticFullData
+    const updatedExoticData = {
+      nome: selectedExoticConfig,
+      dexNumber: exoticConfigForm.dexNumber || 9999,
+      altura: parseFloat(exoticConfigForm.altura) || 0,
+      peso: parseFloat(exoticConfigForm.peso) || 0,
+      genero: exoticConfigForm.genero || 'Desconhecido',
+      tipos: Array.isArray(exoticConfigForm.tipos) ? exoticConfigForm.tipos.filter(t => t && t.trim() !== '') : [],
+      habitats: Array.isArray(exoticConfigForm.habitats) ? exoticConfigForm.habitats.filter(h => h && h.trim() !== '') : [],
+      catchRate: 0,
+      baseExp: 0,
+      evolucao: exoticConfigForm.evolucaoDe || null,
+      evolucaoNivel: exoticConfigForm.evolucaoLevel ? parseInt(exoticConfigForm.evolucaoLevel) : null,
+      evolucaoItem: exoticConfigForm.evolucaoItem || null,
+      statusBasais: {
+        saude: parseInt(exoticConfigForm.statusBasais.saude) || 0,
+        ataque: parseInt(exoticConfigForm.statusBasais.ataque) || 0,
+        defesa: parseInt(exoticConfigForm.statusBasais.defesa) || 0,
+        ataqueEspecial: parseInt(exoticConfigForm.statusBasais.ataqueEsp) || 0,
+        defesaEspecial: parseInt(exoticConfigForm.statusBasais.defesaEsp) || 0,
+        velocidade: parseInt(exoticConfigForm.statusBasais.velocidade) || 0
+      },
+      habilidades: Array.isArray(exoticConfigForm.habilidades) ? exoticConfigForm.habilidades : [],
+      habilidadesAltas: Array.isArray(exoticConfigForm.habilidadesAltas) ? exoticConfigForm.habilidadesAltas : [],
+      habilidadesOcultas: Array.isArray(exoticConfigForm.habilidadesOcultas) ? exoticConfigForm.habilidadesOcultas : [],
+      minimoLevel: parseInt(exoticConfigForm.minimoLevel) || 5,
+      estagio: exoticConfigForm.estagio || 'Básico',
+      evolucaoModo: exoticConfigForm.evolucaoModo || null
+    }
+
+    // Update global exotic species list
+    setGlobalExoticSpecies(globalExoticSpecies.map(e =>
+      e.nome === selectedExoticConfig ? updatedExoticData : e
+    ))
+
+    // Update all existing Pokémon of this species in team
+    setMainTeam(mainTeam.map(pokemon => {
+      if (pokemon.isExotic && (pokemon.species === selectedExoticConfig || pokemon.exoticSpecies === selectedExoticConfig)) {
+        return {
+          ...pokemon,
+          exoticData: updatedExoticData
+        }
+      }
+      return pokemon
+    }))
+
+    // Update all existing Pokémon of this species in PC
+    setPcPokemon(pcPokemon.map(pokemon => {
+      if (pokemon.isExotic && (pokemon.species === selectedExoticConfig || pokemon.exoticSpecies === selectedExoticConfig)) {
+        return {
+          ...pokemon,
+          exoticData: updatedExoticData
+        }
+      }
+      return pokemon
+    }))
+
+    // Update Pokédex entries
+    setPokedex(pokedex.map(entry => {
+      if (entry.isExotic && entry.species === selectedExoticConfig) {
+        return {
+          ...entry,
+          exoticData: updatedExoticData
+        }
+      }
+      return entry
+    }))
+
+    alert('Configurações da espécie exótica atualizadas! Todos os Pokémon desta espécie foram atualizados automaticamente.')
+    setShowExoticConfigModal(false)
+    setExoticConfigSearch('')
+    setSelectedExoticConfig(null)
+  }
+
   // Função para calcular HP máximo: (3 x Saúde) + Nível
   const calculateMaxHP = (pokemon) => {
     const saudeBase = parseInt(pokemon.baseAttributes?.saude) || 0
@@ -2436,6 +3065,16 @@ function App() {
   // Função para buscar tipos do Pokémon do pokemonData
   const getPokemonTypes = (pokemon) => {
     if (!pokemon.species) return []
+
+    // Se for pokémon exótico, buscar tipos da pokédex
+    if (pokemon.isExotic) {
+      const pokedexEntry = pokedex.find(p => p.species === pokemon.species && p.isExotic)
+      if (pokedexEntry && pokedexEntry.exoticData && pokedexEntry.exoticData.tipos) {
+        return pokedexEntry.exoticData.tipos
+      }
+    }
+
+    // Pokémon normal da pokedexData
     const foundPokemon = pokedexData.find(p => p.nome.toLowerCase() === pokemon.species.toLowerCase())
     if (foundPokemon && foundPokemon.tipos) {
       // Converter "Aço" para "Metal" conforme solicitado
@@ -2529,7 +3168,7 @@ function App() {
       nickname: captureForm.nickname,
       species: pokemonToCapture,
       level: captureForm.level,
-      totalXP: XP_TABLE[captureForm.level] || 0, // XP total do nível inicial
+      totalXP: getTotalXPForLevel(captureForm.level),
       currentHP: 0, // Será calculado depois
       currentHappiness: 0, // Felicidade inicial
       isCaptured: true,
@@ -2575,16 +3214,31 @@ function App() {
 
     // Procurar o Pokémon na Pokédex pelo nome da espécie
     const pokemonSpecies = pokemon.species || pokemon.nickname
-    const foundPokemon = pokedexData.find(p => p.nome.toLowerCase() === pokemonSpecies.toLowerCase())
 
-    if (foundPokemon && foundPokemon.statusBasais) {
-      baseAttributesFromData = {
-        saude: foundPokemon.statusBasais.saude || '',
-        ataque: foundPokemon.statusBasais.ataque || '',
-        defesa: foundPokemon.statusBasais.defesa || '',
-        ataqueEspecial: foundPokemon.statusBasais.ataqueEspecial || '',
-        defesaEspecial: foundPokemon.statusBasais.defesaEspecial || '',
-        velocidade: foundPokemon.statusBasais.velocidade || ''
+    // Verificar primeiro se é exótico
+    if (pokemon.isExotic) {
+      const exoticData = globalExoticSpecies.find(e => e.nome === pokemonSpecies)
+      if (exoticData && exoticData.statusBasais) {
+        baseAttributesFromData = {
+          saude: exoticData.statusBasais.saude || '',
+          ataque: exoticData.statusBasais.ataque || '',
+          defesa: exoticData.statusBasais.defesa || '',
+          ataqueEspecial: exoticData.statusBasais.ataqueEspecial || '',
+          defesaEspecial: exoticData.statusBasais.defesaEspecial || '',
+          velocidade: exoticData.statusBasais.velocidade || ''
+        }
+      }
+    } else {
+      const foundPokemon = pokedexData.find(p => p.nome.toLowerCase() === pokemonSpecies.toLowerCase())
+      if (foundPokemon && foundPokemon.statusBasais) {
+        baseAttributesFromData = {
+          saude: foundPokemon.statusBasais.saude || '',
+          ataque: foundPokemon.statusBasais.ataque || '',
+          defesa: foundPokemon.statusBasais.defesa || '',
+          ataqueEspecial: foundPokemon.statusBasais.ataqueEspecial || '',
+          defesaEspecial: foundPokemon.statusBasais.defesaEspecial || '',
+          velocidade: foundPokemon.statusBasais.velocidade || ''
+        }
       }
     }
 
@@ -2638,16 +3292,31 @@ function App() {
 
     // Procurar o Pokémon na Pokédex pelo nome da espécie
     const pokemonSpecies = pokemon.species || pokemon.nickname
-    const foundPokemon = pokedexData.find(p => p.nome.toLowerCase() === pokemonSpecies.toLowerCase())
 
-    if (foundPokemon && foundPokemon.statusBasais) {
-      baseAttributesFromData = {
-        saude: foundPokemon.statusBasais.saude || '',
-        ataque: foundPokemon.statusBasais.ataque || '',
-        defesa: foundPokemon.statusBasais.defesa || '',
-        ataqueEspecial: foundPokemon.statusBasais.ataqueEspecial || '',
-        defesaEspecial: foundPokemon.statusBasais.defesaEspecial || '',
-        velocidade: foundPokemon.statusBasais.velocidade || ''
+    // Verificar primeiro se é exótico
+    if (pokemon.isExotic) {
+      const exoticData = globalExoticSpecies.find(e => e.nome === pokemonSpecies)
+      if (exoticData && exoticData.statusBasais) {
+        baseAttributesFromData = {
+          saude: exoticData.statusBasais.saude || '',
+          ataque: exoticData.statusBasais.ataque || '',
+          defesa: exoticData.statusBasais.defesa || '',
+          ataqueEspecial: exoticData.statusBasais.ataqueEspecial || '',
+          defesaEspecial: exoticData.statusBasais.defesaEspecial || '',
+          velocidade: exoticData.statusBasais.velocidade || ''
+        }
+      }
+    } else {
+      const foundPokemon = pokedexData.find(p => p.nome.toLowerCase() === pokemonSpecies.toLowerCase())
+      if (foundPokemon && foundPokemon.statusBasais) {
+        baseAttributesFromData = {
+          saude: foundPokemon.statusBasais.saude || '',
+          ataque: foundPokemon.statusBasais.ataque || '',
+          defesa: foundPokemon.statusBasais.defesa || '',
+          ataqueEspecial: foundPokemon.statusBasais.ataqueEspecial || '',
+          defesaEspecial: foundPokemon.statusBasais.defesaEspecial || '',
+          velocidade: foundPokemon.statusBasais.velocidade || ''
+        }
       }
     }
 
@@ -2806,13 +3475,17 @@ function App() {
     const updatedTeam = [...mainTeam]
     const pokemon = updatedTeam[selectedPokemonIndex]
 
-    // Nível anterior
     const oldLevel = pokemon.level || 1
     const oldMaxHappiness = calculateMaxHappiness(pokemon)
 
-    // totalXP agora armazena o XP total acumulado
+    // Adiciona XP ao total acumulado
     const newTotalXP = (pokemon.totalXP || 0) + xp
-    const newLevel = calculateLevel(newTotalXP)
+
+    // Descobre qual nível o Pokémon deve estar com essa XP total
+    let newLevel = oldLevel
+    while (newLevel < 100 && newTotalXP >= getTotalXPForLevel(newLevel + 1)) {
+      newLevel++
+    }
 
     pokemon.level = newLevel
     pokemon.totalXP = newTotalXP
@@ -2837,10 +3510,58 @@ function App() {
     setShowXPModal(false)
   }
 
+  // Função para atribuir habilidades a um Pokémon NPC
+  const assignAbilitiesToPokemon = (pokemon) => {
+    // Usar 'species' ou 'name' como fallback
+    const species = pokemon.species || pokemon.name
+    const level = pokemon.level || 1
+    const pokemonAbilities = POKEMON_ABILITIES[species]
+
+    if (!pokemonAbilities) {
+      console.warn(`Nenhuma habilidade encontrada para ${species}`)
+      return pokemon
+    }
+
+    const { habilidades, altasHabilidades } = pokemonAbilities
+    const allAbilities = []
+
+    // Se level >= 40, pode ter altas habilidades
+    if (level >= 40) {
+      allAbilities.push(...habilidades, ...altasHabilidades)
+    } else {
+      // Abaixo do level 40, apenas habilidades normais
+      allAbilities.push(...habilidades)
+    }
+
+    // Escolher aleatoriamente a primeira habilidade
+    const habilidade1 = allAbilities.length > 0
+      ? allAbilities[Math.floor(Math.random() * allAbilities.length)]
+      : null
+
+    // Segunda habilidade apenas se level >= 40
+    let habilidade2 = null
+    if (level >= 40 && allAbilities.length > 1) {
+      // Filtrar para não repetir a primeira habilidade
+      const remainingAbilities = allAbilities.filter(h => h !== habilidade1)
+      if (remainingAbilities.length > 0) {
+        habilidade2 = remainingAbilities[Math.floor(Math.random() * remainingAbilities.length)]
+      }
+    }
+
+    return {
+      ...pokemon,
+      habilidade1,
+      habilidade2
+    }
+  }
+
   const addToNpcList = (pokemonId) => {
     const pokemon = npcPokemonList.find(p => p.id === pokemonId)
     if (pokemon && !pokemon.addedToNpc) {
-      setNpcPokemon(prev => [...prev, pokemon])
+      // Atribuir habilidades ao pokémon
+      const pokemonWithAbilities = assignAbilitiesToPokemon(pokemon)
+
+      setNpcPokemon(prev => [...prev, pokemonWithAbilities])
       setNpcPokemonList(prev => prev.map(p =>
         p.id === pokemonId ? { ...p, addedToNpc: true } : p
       ))
@@ -2984,13 +3705,18 @@ function App() {
         // Usar espécie e natureza editáveis
         const finalNature = sendPokemonNature
 
+        // Preparar habilidades do pokémon NPC (manter as que já foram sorteadas)
+        const habilidadesArray = []
+        if (pokemonToSend.habilidade1) habilidadesArray.push(pokemonToSend.habilidade1)
+        if (pokemonToSend.habilidade2) habilidadesArray.push(pokemonToSend.habilidade2)
+
         // Preparar dados do pokémon para envio
         const pokemonData = {
           id: `${Date.now()}-${Math.random()}`,
           species: sendPokemonSpecies,
           nickname: '',
           level: pokemonToSend.level,
-          totalXP: XP_TABLE[pokemonToSend.level] || 0,
+          totalXP: pokemonToSend.totalXP || 0, // Preserva XP atual do Pokémon
           nature: finalNature.nome,
           baseAttributes: pokemonToSend.baseAttributes,
           levelPoints: {
@@ -3010,7 +3736,8 @@ function App() {
           imageUrl: pokemonToSend.imageUrl || '',
           shiny: pokemonToSend.shiny || false,
           gender: pokemonToSend.gender,
-          dexNumber: pokemonToSend.dexNumber
+          dexNumber: pokemonToSend.dexNumber,
+          habilidades: habilidadesArray
         }
 
         // Verificar se o time principal tem menos de 6 pokémons
@@ -3085,8 +3812,8 @@ function App() {
   const sendNpcPokemonToBattle = (pokemon) => {
     const battleData = {
       id: `npc-pokemon-${Date.now()}-${Math.random()}`,
-      nome: pokemon.species,
-      especie: pokemon.species,
+      nome: pokemon.species || pokemon.name,
+      especie: pokemon.species || pokemon.name,
       tipos: pokemon.types || [],
       hp: pokemon.currentHP !== undefined ? pokemon.currentHP : ((3 * pokemon.attributes.saude) + pokemon.level),
       maxHP: (3 * pokemon.attributes.saude) + pokemon.level,
@@ -3142,6 +3869,14 @@ function App() {
     setBattlePokemon([])
     setCurrentPokemonTurn(0)
     setPokemonRound(1)
+  }
+
+  // Função para alternar estado de uma insígnia
+  const toggleBadge = (region, index) => {
+    setBadges(prev => ({
+      ...prev,
+      [region]: prev[region].map((collected, i) => i === index ? !collected : collected)
+    }))
   }
 
   const addToTrainerBattle = () => {
@@ -3255,6 +3990,22 @@ function App() {
           setCustomItems(data.customItems || [])
           setCaracteristicasSelected(data.caracteristicasSelected || [])
           setTalentosSelected(data.talentosSelected || [])
+          setPokemonImages(data.pokemonImages || {})
+          setBadges(data.badges || {
+            Kanto: [false, false, false, false, false, false, false, false, false],
+            Johto: [false, false, false, false, false, false, false, false, false],
+            Hoenn: [false, false, false, false, false, false, false, false, false],
+            Sinnoh: [false, false, false, false, false, false, false, false, false],
+            Unova: [false, false, false, false, false, false, false, false, false, false, false, false],
+            Kalos: [false, false, false, false, false, false, false, false, false]
+          })
+          setEstilizadorBattery(data.estilizadorBattery !== undefined ? data.estilizadorBattery : 10)
+          setEstilizadorPolicialBattery(data.estilizadorPolicialBattery !== undefined ? data.estilizadorPolicialBattery : 30)
+          setThunderStoneActive(data.thunderStoneActive || false)
+          setBolsaTalento(data.bolsaTalento || 0)
+          setOtherCapacities(data.otherCapacities || [])
+          setVivencias(data.vivencias || [])
+          setConquistas(data.conquistas || [])
         } catch (e) {
           console.error('Erro ao carregar:', e)
         }
@@ -3269,6 +4020,18 @@ function App() {
         try {
           const data = JSON.parse(saved)
           setHiddenPokelojaItems(data.hiddenPokelojaItems || [])
+          setNpcPokemon(data.npcPokemon || [])
+          setNpcPokemonList(data.npcPokemonList || [])
+          setBattleTrainers(data.battleTrainers || [])
+          setBattlePokemon(data.battlePokemon || [])
+          setBattleTrainersList(data.battleTrainersList || [])
+          setBattlePokemonList(data.battlePokemonList || [])
+          setCurrentTrainerTurn(data.currentTrainerTurn || 0)
+          setCurrentPokemonTurn(data.currentPokemonTurn || 0)
+          setTrainerRound(data.trainerRound || 1)
+          setPokemonRound(data.pokemonRound || 1)
+          setNpcConditions(data.npcConditions || {})
+          setExpandedNpcCards(data.expandedNpcCards || [])
         } catch (e) {
           console.error('Erro ao carregar configurações do mestre:', e)
         }
@@ -3284,17 +4047,44 @@ function App() {
         level, image, classes, attributes, skills, currentHP,
         mainTeam, pcPokemon, pokedex,
         pokemonedas, keyItems, customItems,
-        caracteristicasSelected, talentosSelected
+        caracteristicasSelected, talentosSelected,
+        pokemonImages, badges,
+        estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive,
+        bolsaTalento, otherCapacities,
+        vivencias, conquistas
       }
-      localStorage.setItem(key, JSON.stringify(data))
+      try {
+        localStorage.setItem(key, JSON.stringify(data))
+      } catch (error) {
+        console.error('Erro ao salvar no localStorage:', error)
+        if (error.name === 'QuotaExceededError') {
+          alert('Espaço de armazenamento cheio! Remova algumas imagens de pokémon ou use URLs ao invés de arquivos locais.')
+        }
+      }
     } else if (currentUser?.type === 'mestre') {
       const key = 'mestre_config'
       const data = {
-        hiddenPokelojaItems
+        hiddenPokelojaItems,
+        npcPokemon,
+        npcPokemonList,
+        battleTrainers,
+        battlePokemon,
+        battleTrainersList,
+        battlePokemonList,
+        currentTrainerTurn,
+        currentPokemonTurn,
+        trainerRound,
+        pokemonRound,
+        npcConditions,
+        expandedNpcCards
       }
-      localStorage.setItem(key, JSON.stringify(data))
+      try {
+        localStorage.setItem(key, JSON.stringify(data))
+      } catch (error) {
+        console.error('Erro ao salvar configurações do mestre:', error)
+      }
     }
-  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, hiddenPokelojaItems, currentUser])
+  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, pokemonImages, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, hiddenPokelojaItems, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, currentUser])
 
   // Fechar modais com ESC
   useEffect(() => {
@@ -3336,6 +4126,23 @@ function App() {
     }
   }, [npcTrainers, currentUser])
 
+  // Salvar espécies exóticas globais no localStorage
+  useEffect(() => {
+    localStorage.setItem('globalExoticSpecies', JSON.stringify(globalExoticSpecies))
+  }, [globalExoticSpecies])
+
+  // Variável do modal de Account Data (reutilizável em todos os returns)
+  const accountDataModal = currentUser ? (
+    <AccountDataModal
+      show={showAccountDataModal}
+      onClose={() => setShowAccountDataModal(false)}
+      darkMode={darkMode}
+      currentUser={currentUser}
+      handleDownloadAccountData={handleDownloadAccountData}
+      handleUploadAccountData={handleUploadAccountData}
+    />
+  ) : null
+
   // TELA DE LOGIN
   if (!currentUser) {
     return (
@@ -3376,41 +4183,47 @@ function App() {
   if (!currentArea && currentUser.type === 'mestre') {
     const areas = mestreAreas
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{currentUser.username} {currentUser.type === 'mestre' && '👑'}</h2>
-              <div className="flex gap-2">
-                <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
-                <button onClick={() => setCurrentUser(null)} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{currentUser.username} {currentUser.type === 'mestre' && '👑'}</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
+                  <button onClick={() => setCurrentUser(null)} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {areas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 text-sm font-semibold shadow-md">{area}</button>)}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {areas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 text-sm font-semibold shadow-md">{area}</button>)}
+          </div>
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <p className={`text-center text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Selecione uma área acima</p>
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
-            <p className={`text-center text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Selecione uma área acima</p>
-          </div>
-        </div>
-      </div>
+        {accountDataModal}
+      </>
     )
   }
 
   // GERADOR POKÉMON (MESTRE)
   if (currentUser.type === 'mestre' && currentArea === 'Gerador Pokémon') {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Gerador Pokémon 👑</h2>
-              <div className="flex gap-2">
-                <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
-                <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Gerador Pokémon 👑</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
+                  <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -3504,19 +4317,23 @@ function App() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
   // ÁREA TREINADOR NPC
   if (currentUser.type === 'mestre' && currentArea === 'Treinador NPC') {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Treinador NPC 👑</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -4279,7 +5096,9 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
@@ -4287,12 +5106,14 @@ function App() {
   // ÁREA POKÉMON NPC (MESTRE)
   if (currentUser.type === 'mestre' && currentArea === 'Pokémon NPC') {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Pokémon NPC 👑</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -4339,9 +5160,25 @@ function App() {
                           <p className={`text-sm font-bold text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                             {pokemon.species || pokemon.name || 'Pokémon'} {pokemon.shiny && '✨'}
                           </p>
-                          <p className={`text-xs text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Nível {pokemon.level}
-                          </p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <p className={`text-xs text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Nível {pokemon.level}
+                            </p>
+                            {(pokemon.habilidade1 || pokemon.habilidade2) && (
+                              <div className="flex gap-1">
+                                {pokemon.habilidade1 && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-500 text-white'}`}>
+                                    {pokemon.habilidade1}
+                                  </span>
+                                )}
+                                {pokemon.habilidade2 && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${darkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-500 text-white'}`}>
+                                    {pokemon.habilidade2}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <button
                           onClick={(e) => {
@@ -4373,7 +5210,7 @@ function App() {
                             )}
                             <div className="text-center mb-2">
                               <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                {pokemon.species} {pokemon.shiny && '✨'}
+                                {pokemon.species || pokemon.name} {pokemon.shiny && '✨'}
                               </p>
                               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                 #{String(pokemon.dexNumber).padStart(4, '0')} • Nível {pokemon.level}
@@ -4432,15 +5269,37 @@ function App() {
 
                         {/* Tipos e Valor de Captura */}
                         <div className="mb-2">
-                          <h4 className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tipos</h4>
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1">
+                          <h4 className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tipos & Habilidades</h4>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex gap-1 flex-wrap">
                               {pokemon.types.map((type, idx) => (
                                 <span key={idx} className="px-2 py-0.5 text-xs rounded-lg bg-gradient-to-r from-blue-600 to-purple-700 text-white font-semibold">
                                   {type}
                                 </span>
                               ))}
+                              {pokemon.habilidade1 && (
+                                <span
+                                  onClick={() => {
+                                    setSelectedAbility(pokemon.habilidade1)
+                                    setShowAbilityModal(true)
+                                  }}
+                                  className={`px-2 py-0.5 text-xs rounded-lg font-semibold cursor-pointer hover:opacity-80 transition-opacity ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-500 text-white'}`}>
+                                  {pokemon.habilidade1}
+                                </span>
+                              )}
+                              {pokemon.habilidade2 && (
+                                <span
+                                  onClick={() => {
+                                    setSelectedAbility(pokemon.habilidade2)
+                                    setShowAbilityModal(true)
+                                  }}
+                                  className={`px-2 py-0.5 text-xs rounded-lg font-semibold cursor-pointer hover:opacity-80 transition-opacity ${darkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-500 text-white'}`}>
+                                  {pokemon.habilidade2}
+                                </span>
+                              )}
                             </div>
+                          </div>
+                          <div className="flex justify-end">
                             <div className={`px-3 py-1 rounded-lg font-bold text-sm ${
                               calculateCaptureValue(pokemon) >= 0
                                 ? 'bg-green-600 text-white'
@@ -4499,7 +5358,7 @@ function App() {
                         <div className={`grid grid-cols-2 gap-2 mb-2 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                           <div>
                             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Espécie</p>
-                            <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.species}</p>
+                            <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.species || pokemon.name}</p>
                           </div>
                           <div>
                             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Catch Rate</p>
@@ -4582,7 +5441,7 @@ function App() {
                         <button
                           onClick={() => {
                             setPokemonToSend(pokemon)
-                            setSendPokemonSpecies(pokemon.species || '')
+                            setSendPokemonSpecies(pokemon.species || pokemon.name || '')
                             setSendPokemonNature(pokemon.nature || null)
                             setSpeciesSearchSend('')
                             setNatureSearchSend('')
@@ -4659,6 +5518,67 @@ function App() {
                     Curar
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalhes da Habilidade */}
+        {showAbilityModal && selectedAbility && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowAbilityModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {selectedAbility}
+                  </h3>
+                  <button onClick={() => setShowAbilityModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                {/* Informações da Habilidade */}
+                {(() => {
+                  const abilityData = HABILIDADES_DATA_IMPORTED[selectedAbility]
+
+                  if (!abilityData) {
+                    return (
+                      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Informações da habilidade não encontradas.
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Ativação */}
+                      {abilityData.ativacao && (
+                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <h4 className={`text-sm font-bold mb-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            Ativação
+                          </h4>
+                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-line`}>
+                            {abilityData.ativacao}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Efeito */}
+                      {abilityData.efeito && (
+                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <h4 className={`text-sm font-bold mb-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                            Efeito
+                          </h4>
+                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-line`}>
+                            {abilityData.efeito}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           </div>
@@ -4774,6 +5694,25 @@ function App() {
                       ✨ Shiny
                     </p>
                   )}
+                  {(pokemonToSend.habilidade1 || pokemonToSend.habilidade2) && (
+                    <div className="mt-2">
+                      <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Habilidades:
+                      </p>
+                      <div className="flex gap-1 flex-wrap">
+                        {pokemonToSend.habilidade1 && (
+                          <span className={`px-2 py-0.5 text-xs rounded-lg font-semibold ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-500 text-white'}`}>
+                            {pokemonToSend.habilidade1}
+                          </span>
+                        )}
+                        {pokemonToSend.habilidade2 && (
+                          <span className={`px-2 py-0.5 text-xs rounded-lg font-semibold ${darkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-500 text-white'}`}>
+                            {pokemonToSend.habilidade2}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Lista de Treinadores */}
@@ -4806,7 +5745,9 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
@@ -4819,12 +5760,14 @@ function App() {
     const safePokemonList = Array.isArray(battlePokemonList) ? battlePokemonList : []
 
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Batalha 👑</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -5085,19 +6028,23 @@ function App() {
 
           </div>
         </div>
-      </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
   // ÁREA ENCICLOPÉDIA M
   if (currentUser.type === 'mestre' && currentArea === 'Enciclopédia M') {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Enciclopédia M 👑</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -5112,10 +6059,10 @@ function App() {
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
             {/* Menu de Navegação das Subáreas */}
             <div className="mb-6">
-              <div className="flex flex-wrap gap-3 justify-center">
+              <div className="flex flex-wrap gap-2 justify-center">
                 <button
                   onClick={() => setEncyclopediaMSection('Golpedex M')}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
                     encyclopediaMSection === 'Golpedex M'
                       ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg transform scale-105'
                       : darkMode
@@ -5123,12 +6070,12 @@ function App() {
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
-                  <Sparkles size={20} />
+                  <Sparkles size={16} />
                   Golpedex M
                 </button>
                 <button
                   onClick={() => setEncyclopediaMSection('Descritordex M')}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
                     encyclopediaMSection === 'Descritordex M'
                       ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg transform scale-105'
                       : darkMode
@@ -5136,12 +6083,12 @@ function App() {
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
-                  <BookOpenText size={20} />
+                  <BookOpenText size={16} />
                   Descritordex M
                 </button>
                 <button
                   onClick={() => setEncyclopediaMSection('Tag de Concursodex M')}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
                     encyclopediaMSection === 'Tag de Concursodex M'
                       ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-lg transform scale-105'
                       : darkMode
@@ -5149,12 +6096,12 @@ function App() {
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
-                  <Crown size={20} />
+                  <Crown size={16} />
                   Tag de Concursodex M
                 </button>
                 <button
                   onClick={() => setEncyclopediaMSection('Períciadex M')}
-                  className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
                     encyclopediaMSection === 'Períciadex M'
                       ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg transform scale-105'
                       : darkMode
@@ -5162,8 +6109,47 @@ function App() {
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                   }`}
                 >
-                  <Zap size={20} />
+                  <Zap size={16} />
                   Períciadex M
+                </button>
+                <button
+                  onClick={() => setEncyclopediaMSection('Habilidadedex M')}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                    encyclopediaMSection === 'Habilidadedex M'
+                      ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-lg transform scale-105'
+                      : darkMode
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <Sparkles size={16} />
+                  Habilidadedex M
+                </button>
+                <button
+                  onClick={() => setEncyclopediaMSection('Capacidadex M')}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                    encyclopediaMSection === 'Capacidadex M'
+                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg transform scale-105'
+                      : darkMode
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <Zap size={16} />
+                  Capacidadex M
+                </button>
+                <button
+                  onClick={() => setEncyclopediaMSection('Condiçõesdex M')}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                    encyclopediaMSection === 'Condiçõesdex M'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg transform scale-105'
+                      : darkMode
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <ShieldPlus size={16} />
+                  Condiçõesdex M
                 </button>
               </div>
             </div>
@@ -5488,9 +6474,278 @@ function App() {
                 </div>
               </div>
             )}
+
+            {/* HABILIDADEDEX M */}
+            {encyclopediaMSection === 'Habilidadedex M' && (
+              <div>
+                <h3 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Habilidadedex M
+                </h3>
+                <p className={`mb-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Pesquise até 8 habilidades simultaneamente para comparar suas características
+                </p>
+
+                {/* Grid 4x2 de Barras de Pesquisa */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {habilidadedexMSearches.map((search, index) => (
+                    <div key={index} className="relative">
+                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Habilidade #{index + 1}
+                      </label>
+                      <div className="relative">
+                        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} size={20} />
+                        <input
+                          type="text"
+                          value={search}
+                          onChange={(e) => {
+                            const newSearches = [...habilidadedexMSearches]
+                            newSearches[index] = e.target.value
+                            setHabilidadedexMSearches(newSearches)
+                          }}
+                          placeholder="Digite o nome da habilidade..."
+                          className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 ${
+                            darkMode
+                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
+                              : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-teal-500'
+                          } focus:outline-none transition-all`}
+                          list={`habilidades-datalist-m-${index}`}
+                        />
+                        <datalist id={`habilidades-datalist-m-${index}`}>
+                          {HABILIDADES_NAMES.filter(nome =>
+                            nome.toLowerCase().includes(search.toLowerCase())
+                          ).slice(0, 50).map(nome => (
+                            <option key={nome} value={nome} />
+                          ))}
+                        </datalist>
+                        {search && (
+                          <button
+                            onClick={() => {
+                              const newSearches = [...habilidadedexMSearches]
+                              newSearches[index] = ''
+                              setHabilidadedexMSearches(newSearches)
+                            }}
+                            className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                              darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                          >
+                            <X size={20} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Exibir informações da habilidade se selecionada */}
+                      {search && HABILIDADES_DATA[search] && (
+                        <div className={`mt-3 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${darkMode ? 'bg-teal-900 text-teal-300' : 'bg-teal-100 text-teal-800'}`}>
+                                {HABILIDADES_DATA[search].ativacao || 'N/A'}
+                              </span>
+                            </div>
+
+                            <div className={`pt-2 border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <span className="font-semibold">Efeito:</span> {HABILIDADES_DATA[search].efeito}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CAPACIDADEX M */}
+            {encyclopediaMSection === 'Capacidadex M' && (
+              <div>
+                <h3 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Capacidadex M
+                </h3>
+                <p className={`mb-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Pesquise até 8 capacidades simultaneamente para comparar suas características
+                </p>
+
+                {/* Grid 4x2 de Barras de Pesquisa */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {capacidadexMSearches.map((search, index) => (
+                    <div key={index} className="relative">
+                      <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Capacidade #{index + 1}
+                      </label>
+                      <div className="relative">
+                        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} size={20} />
+                        <input
+                          type="text"
+                          value={search}
+                          onChange={(e) => {
+                            const newSearches = [...capacidadexMSearches]
+                            newSearches[index] = e.target.value
+                            setCapacidadexMSearches(newSearches)
+                          }}
+                          placeholder="Digite o nome da capacidade..."
+                          className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 ${
+                            darkMode
+                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-indigo-500'
+                              : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-indigo-500'
+                          } focus:outline-none transition-all`}
+                          list={`capacidades-datalist-m-${index}`}
+                        />
+                        <datalist id={`capacidades-datalist-m-${index}`}>
+                          {CAPACIDADES_NAMES.filter(nome =>
+                            nome.toLowerCase().includes(search.toLowerCase())
+                          ).slice(0, 50).map(nome => (
+                            <option key={nome} value={nome} />
+                          ))}
+                        </datalist>
+                        {search && (
+                          <button
+                            onClick={() => {
+                              const newSearches = [...capacidadexMSearches]
+                              newSearches[index] = ''
+                              setCapacidadexMSearches(newSearches)
+                            }}
+                            className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                              darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                          >
+                            <X size={20} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Exibir informações da capacidade se selecionada */}
+                      {search && CAPACIDADES_DATA[search] && (
+                        <div className={`mt-3 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <div className="space-y-2">
+                            <div className={`pt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              <p className={`text-sm leading-relaxed`}>
+                                {CAPACIDADES_DATA[search]}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CONDIÇÕESDEX M */}
+            {encyclopediaMSection === 'Condiçõesdex M' && (
+              <div>
+                <h3 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Condiçõesdex M
+                </h3>
+                <p className={`mb-6 text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Clique em uma condição para expandir e ver suas informações detalhadas
+                </p>
+
+                {/* Grid 3x3 de Condições */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {condicoes.map((condicao) => {
+                    const isExpanded = expandedCondicoesM.includes(condicao.nome)
+
+                    return (
+                      <div
+                        key={condicao.nome}
+                        className={`${
+                          darkMode ? 'bg-gray-700' : 'bg-gray-100'
+                        } rounded-lg overflow-hidden transition-all ${
+                          isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''
+                        }`}
+                      >
+                        <button
+                          onClick={() => {
+                            if (isExpanded) {
+                              setExpandedCondicoesM(expandedCondicoesM.filter(nome => nome !== condicao.nome))
+                            } else {
+                              setExpandedCondicoesM([...expandedCondicoesM, condicao.nome])
+                            }
+                          }}
+                          className={`w-full p-4 text-left flex justify-between items-center ${
+                            darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                          } transition-colors`}
+                        >
+                          <span className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                            {condicao.nome}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className={darkMode ? 'text-gray-300' : 'text-gray-600'} size={24} />
+                          ) : (
+                            <ChevronDown className={darkMode ? 'text-gray-300' : 'text-gray-600'} size={24} />
+                          )}
+                        </button>
+
+                        {isExpanded && (
+                          <div className={`p-6 ${darkMode ? 'bg-gray-750' : 'bg-white'} border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} leading-relaxed mb-4`}>
+                              {condicao.descricao}
+                            </p>
+
+                            {condicao.tabela && (
+                              <div className="mt-4">
+                                <h4 className={`font-bold text-lg mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                  {condicao.tabela.titulo}
+                                </h4>
+                                <div className="overflow-x-auto">
+                                  <table className={`w-full border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                                    <thead>
+                                      <tr className={darkMode ? 'bg-gray-600' : 'bg-gray-200'}>
+                                        {condicao.tabela.colunas.map((coluna, idx) => (
+                                          <th
+                                            key={idx}
+                                            className={`px-4 py-2 text-left font-semibold ${
+                                              darkMode ? 'text-white' : 'text-gray-800'
+                                            } border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
+                                          >
+                                            {coluna}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {condicao.tabela.linhas.map((linha, idx) => (
+                                        <tr
+                                          key={idx}
+                                          className={`${
+                                            idx % 2 === 0
+                                              ? darkMode ? 'bg-gray-700' : 'bg-gray-50'
+                                              : darkMode ? 'bg-gray-750' : 'bg-white'
+                                          }`}
+                                        >
+                                          {linha.map((celula, cellIdx) => (
+                                            <td
+                                              key={cellIdx}
+                                              className={`px-4 py-2 ${
+                                                darkMode ? 'text-gray-300' : 'text-gray-700'
+                                              } border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
+                                            >
+                                              {celula}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
@@ -5530,12 +6785,14 @@ function App() {
     }
 
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Visão do Mestre 👑</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -5809,6 +7066,22 @@ function App() {
                               <span className="font-bold">De olho na Mochila</span>
                             </div>
                             <p className="text-xs opacity-75">Ver itens</p>
+                          </button>
+
+                          {/* De olho nas vivências */}
+                          <button
+                            onClick={() => setShowVivenciasModal(true)}
+                            className={`p-4 rounded-lg text-left transition-all ${
+                              darkMode
+                                ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
+                                : 'bg-white text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <BookOpen size={18} />
+                              <span className="font-bold">De olho nas vivências</span>
+                            </div>
+                            <p className="text-xs opacity-75">Ver vivências</p>
                           </button>
                         </div>
 
@@ -6110,7 +7383,969 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+
+        {/* Modal de Vivências */}
+        {showVivenciasModal && selectedTrainer && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto`}>
+              <div className={`sticky top-0 ${darkMode ? 'bg-gray-800' : 'bg-white'} p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-between items-center`}>
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Vivências - {selectedTrainer}
+                </h3>
+                <button
+                  onClick={() => setShowVivenciasModal(false)}
+                  className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                >
+                  <X size={24} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+                </button>
+              </div>
+              <div className="p-6">
+                {trainerData?.vivencias && trainerData.vivencias.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {trainerData.vivencias.map((vivencia) => (
+                      <div key={vivencia.id} className={`p-4 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'}`}>
+                        <h4 className={`font-bold text-lg mb-3 ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                          {vivencia.nome}
+                        </h4>
+                        <div className="space-y-2">
+                          {vivencia.frequencia && (
+                            <div>
+                              <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência:</span>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{vivencia.frequencia}</p>
+                            </div>
+                          )}
+                          {vivencia.alvo && (
+                            <div>
+                              <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alvo:</span>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{vivencia.alvo}</p>
+                            </div>
+                          )}
+                          {vivencia.gatilho && (
+                            <div>
+                              <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Gatilho:</span>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{vivencia.gatilho}</p>
+                            </div>
+                          )}
+                          {vivencia.efeito && (
+                            <div>
+                              <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito:</span>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{vivencia.efeito}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`p-8 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <p className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Este treinador não possui vivências cadastradas.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {accountDataModal}
+        </div>
+      </>
+    )
+  }
+
+  // ÁREA POKEAPP (MESTRE)
+  if (currentUser.type === 'mestre' && currentArea === 'PokeApp') {
+    return (
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>PokeApp 👑</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
+                  <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {mestreAreas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className={`px-4 py-2 rounded-lg text-sm font-semibold ${area === 'PokeApp' ? 'bg-gradient-to-r from-blue-600 to-purple-700 text-white' : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{area}</button>)}
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            {!pokeAppSubArea && (
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-6`}>Selecione uma aplicação</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <button
+                    onClick={() => setPokeAppSubArea('Concurso')}
+                    className="p-8 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 text-white hover:from-yellow-600 hover:to-orange-700 transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    <h4 className="text-xl font-bold mb-2">🏆 Concurso Pokémon</h4>
+                    <p className="text-sm opacity-90">Calculadora de pontuação para concursos</p>
+                  </button>
+                  <button
+                    onClick={() => setPokeAppSubArea('Encontro')}
+                    className="p-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    <h4 className="text-xl font-bold mb-2">🔍 Encontro</h4>
+                    <p className="text-sm opacity-90">Em desenvolvimento</p>
+                  </button>
+                  <button
+                    onClick={() => setPokeAppSubArea('Sorteador')}
+                    className="p-8 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 text-white hover:from-green-600 hover:to-teal-700 transition-all transform hover:scale-105 shadow-lg"
+                  >
+                    <h4 className="text-xl font-bold mb-2">🎲 Sorteador</h4>
+                    <p className="text-sm opacity-90">Em desenvolvimento</p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {pokeAppSubArea && (
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokeAppSubArea}</h3>
+                  <button
+                    onClick={() => {
+                      setPokeAppSubArea('')
+                      setShowContestResults(false)
+                      setContestPokemons([])
+                    }}
+                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                  >
+                    ← Voltar
+                  </button>
+                </div>
+
+                {pokeAppSubArea === 'Encontro' && (
+                  <div>
+                    {/* Imagem Pokémon */}
+                    <div className="flex justify-center mb-6">
+                      <div className={`w-32 h-32 rounded-full ${darkMode ? 'bg-gradient-to-br from-gray-700 to-gray-600' : 'bg-gradient-to-br from-gray-300 to-gray-200'} flex items-center justify-center text-6xl border-4 ${darkMode ? 'border-gray-500' : 'border-gray-400'} shadow-lg`}>
+                        ⚡
+                      </div>
+                    </div>
+
+                    {/* Campos de entrada */}
+                    <div className="space-y-6 mb-6">
+                      {/* Horas de Procura */}
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                          Horas de Procura:
+                        </label>
+                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
+                          1 hora = 10% de chance (0-100 horas)
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={encounterHours}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
+                            setEncounterHours(val)
+                          }}
+                          className={`w-full px-4 py-3 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                          placeholder="Digite as horas (0-100)"
+                        />
+                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-1 italic`}>
+                          0 horas = 0% de chance
+                        </div>
+                      </div>
+
+                      {/* Rolagem de Investigação */}
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                          Rolagem de Investigação/Percepção:
+                        </label>
+                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
+                          5 pontos = 5% de chance (0-100 pontos)
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={encounterInvestigation}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
+                            setEncounterInvestigation(val)
+                          }}
+                          className={`w-full px-4 py-3 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                          placeholder="Digite os pontos (0-100)"
+                        />
+                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-1 italic`}>
+                          0 pontos = 0% de chance
+                        </div>
+                      </div>
+
+                      {/* Ajudantes Pokémon */}
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                          Ajudantes Pokémon:
+                        </label>
+                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
+                          1 Pokémon ajudante = 4% de chance (0-100 ajudantes)
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={encounterHelpers}
+                          onChange={(e) => {
+                            const val = Math.max(0, Math.min(100, parseInt(e.target.value) || 0))
+                            setEncounterHelpers(val)
+                          }}
+                          className={`w-full px-4 py-3 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                          placeholder="Digite os ajudantes (0-100)"
+                        />
+                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'} mt-1 italic`}>
+                          0 ajudantes = 0% de chance
+                        </div>
+                      </div>
+
+                      {/* Bônus de Encontro */}
+                      <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-6 rounded-lg`}>
+                        <h4 className={`text-lg font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'} mb-4`}>
+                          Bônus de Encontro
+                        </h4>
+
+                        <div className="space-y-3">
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={encounterBait}
+                              onChange={(e) => setEncounterBait(e.target.checked)}
+                              className="w-5 h-5 mr-3 accent-blue-500"
+                            />
+                            <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Usar Isca (+10% de chance)
+                            </span>
+                          </label>
+
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={encounterPokemonAttack}
+                              onChange={(e) => setEncounterPokemonAttack(e.target.checked)}
+                              className="w-5 h-5 mr-3 accent-blue-500"
+                            />
+                            <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Usar Golpe Pokémon (+7% de chance)
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Pokémon Específico */}
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                          Pokémon Específico:
+                        </label>
+                        <div className="flex gap-6">
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="radio"
+                              checked={encounterSpecific}
+                              onChange={() => setEncounterSpecific(true)}
+                              className="w-5 h-5 mr-2 accent-blue-500"
+                            />
+                            <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Sim (-20% de chance)
+                            </span>
+                          </label>
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="radio"
+                              checked={!encounterSpecific}
+                              onChange={() => setEncounterSpecific(false)}
+                              className="w-5 h-5 mr-2 accent-blue-500"
+                            />
+                            <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Não
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botão Procurar */}
+                    <button
+                      onClick={() => {
+                        // Calcular chance total
+                        let totalChance = 0
+
+                        // Horas: 10% por hora
+                        const hoursChance = encounterHours * 10
+                        totalChance += hoursChance
+
+                        // Investigação: 5% a cada 5 pontos
+                        const investigationChance = Math.floor(encounterInvestigation / 5) * 5
+                        totalChance += investigationChance
+
+                        // Ajudantes: 4% por ajudante
+                        const helpersChance = encounterHelpers * 4
+                        totalChance += helpersChance
+
+                        // Isca: +10%
+                        if (encounterBait) totalChance += 10
+
+                        // Golpe Pokémon: +7%
+                        if (encounterPokemonAttack) totalChance += 7
+
+                        // Pokémon específico: -20%
+                        if (encounterSpecific) totalChance -= 20
+
+                        // Limitar entre 0 e 100
+                        totalChance = Math.max(0, Math.min(100, totalChance))
+
+                        // Rolar dado
+                        const roll = Math.random() * 100
+
+                        setEncounterResult({
+                          chance: totalChance,
+                          success: roll <= totalChance && totalChance > 0,
+                          breakdown: [
+                            { label: `Horas (${encounterHours}h)`, value: hoursChance },
+                            { label: `Investigação (${encounterInvestigation}pts)`, value: investigationChance },
+                            { label: `Ajudantes (${encounterHelpers}pkm)`, value: helpersChance },
+                            ...(encounterBait ? [{ label: 'Isca', value: 10 }] : []),
+                            ...(encounterPokemonAttack ? [{ label: 'Golpe Pokémon', value: 7 }] : []),
+                            ...(encounterSpecific ? [{ label: 'Pokémon específico', value: -20 }] : [])
+                          ]
+                        })
+                      }}
+                      className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-800 px-8 py-4 rounded-full text-lg font-bold hover:from-yellow-500 hover:to-yellow-600 shadow-lg transform transition-transform hover:-translate-y-1"
+                    >
+                      Procurar Pokémon!
+                    </button>
+
+                    {/* Display de Chance */}
+                    <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-6 rounded-lg mt-6`}>
+                      <div className="text-center">
+                        <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                          Chance de Encontro: <span className="text-blue-500">
+                            {(() => {
+                              let chance = 0
+                              chance += encounterHours * 10
+                              chance += Math.floor(encounterInvestigation / 5) * 5
+                              chance += encounterHelpers * 4
+                              if (encounterBait) chance += 10
+                              if (encounterPokemonAttack) chance += 7
+                              if (encounterSpecific) chance -= 20
+                              return Math.max(0, Math.min(100, chance)).toFixed(1)
+                            })()}%
+                          </span>
+                        </div>
+
+                        {/* Detalhamento */}
+                        <div className={`mt-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} text-left`}>
+                          <div className="font-bold mb-2">Detalhamento:</div>
+                          {encounterHours > 0 && <div>Horas ({encounterHours}h): {encounterHours * 10}%</div>}
+                          {encounterInvestigation > 0 && <div>Investigação ({encounterInvestigation}pts): {Math.floor(encounterInvestigation / 5) * 5}%</div>}
+                          {encounterHelpers > 0 && <div>Ajudantes ({encounterHelpers}pkm): {encounterHelpers * 4}%</div>}
+                          {encounterBait && <div>Isca: +10%</div>}
+                          {encounterPokemonAttack && <div>Golpe Pokémon: +7%</div>}
+                          {encounterSpecific && <div>Pokémon específico: -20%</div>}
+                          {encounterHours === 0 && encounterInvestigation === 0 && encounterHelpers === 0 && !encounterBait && !encounterPokemonAttack && (
+                            <div className="italic">Adicione valores para calcular a chance</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Resultado */}
+                    {encounterResult && (
+                      <div className={`mt-6 p-6 rounded-lg border-2 ${
+                        encounterResult.chance === 0
+                          ? `${darkMode ? 'bg-red-900/20 border-red-500/50' : 'bg-red-50 border-red-300'}`
+                          : encounterResult.success
+                          ? `${darkMode ? 'bg-green-900/20 border-green-500/50' : 'bg-green-50 border-green-300'}`
+                          : `${darkMode ? 'bg-red-900/20 border-red-500/50' : 'bg-red-50 border-red-300'}`
+                      }`}>
+                        <div className="text-center">
+                          <div className="text-5xl mb-4">
+                            {encounterResult.chance === 0 ? '❌' : encounterResult.success ? '🎉' : '😢'}
+                          </div>
+                          <div className={`text-xl font-bold mb-2 ${
+                            encounterResult.chance === 0
+                              ? 'text-red-500'
+                              : encounterResult.success
+                              ? 'text-green-500'
+                              : 'text-red-500'
+                          }`}>
+                            {encounterResult.chance === 0
+                              ? 'Impossível encontrar Pokémon!'
+                              : encounterResult.success
+                              ? 'Parabéns! Você encontrou um Pokémon!'
+                              : 'Que pena! O Pokémon escapou desta vez.'}
+                          </div>
+                          <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {encounterResult.chance === 0
+                              ? 'Sua chance é de 0%. Aumente os valores para ter uma chance.'
+                              : `Sua chance era de ${encounterResult.chance.toFixed(1)}%`}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {pokeAppSubArea === 'Sorteador' && (
+                  <div>
+                    <p className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-6`}>
+                      Clique nos botões para sortear itens aleatórios de cada categoria
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {/* Frutos */}
+                      {(() => {
+                        const sortearFruto = () => {
+                          const frutos = [
+                            { nome: "Persim (Caqui)", preco: 45, efeito: "Restaura Confusão", sabores: ["Azedo", "Doce", "Picante", "Seco"] },
+                            { nome: "Oran (Laranja)", preco: 90, efeito: "Recupera 1d8 PV.", sabores: ["Amargo", "Azedo", "Picante", "Seco"] },
+                            { nome: "Sitrus (Toranja)", preco: 155, efeito: "Recupera 2d8 PV.", sabores: ["Amargo", "Azedo", "Doce", "Seco"] },
+                            { nome: "Chesto (Castanha)", preco: 225, efeito: "Restaura Sono.", sabores: ["Seco"] },
+                            { nome: "Cheri (Cereja)", preco: 225, efeito: "Restaura Paralisia.", sabores: ["Picante"] },
+                            { nome: "Pecha (Pêssego)", preco: 225, efeito: "Restaura Veneno.", sabores: ["Doce"] },
+                            { nome: "Lum (Ameka)", preco: 555, efeito: "Restaura qualquer Condição.", sabores: ["Azedo"] }
+                          ]
+                          const resultado = frutos[Math.floor(Math.random() * frutos.length)]
+                          setSortedItems(prev => ({ ...prev, frutos: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              Frutos
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm`}>
+                              {sortedItems.frutos ? (
+                                <>
+                                  <p className="font-bold text-yellow-400 mb-1">{sortedItems.frutos.nome}</p>
+                                  <p className="text-red-400 font-bold mb-1">Preço: {sortedItems.frutos.preco}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}><span className="font-bold">Sabores:</span> {sortedItems.frutos.sabores.join(", ")}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}><span className="font-bold">Efeito:</span> {sortedItems.frutos.efeito}</p>
+                                </>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearFruto}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Itens Mantidos */}
+                      {(() => {
+                        const sortearItemMantido = () => {
+                          const itensMantidos = [
+                            { nome: "Amuleto da Sorte", preco: 2400, efeito: "Até o fim do encontro, o número mínimo necessário no Teste de Acurácia para se obter um Crítico é reduzido em 3." },
+                            { nome: "Restos", preco: 2000, efeito: "O usuário recupera uma quantidade de Pontos de Vida por rodada igual a 1/16 de seus PV máximos até o fim do encontro." },
+                            { nome: "Cinturão do Campeão", preco: 6000, efeito: "Quando causar dano superefeitvo, adicione ao dano (antes de aplicar a vulnerabilidade) uma quantidade igual ao Bônus Elemental." }
+                          ]
+                          const resultado = itensMantidos[Math.floor(Math.random() * itensMantidos.length)]
+                          setSortedItems(prev => ({ ...prev, itensMantidos: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              Itens Mantidos
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm overflow-y-auto`}>
+                              {sortedItems.itensMantidos ? (
+                                <>
+                                  <p className="font-bold text-yellow-400 mb-1">{sortedItems.itensMantidos.nome}</p>
+                                  <p className="text-red-400 font-bold mb-1">Preço: {sortedItems.itensMantidos.preco}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}><span className="font-bold">Efeito:</span> {sortedItems.itensMantidos.efeito}</p>
+                                </>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearItemMantido}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Melhoradores */}
+                      {(() => {
+                        const sortearMelhorador = () => {
+                          const melhoradores = [
+                            { nome: "X-Ataque", preco: 80, efeito: "Eleva uma Fase de Ataque." },
+                            { nome: "X-Defesa", preco: 80, efeito: "Eleva uma Fase de Defesa." },
+                            { nome: "X-Velocidade", preco: 80, efeito: "Eleva uma Fase de Velocidade." },
+                            { nome: "Golpe Atroz", preco: 80, efeito: "Obtém Críticos em resultados 18 a 20 nos Testes de Acurácia." }
+                          ]
+                          const resultado = melhoradores[Math.floor(Math.random() * melhoradores.length)]
+                          setSortedItems(prev => ({ ...prev, melhoradores: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              Melhoradores
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm`}>
+                              {sortedItems.melhoradores ? (
+                                <>
+                                  <p className="font-bold text-yellow-400 mb-1">{sortedItems.melhoradores.nome}</p>
+                                  <p className="text-red-400 font-bold mb-1">Preço: {sortedItems.melhoradores.preco}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}><span className="font-bold">Efeito:</span> {sortedItems.melhoradores.efeito}</p>
+                                </>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearMelhorador}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Pedras de Evolução */}
+                      {(() => {
+                        const sortearPedraEvolucao = () => {
+                          const pedrasEvolucao = [
+                            "Pedra Brilhante", "Pedra da Água", "Pedra da Alvorada", "Pedra da Folha",
+                            "Pedra da Lua", "Pedra do Crepúsculo", "Pedra do Fogo", "Pedra do Frio",
+                            "Pedra do Sol", "Pedra do Trovão"
+                          ]
+                          const resultado = pedrasEvolucao[Math.floor(Math.random() * pedrasEvolucao.length)]
+                          setSortedItems(prev => ({ ...prev, pedrasEvolucao: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              Pedras de Evolução
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm`}>
+                              {sortedItems.pedrasEvolucao ? (
+                                <p className="font-bold text-yellow-400 text-center pt-10">{sortedItems.pedrasEvolucao}</p>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearPedraEvolucao}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Itens de Cura */}
+                      {(() => {
+                        const sortearItemCura = () => {
+                          const itensCura = [
+                            { nome: "Poção", preco: 200, efeito: "Restaura 2d12+10 PV" },
+                            { nome: "Superpoção", preco: 350, efeito: "Restaura 3d12+20 PV" },
+                            { nome: "Hiperpoção", preco: 450, efeito: "Restaura 4d12+30 PV" },
+                            { nome: "Antídoto", preco: 250, efeito: "Restaura Veneno" },
+                            { nome: "Panaceia", preco: 500, efeito: "Restaura todas as Condições" },
+                            { nome: "Revivente", preco: 300, efeito: "Restaura um pokémon inconsciente a 20 Pontos de Vida" }
+                          ]
+                          const resultado = itensCura[Math.floor(Math.random() * itensCura.length)]
+                          setSortedItems(prev => ({ ...prev, itensCura: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              Itens de Cura
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm`}>
+                              {sortedItems.itensCura ? (
+                                <>
+                                  <p className="font-bold text-yellow-400 mb-1">{sortedItems.itensCura.nome}</p>
+                                  <p className="text-red-400 font-bold mb-1">Preço: {sortedItems.itensCura.preco}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}><span className="font-bold">Efeito:</span> {sortedItems.itensCura.efeito}</p>
+                                </>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearItemCura}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Pokébolas */}
+                      {(() => {
+                        const sortearPokebola = () => {
+                          const pokebolas = [
+                            { nome: "Pokébola Básica", preco: 200, efeito: "Modificador: 15" },
+                            { nome: "Superbola", preco: 500, efeito: "Modificador: 5" },
+                            { nome: "Ultrabola", preco: 1000, efeito: "Modificador: -5" },
+                            { nome: "Pokébola de Nível", preco: 2000, efeito: "+5; ou -15 se o Nível do alvo é menor que a metade do Nível do seu pokémon." },
+                            { nome: "Pokébola Amigável", preco: 2000, efeito: "-5. A Lealdade do alvo começará 2." }
+                          ]
+                          const resultado = pokebolas[Math.floor(Math.random() * pokebolas.length)]
+                          setSortedItems(prev => ({ ...prev, pokebolas: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              Pokébolas
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm`}>
+                              {sortedItems.pokebolas ? (
+                                <>
+                                  <p className="font-bold text-yellow-400 mb-1">{sortedItems.pokebolas.nome}</p>
+                                  <p className="text-red-400 font-bold mb-1">Preço: {sortedItems.pokebolas.preco}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}><span className="font-bold">Efeito:</span> {sortedItems.pokebolas.efeito}</p>
+                                </>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearPokebola}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Vitaminas */}
+                      {(() => {
+                        const sortearVitamina = () => {
+                          const vitaminas = [
+                            { nome: "Imunizante", preco: 4900, efeito: "Aumenta a Saúde Basal em 1." },
+                            { nome: "Proteína", preco: 4900, efeito: "Aumenta o Ataque Basal em 1." },
+                            { nome: "Ferro", preco: 4900, efeito: "Aumenta a Defesa Basal em 1." },
+                            { nome: "Cálcio", preco: 4900, efeito: "Aumenta o Ataque Especial Basal em 1." },
+                            { nome: "Zinco", preco: 4900, efeito: "Aumenta a Defesa Especial Basal em 1." },
+                            { nome: "Carburante", preco: 4900, efeito: "Aumenta a Velocidade Basal em 1." }
+                          ]
+                          const resultado = vitaminas[Math.floor(Math.random() * vitaminas.length)]
+                          setSortedItems(prev => ({ ...prev, vitaminas: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              Vitaminas
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm`}>
+                              {sortedItems.vitaminas ? (
+                                <>
+                                  <p className="font-bold text-yellow-400 mb-1">{sortedItems.vitaminas.nome}</p>
+                                  <p className="text-red-400 font-bold mb-1">Preço: {sortedItems.vitaminas.preco}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}><span className="font-bold">Efeito:</span> {sortedItems.vitaminas.efeito}</p>
+                                </>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearVitamina}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+
+                      {/* TMs */}
+                      {(() => {
+                        const sortearTM = () => {
+                          const tms = [
+                            { nome: "Cascata", tipo: "Água" },
+                            { nome: "Relâmpago", tipo: "Elétrico" },
+                            { nome: "Lança-Chamas", tipo: "Fogo" },
+                            { nome: "Raio de Gelo", tipo: "Gelo" },
+                            { nome: "Terremoto", tipo: "Terra" },
+                            { nome: "Psicochoque", tipo: "Psíquico" },
+                            { nome: "Garra do Dragão", tipo: "Dragão" },
+                            { nome: "Pulso Sombrio", tipo: "Trevas" }
+                          ]
+                          const resultado = tms[Math.floor(Math.random() * tms.length)]
+                          setSortedItems(prev => ({ ...prev, tms: resultado }))
+                        }
+
+                        return (
+                          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'} hover:shadow-lg transition-shadow`}>
+                            <h3 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'} mb-3 pb-2 border-b-2 ${darkMode ? 'border-blue-500' : 'border-blue-400'}`}>
+                              TMs
+                            </h3>
+                            <div className={`min-h-[120px] mb-3 p-3 ${darkMode ? 'bg-gray-800' : 'bg-white'} rounded border ${darkMode ? 'border-gray-600' : 'border-gray-300'} text-sm`}>
+                              {sortedItems.tms ? (
+                                <>
+                                  <p className="font-bold text-yellow-400 mb-1">{sortedItems.tms.nome}</p>
+                                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}><span className="font-bold">Tipo:</span> {sortedItems.tms.tipo}</p>
+                                </>
+                              ) : (
+                                <p className={`${darkMode ? 'text-gray-500' : 'text-gray-400'} text-center pt-10`}>Clique em sortear</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={sortearTM}
+                              className="w-full bg-gradient-to-b from-red-500 to-red-700 text-white px-4 py-2 rounded font-bold hover:from-red-600 hover:to-red-800 shadow-md transition-all"
+                            >
+                              Sortear
+                            </button>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {pokeAppSubArea === 'Concurso' && (
+                  <div>
+                    {/* Configuração do Concurso */}
+                    <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-6 rounded-lg mb-6`}>
+                      <h4 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Configuração do Concurso</h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                            Número de Pokémon no Concurso (1-20)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={numPokemons}
+                            onChange={(e) => setNumPokemons(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                            className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'}`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                            Número de Rodadas de Apelação (1-20)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={numAppealRounds}
+                            onChange={(e) => {
+                              const val = Math.max(1, Math.min(20, parseInt(e.target.value) || 1))
+                              setNumAppealRounds(val)
+                              // Atualizar pokémons existentes com novas rodadas
+                              if (contestPokemons.length > 0) {
+                                const updated = contestPokemons.map(p => ({
+                                  ...p,
+                                  appealScores: Array(val).fill(0)
+                                }))
+                                setContestPokemons(updated)
+                              }
+                            }}
+                            className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'}`}
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const newPokemons = Array.from({ length: numPokemons }, (_, i) => ({
+                            id: Date.now() + i,
+                            name: `Pokémon ${i + 1}`,
+                            presentationScore: 0,
+                            appealScores: Array(numAppealRounds).fill(0)
+                          }))
+                          setContestPokemons(newPokemons)
+                          setShowContestResults(false)
+                        }}
+                        className="w-full bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 font-semibold"
+                      >
+                        Gerar Formulário de Pokémon
+                      </button>
+                    </div>
+
+                    {/* Lista de Pokémon */}
+                    {contestPokemons.length > 0 && (
+                      <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-6 rounded-lg mb-6`}>
+                        <h4 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Notas dos Pokémon</h4>
+
+                        <div className="space-y-4">
+                          {contestPokemons.map((pokemon, idx) => (
+                            <div key={pokemon.id} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} p-4 rounded-lg border-2 ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                              <div className="flex justify-between items-center mb-3">
+                                <input
+                                  type="text"
+                                  value={pokemon.name}
+                                  onChange={(e) => {
+                                    const updated = [...contestPokemons]
+                                    updated[idx].name = e.target.value
+                                    setContestPokemons(updated)
+                                  }}
+                                  className={`flex-1 px-3 py-2 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-gray-100 border-gray-300'} border-2 mr-2`}
+                                  placeholder={`Nome do Pokémon ${idx + 1}`}
+                                />
+                                <button
+                                  onClick={() => {
+                                    setContestPokemons(contestPokemons.filter((_, i) => i !== idx))
+                                  }}
+                                  className="bg-red-500 text-white px-3 py-2 rounded-full hover:bg-red-600 font-bold"
+                                >
+                                  ×
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                                    Nota de Apresentação
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={pokemon.presentationScore}
+                                    onChange={(e) => {
+                                      const updated = [...contestPokemons]
+                                      updated[idx].presentationScore = Math.max(0, parseInt(e.target.value) || 0)
+                                      setContestPokemons(updated)
+                                    }}
+                                    className={`w-full px-3 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                                    Notas de Apelação
+                                  </label>
+                                  <div className="grid grid-cols-4 gap-2">
+                                    {pokemon.appealScores.map((score, scoreIdx) => (
+                                      <div key={scoreIdx}>
+                                        <label className={`block text-xs text-center ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>
+                                          R{scoreIdx + 1}
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={score}
+                                          onChange={(e) => {
+                                            const updated = [...contestPokemons]
+                                            updated[idx].appealScores[scoreIdx] = Math.max(0, parseInt(e.target.value) || 0)
+                                            setContestPokemons(updated)
+                                          }}
+                                          className={`w-full px-2 py-1 border-2 rounded text-center ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                          <button
+                            onClick={() => {
+                              const results = contestPokemons.map(p => ({
+                                ...p,
+                                appealTotal: p.appealScores.reduce((sum, score) => sum + score, 0),
+                                total: p.presentationScore + p.appealScores.reduce((sum, score) => sum + score, 0)
+                              })).sort((a, b) => b.total - a.total)
+                              setContestPokemons(results)
+                              setShowContestResults(true)
+                            }}
+                            className="flex-1 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 font-semibold"
+                          >
+                            Calcular Pódio
+                          </button>
+                          <button
+                            onClick={() => {
+                              setContestPokemons([])
+                              setShowContestResults(false)
+                            }}
+                            className="flex-1 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 font-semibold"
+                          >
+                            Reiniciar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Resultados */}
+                    {showContestResults && contestPokemons.length > 0 && (
+                      <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-6 rounded-lg`}>
+                        <h4 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-6`}>Resultado do Concurso</h4>
+
+                        {/* Pódio */}
+                        <div className="flex justify-center items-end gap-4 mb-8">
+                          {contestPokemons.length >= 2 && (
+                            <div className="bg-gradient-to-br from-gray-300 to-gray-400 rounded-t-lg p-4 text-center" style={{ width: '140px', height: '110px' }}>
+                              <div className="text-3xl font-bold text-gray-800">2º</div>
+                              <div className="font-bold text-gray-800 mt-2">{contestPokemons[1].name}</div>
+                              <div className="text-sm text-gray-700 mt-1">{contestPokemons[1].total} pontos</div>
+                            </div>
+                          )}
+                          {contestPokemons.length >= 1 && (
+                            <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-t-lg p-4 text-center" style={{ width: '140px', height: '140px' }}>
+                              <div className="text-4xl font-bold text-yellow-900">1º</div>
+                              <div className="font-bold text-yellow-900 mt-2">{contestPokemons[0].name}</div>
+                              <div className="text-sm text-yellow-800 mt-1">{contestPokemons[0].total} pontos</div>
+                            </div>
+                          )}
+                          {contestPokemons.length >= 3 && (
+                            <div className="bg-gradient-to-br from-orange-600 to-orange-800 rounded-t-lg p-4 text-center" style={{ width: '140px', height: '90px' }}>
+                              <div className="text-2xl font-bold text-orange-100">3º</div>
+                              <div className="font-bold text-orange-100 mt-2">{contestPokemons[2].name}</div>
+                              <div className="text-sm text-orange-200 mt-1">{contestPokemons[2].total} pontos</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Ranking completo */}
+                        <div className="space-y-2">
+                          {contestPokemons.map((pokemon, idx) => (
+                            <div key={pokemon.id} className={`flex justify-between items-center p-3 rounded ${darkMode ? 'bg-gray-600' : 'bg-white'} border ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                              <div className="flex items-center gap-3">
+                                {idx === 0 && <span className="w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600"></span>}
+                                {idx === 1 && <span className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-300 to-gray-400"></span>}
+                                {idx === 2 && <span className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-600 to-orange-800"></span>}
+                                <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{idx + 1}º</span>
+                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{pokemon.name}</span>
+                              </div>
+                              <span className={`font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{pokemon.total} pontos</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
@@ -6120,17 +8355,19 @@ function App() {
     const displacement = getDisplacement()
     const evasion = getEvasion()
     const hpPercent = maxHP > 0 ? (currentHP / maxHP) * 100 : 0
-    
+
     const capturedCount = pokedex.filter(p => p.isCaptured).length
     const scannedCount = pokedex.length
 
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{currentUser.username}</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -6737,16 +8974,16 @@ function App() {
                               <div className="mb-1">
                                 <div className="flex justify-between items-center mb-1">
                                   <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                    XP: {(pokemon.totalXP || 0) - XP_TABLE[pokemon.level]}/{XP_TABLE[pokemon.level + 1] - XP_TABLE[pokemon.level]}
+                                    XP: {getCurrentLevelXP(pokemon)}/{getXPForNextLevel(pokemon.level)}
                                   </span>
                                   <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                    {Math.round((((pokemon.totalXP || 0) - XP_TABLE[pokemon.level]) / (XP_TABLE[pokemon.level + 1] - XP_TABLE[pokemon.level])) * 100)}%
+                                    {Math.round(getXPProgress(pokemon))}%
                                   </span>
                                 </div>
                                 <div className={`w-full rounded-full h-3 overflow-hidden ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}>
                                   <div
                                     className="rainbow-xp-bar h-3 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, (((pokemon.totalXP || 0) - XP_TABLE[pokemon.level]) / (XP_TABLE[pokemon.level + 1] - XP_TABLE[pokemon.level])) * 100)}%` }}
+                                    style={{ width: `${getXPProgress(pokemon)}%` }}
                                   ></div>
                                 </div>
                               </div>
@@ -7119,12 +9356,22 @@ function App() {
                   </div>
                   <div className={`max-h-48 overflow-y-auto border-2 rounded-lg ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                     {filteredSpecies.map(species => (
-                      <button key={species} onClick={() => { setPokemonForm({ ...pokemonForm, species }); setSpeciesSearch('') }} className={`w-full px-4 py-2 text-left hover:bg-opacity-80 ${pokemonForm.species === species ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-200' : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white hover:bg-gray-100'}`}>
+                      <button key={species} onClick={() => {
+                        // Verificar se é espécie exótica
+                        const isExoticSpecies = globalExoticSpecies.some(e => e.nome === species)
+                        setPokemonForm({
+                          ...pokemonForm,
+                          species: isExoticSpecies ? '' : species,
+                          isExotic: isExoticSpecies,
+                          exoticSpecies: isExoticSpecies ? species : ''
+                        })
+                        setSpeciesSearch('')
+                      }} className={`w-full px-4 py-2 text-left hover:bg-opacity-80 ${pokemonForm.species === species || pokemonForm.exoticSpecies === species ? darkMode ? 'bg-blue-600 text-white' : 'bg-blue-200' : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-white hover:bg-gray-100'}`}>
                         {species}
                       </button>
                     ))}
                   </div>
-                  {pokemonForm.species && <p className={`mt-2 text-sm ${darkMode ? 'text-green-400' : 'text-green-600'}`}>✓ Selecionado: {pokemonForm.species}</p>}
+                  {(pokemonForm.species || pokemonForm.exoticSpecies) && <p className={`mt-2 text-sm ${darkMode ? 'text-green-400' : 'text-green-600'}`}>✓ Selecionado: {pokemonForm.species || pokemonForm.exoticSpecies}</p>}
                 </div>
               )}
 
@@ -7152,8 +9399,8 @@ function App() {
               <div className="mb-4">
                 <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Pokémon: <strong>{mainTeam[selectedPokemonIndex].nickname}</strong></p>
                 <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Nível atual: <strong>{mainTeam[selectedPokemonIndex].level}</strong></p>
-                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>XP total: <strong>{mainTeam[selectedPokemonIndex].totalXP || 0}</strong></p>
-                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Progresso no nível: <strong>{(mainTeam[selectedPokemonIndex].totalXP || 0) - XP_TABLE[mainTeam[selectedPokemonIndex].level]}/{XP_TABLE[mainTeam[selectedPokemonIndex].level + 1] - XP_TABLE[mainTeam[selectedPokemonIndex].level]}</strong></p>
+                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>XP Total: <strong>{mainTeam[selectedPokemonIndex].totalXP || 0}</strong></p>
+                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Progresso no nível: <strong>{getCurrentLevelXP(mainTeam[selectedPokemonIndex])}/{getXPForNextLevel(mainTeam[selectedPokemonIndex].level)}</strong></p>
               </div>
             )}
             <input type="number" min="1" value={xpToAdd} onChange={e => setXpToAdd(e.target.value)} placeholder="Quantidade de XP" className={`w-full px-4 py-3 border-2 rounded-lg mb-4 text-center text-xl ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
@@ -7234,65 +9481,6 @@ function App() {
               >
                 Renomear
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL DE INFORMAÇÃO DE CAPACIDADE */}
-        {showCapacityInfoModal && selectedCapacityForInfo && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
-                <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
-                  <X size={24} />
-                </button>
-              </div>
-              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
-                {CAPACIDADES_DATA[selectedCapacityForInfo]}
-              </div>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setShowCapacityInfoModal(false)}
-                  className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Detalhes da Habilidade */}
-        {showHabilidadeDetailModal && selectedHabilidadeForDetail && HABILIDADES_DATA[selectedHabilidadeForDetail] && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowHabilidadeDetailModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className={`text-2xl font-bold ${darkMode ? 'text-teal-400' : 'text-teal-700'}`}>{selectedHabilidadeForDetail}</h3>
-                <button onClick={() => setShowHabilidadeDetailModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
-                  <X size={24} />
-                </button>
-              </div>
-              <div className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                <p className="mb-2">
-                  <span className="font-semibold">Ativação:</span>{' '}
-                  <span className={`px-2 py-1 rounded ${darkMode ? 'bg-teal-900 text-teal-300' : 'bg-teal-100 text-teal-800'}`}>
-                    {HABILIDADES_DATA[selectedHabilidadeForDetail].ativacao}
-                  </span>
-                </p>
-              </div>
-              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
-                <p className="font-semibold mb-2">Efeito:</p>
-                <p>{HABILIDADES_DATA[selectedHabilidadeForDetail].efeito}</p>
-              </div>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setShowHabilidadeDetailModal(false)}
-                  className="bg-teal-500 text-white px-6 py-2 rounded-lg hover:bg-teal-600 font-semibold"
-                >
-                  Fechar
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -7407,7 +9595,7 @@ function App() {
                     <input type="number" value={exoticDataForm.dexNumber} onChange={(e) => setExoticDataForm({...exoticDataForm, dexNumber: e.target.value})} className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
                   </div>
                   <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Gênero</label>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Distribuição de Gênero</label>
                     <input type="text" value={exoticDataForm.genero} onChange={(e) => setExoticDataForm({...exoticDataForm, genero: e.target.value})} placeholder="Macho/Fêmea/Sem Gênero" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
                   </div>
                 </div>
@@ -7424,18 +9612,43 @@ function App() {
                 </div>
 
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Tipos * (separados por Enter)</label>
-                  {exoticDataForm.tipos.map((tipo, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2">
-                      <input type="text" value={tipo} onChange={(e) => {
-                        const newTipos = [...exoticDataForm.tipos]
-                        newTipos[idx] = e.target.value
-                        setExoticDataForm({...exoticDataForm, tipos: newTipos})
-                      }} placeholder={`Tipo ${idx + 1}`} className={`flex-1 px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
-                      {idx > 0 && <button onClick={() => setExoticDataForm({...exoticDataForm, tipos: exoticDataForm.tipos.filter((_, i) => i !== idx)})} className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600"><Minus size={16} /></button>}
-                    </div>
-                  ))}
-                  {exoticDataForm.tipos.length < 3 && <button onClick={() => setExoticDataForm({...exoticDataForm, tipos: [...exoticDataForm.tipos, '']})} className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm"><Plus size={16} className="inline" /> Adicionar Tipo</button>}
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Tipos * (máximo 3)</label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {['Normal', 'Fogo', 'Água', 'Planta', 'Elétrico', 'Gelo', 'Lutador', 'Veneno', 'Terra', 'Voador', 'Psíquico', 'Inseto', 'Pedra', 'Fantasma', 'Dragão', 'Sombrio', 'Metal', 'Fada'].map(tipo => {
+                      const isSelected = exoticDataForm.tipos.includes(tipo)
+                      return (
+                        <button
+                          key={tipo}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setExoticDataForm({...exoticDataForm, tipos: exoticDataForm.tipos.filter(t => t !== tipo)})
+                            } else if (exoticDataForm.tipos.length < 3) {
+                              setExoticDataForm({...exoticDataForm, tipos: [...exoticDataForm.tipos, tipo]})
+                            }
+                          }}
+                          className={`px-3 py-2 rounded-lg text-sm font-bold text-white transition-all ${
+                            isSelected
+                              ? `${TYPE_STYLES[tipo] || 'bg-gray-500'} ring-4 ring-yellow-400`
+                              : `${TYPE_STYLES[tipo] || 'bg-gray-500'} opacity-50 hover:opacity-75`
+                          }`}
+                        >
+                          {tipo}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {exoticDataForm.tipos.map((tipo, idx) => (
+                      <span
+                        key={idx}
+                        className={`px-3 py-1 rounded-md text-xs font-bold text-white shadow-md ${TYPE_STYLES[tipo] || 'bg-gray-400'}`}
+                        style={{ clipPath: 'polygon(0 0, 90% 0, 100% 50%, 90% 100%, 0 100%)' }}
+                      >
+                        {tipo}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
@@ -7904,7 +10117,7 @@ function App() {
                     <div><span className="font-semibold">Apelido:</span> {viewingPokemon.nickname || '-'}</div>
                     <div><span className="font-semibold">Espécie:</span> {viewingPokemon.species || '-'}</div>
                     <div><span className="font-semibold">Nível:</span> {viewingPokemon.level || '-'}</div>
-                    <div><span className="font-semibold">XP:</span> {(viewingPokemon.totalXP || 0) - XP_TABLE[viewingPokemon.level]}/{XP_TABLE[viewingPokemon.level + 1] - XP_TABLE[viewingPokemon.level]}</div>
+                    <div><span className="font-semibold">XP:</span> {getCurrentLevelXP(viewingPokemon)}/{getXPForNextLevel(viewingPokemon.level)}</div>
                     <div><span className="font-semibold">Natureza:</span> {viewingPokemon.nature || '-'}</div>
                     <div><span className="font-semibold">Gênero:</span> {viewingPokemon.gender || '-'}</div>
                     <div><span className="font-semibold">Felicidade:</span> {viewingPokemon.currentHappiness || 0}/{calculateMaxHappiness(viewingPokemon)}</div>
@@ -8325,33 +10538,46 @@ function App() {
                     Habilidades Disponíveis
                   </label>
                   <div className={`max-h-64 overflow-y-auto rounded-lg p-4 space-y-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    {HABILIDADES_NAMES
+                    {HABILIDADES_NAMES.length === 0 ? (
+                      <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Nenhuma habilidade disponível
+                      </div>
+                    ) : HABILIDADES_NAMES
                       .filter(hab => hab.toLowerCase().includes(habilidadesSearch.toLowerCase()))
                       .filter(hab => !habilidadesSelectedList.includes(hab))
-                      .map((hab, idx) => (
-                        <div key={idx} className={`flex items-center justify-between p-3 rounded transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-white hover:bg-gray-50'}`}>
-                          <div className="flex-1">
-                            <button
-                              onClick={() => {
-                                setSelectedHabilidadeForDetail(hab)
-                                setShowHabilidadeDetailModal(true)
-                              }}
-                              className={`font-semibold hover:underline text-left ${darkMode ? 'text-white' : 'text-gray-800'}`}
-                            >
-                              {hab}
-                            </button>
-                            <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                              <span className="mr-3">Ativação: {HABILIDADES_DATA[hab].ativacao}</span>
+                      .length === 0 ? (
+                      <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Nenhuma habilidade encontrada
+                      </div>
+                    ) : (
+                      HABILIDADES_NAMES
+                        .filter(hab => hab.toLowerCase().includes(habilidadesSearch.toLowerCase()))
+                        .filter(hab => !habilidadesSelectedList.includes(hab))
+                        .map((hab, idx) => (
+                          <div key={idx} className={`flex items-center justify-between p-3 rounded transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-white hover:bg-gray-50'}`}>
+                            <div className="flex-1">
+                              <button
+                                onClick={() => {
+                                  setSelectedHabilidadeForDetail(hab)
+                                  setShowHabilidadeDetailModal(true)
+                                }}
+                                className={`font-semibold hover:underline text-left ${darkMode ? 'text-white' : 'text-gray-800'}`}
+                              >
+                                {hab}
+                              </button>
+                              <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                <span className="mr-3">Ativação: {HABILIDADES_DATA[hab]?.ativacao || 'N/A'}</span>
+                              </div>
                             </div>
+                            <button
+                              onClick={() => handleAddHabilidadeToSelected(hab)}
+                              className={`ml-2 p-2 rounded text-white ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'}`}
+                            >
+                              <Plus size={16} />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleAddHabilidadeToSelected(hab)}
-                            className={`ml-2 p-2 rounded text-white ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'}`}
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                      ))}
+                        ))
+                    )}
                   </div>
                 </div>
 
@@ -8551,19 +10777,82 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+
+        {/* Modal de Detalhes da Habilidade - Treinador */}
+        {showHabilidadeDetailModal && selectedHabilidadeForDetail && HABILIDADES_DATA?.[selectedHabilidadeForDetail] && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowHabilidadeDetailModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-teal-400' : 'text-teal-700'}`}>{selectedHabilidadeForDetail}</h3>
+                <button onClick={() => setShowHabilidadeDetailModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                  <X size={24} />
+                </button>
+              </div>
+              <div className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <p className="mb-2">
+                  <span className="font-semibold">Ativação:</span>{' '}
+                  <span className={`px-2 py-1 rounded ${darkMode ? 'bg-teal-900 text-teal-300' : 'bg-teal-100 text-teal-800'}`}>
+                    {HABILIDADES_DATA[selectedHabilidadeForDetail]?.ativacao || 'N/A'}
+                  </span>
+                </p>
+              </div>
+              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
+                <p className="font-semibold mb-2">Efeito:</p>
+                <p>{HABILIDADES_DATA[selectedHabilidadeForDetail]?.efeito || 'Descrição não disponível'}</p>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowHabilidadeDetailModal(false)}
+                  className="bg-teal-500 text-white px-6 py-2 rounded-lg hover:bg-teal-600 font-semibold"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Informação de Capacidade - Treinador */}
+        {showCapacityInfoModal && selectedCapacityForInfo && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
+                <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                  <X size={24} />
+                </button>
+              </div>
+              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
+                {CAPACIDADES_DATA[selectedCapacityForInfo]}
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowCapacityInfoModal(false)}
+                  className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
   // ÁREA DO PC
   if (currentUser.type === 'treinador' && currentArea === 'PC') {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>PC ({pcPokemon.length}/1000)</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -8761,7 +11050,7 @@ function App() {
                     <div><span className="font-semibold">Apelido:</span> {viewingPokemon.nickname || '-'}</div>
                     <div><span className="font-semibold">Espécie:</span> {viewingPokemon.species || '-'}</div>
                     <div><span className="font-semibold">Nível:</span> {viewingPokemon.level || '-'}</div>
-                    <div><span className="font-semibold">XP:</span> {(viewingPokemon.totalXP || 0) - XP_TABLE[viewingPokemon.level]}/{XP_TABLE[viewingPokemon.level + 1] - XP_TABLE[viewingPokemon.level]}</div>
+                    <div><span className="font-semibold">XP:</span> {getCurrentLevelXP(viewingPokemon)}/{getXPForNextLevel(viewingPokemon.level)}</div>
                     <div><span className="font-semibold">Natureza:</span> {viewingPokemon.nature || '-'}</div>
                     <div><span className="font-semibold">Gênero:</span> {viewingPokemon.gender || '-'}</div>
                     <div><span className="font-semibold">Felicidade:</span> {viewingPokemon.currentHappiness || 0}/{calculateMaxHappiness(viewingPokemon)}</div>
@@ -9732,33 +12021,46 @@ function App() {
                     Habilidades Disponíveis
                   </label>
                   <div className={`max-h-64 overflow-y-auto rounded-lg p-4 space-y-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    {HABILIDADES_NAMES
+                    {HABILIDADES_NAMES.length === 0 ? (
+                      <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Nenhuma habilidade disponível
+                      </div>
+                    ) : HABILIDADES_NAMES
                       .filter(hab => hab.toLowerCase().includes(habilidadesSearch.toLowerCase()))
                       .filter(hab => !habilidadesSelectedList.includes(hab))
-                      .map((hab, idx) => (
-                        <div key={idx} className={`flex items-center justify-between p-3 rounded transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-white hover:bg-gray-50'}`}>
-                          <div className="flex-1">
-                            <button
-                              onClick={() => {
-                                setSelectedHabilidadeForDetail(hab)
-                                setShowHabilidadeDetailModal(true)
-                              }}
-                              className={`font-semibold hover:underline text-left ${darkMode ? 'text-white' : 'text-gray-800'}`}
-                            >
-                              {hab}
-                            </button>
-                            <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                              <span className="mr-3">Ativação: {HABILIDADES_DATA[hab].ativacao}</span>
+                      .length === 0 ? (
+                      <div className={`p-4 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Nenhuma habilidade encontrada
+                      </div>
+                    ) : (
+                      HABILIDADES_NAMES
+                        .filter(hab => hab.toLowerCase().includes(habilidadesSearch.toLowerCase()))
+                        .filter(hab => !habilidadesSelectedList.includes(hab))
+                        .map((hab, idx) => (
+                          <div key={idx} className={`flex items-center justify-between p-3 rounded transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-white hover:bg-gray-50'}`}>
+                            <div className="flex-1">
+                              <button
+                                onClick={() => {
+                                  setSelectedHabilidadeForDetail(hab)
+                                  setShowHabilidadeDetailModal(true)
+                                }}
+                                className={`font-semibold hover:underline text-left ${darkMode ? 'text-white' : 'text-gray-800'}`}
+                              >
+                                {hab}
+                              </button>
+                              <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                <span className="mr-3">Ativação: {HABILIDADES_DATA[hab]?.ativacao || 'N/A'}</span>
+                              </div>
                             </div>
+                            <button
+                              onClick={() => handleAddHabilidadeToSelected(hab)}
+                              className={`ml-2 p-2 rounded text-white ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'}`}
+                            >
+                              <Plus size={16} />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleAddHabilidadeToSelected(hab)}
-                            className={`ml-2 p-2 rounded text-white ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'}`}
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                      ))}
+                        ))
+                    )}
                   </div>
                 </div>
 
@@ -9826,19 +12128,82 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+
+        {/* Modal de Detalhes da Habilidade - PC */}
+        {showHabilidadeDetailModal && selectedHabilidadeForDetail && HABILIDADES_DATA?.[selectedHabilidadeForDetail] && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowHabilidadeDetailModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-teal-400' : 'text-teal-700'}`}>{selectedHabilidadeForDetail}</h3>
+                <button onClick={() => setShowHabilidadeDetailModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                  <X size={24} />
+                </button>
+              </div>
+              <div className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <p className="mb-2">
+                  <span className="font-semibold">Ativação:</span>{' '}
+                  <span className={`px-2 py-1 rounded ${darkMode ? 'bg-teal-900 text-teal-300' : 'bg-teal-100 text-teal-800'}`}>
+                    {HABILIDADES_DATA[selectedHabilidadeForDetail]?.ativacao || 'N/A'}
+                  </span>
+                </p>
+              </div>
+              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
+                <p className="font-semibold mb-2">Efeito:</p>
+                <p>{HABILIDADES_DATA[selectedHabilidadeForDetail]?.efeito || 'Descrição não disponível'}</p>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowHabilidadeDetailModal(false)}
+                  className="bg-teal-500 text-white px-6 py-2 rounded-lg hover:bg-teal-600 font-semibold"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Informação de Capacidade - PC */}
+        {showCapacityInfoModal && selectedCapacityForInfo && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
+                <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                  <X size={24} />
+                </button>
+              </div>
+              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
+                {CAPACIDADES_DATA[selectedCapacityForInfo]}
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setShowCapacityInfoModal(false)}
+                  className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
   // ÁREA DA POKÉDEX
   if (currentUser.type === 'treinador' && currentArea === 'Pokédex') {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Pokédex ({pokedex.length})</h2>
               <div className="flex gap-2">
+                <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
                 <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
                 <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
               </div>
@@ -9853,13 +12218,22 @@ function App() {
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
             <div className="flex justify-between items-center mb-6">
               <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Pokémon Registrados</h3>
-              <div className={`flex gap-4 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                <span className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-900/30 border border-blue-500' : 'bg-blue-50 border border-blue-400'} ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                  Escaneados: {pokedex.length}
-                </span>
-                <span className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-green-900/30 border border-green-500' : 'bg-green-50 border border-green-400'} ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
-                  Capturados: {pokedex.filter(p => p.isCaptured).length}
-                </span>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setShowExoticConfigModal(true)}
+                  className={`p-2 rounded-lg transition-all hover:scale-110 ${darkMode ? 'bg-purple-900/50 text-purple-400 hover:bg-purple-800' : 'bg-purple-100 text-purple-600 hover:bg-purple-200'}`}
+                  title="Configuração Pokémon Exótico"
+                >
+                  <ListTree size={20} />
+                </button>
+                <div className={`flex gap-4 text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <span className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-blue-900/30 border border-blue-500' : 'bg-blue-50 border border-blue-400'} ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                    Escaneados: {pokedex.length}
+                  </span>
+                  <span className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-green-900/30 border border-green-500' : 'bg-green-50 border border-green-400'} ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                    Capturados: {pokedex.filter(p => p.isCaptured).length}
+                  </span>
+                </div>
               </div>
             </div>
             {pokedex.length === 0 ? (
@@ -10102,7 +12476,7 @@ function App() {
                     <input type="number" value={exoticDataForm.dexNumber} onChange={(e) => setExoticDataForm({...exoticDataForm, dexNumber: e.target.value})} className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
                   </div>
                   <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Gênero</label>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Distribuição de Gênero</label>
                     <input type="text" value={exoticDataForm.genero} onChange={(e) => setExoticDataForm({...exoticDataForm, genero: e.target.value})} placeholder="Macho/Fêmea/Sem Gênero" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
                   </div>
                 </div>
@@ -10119,18 +12493,43 @@ function App() {
                 </div>
 
                 <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Tipos * (separados por Enter)</label>
-                  {exoticDataForm.tipos.map((tipo, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2">
-                      <input type="text" value={tipo} onChange={(e) => {
-                        const newTipos = [...exoticDataForm.tipos]
-                        newTipos[idx] = e.target.value
-                        setExoticDataForm({...exoticDataForm, tipos: newTipos})
-                      }} placeholder={`Tipo ${idx + 1}`} className={`flex-1 px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
-                      {idx > 0 && <button onClick={() => setExoticDataForm({...exoticDataForm, tipos: exoticDataForm.tipos.filter((_, i) => i !== idx)})} className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600"><Minus size={16} /></button>}
-                    </div>
-                  ))}
-                  {exoticDataForm.tipos.length < 3 && <button onClick={() => setExoticDataForm({...exoticDataForm, tipos: [...exoticDataForm.tipos, '']})} className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm"><Plus size={16} className="inline" /> Adicionar Tipo</button>}
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Tipos * (máximo 3)</label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {['Normal', 'Fogo', 'Água', 'Planta', 'Elétrico', 'Gelo', 'Lutador', 'Veneno', 'Terra', 'Voador', 'Psíquico', 'Inseto', 'Pedra', 'Fantasma', 'Dragão', 'Sombrio', 'Metal', 'Fada'].map(tipo => {
+                      const isSelected = exoticDataForm.tipos.includes(tipo)
+                      return (
+                        <button
+                          key={tipo}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setExoticDataForm({...exoticDataForm, tipos: exoticDataForm.tipos.filter(t => t !== tipo)})
+                            } else if (exoticDataForm.tipos.length < 3) {
+                              setExoticDataForm({...exoticDataForm, tipos: [...exoticDataForm.tipos, tipo]})
+                            }
+                          }}
+                          className={`px-3 py-2 rounded-lg text-sm font-bold text-white transition-all ${
+                            isSelected
+                              ? `${TYPE_STYLES[tipo] || 'bg-gray-500'} ring-4 ring-yellow-400`
+                              : `${TYPE_STYLES[tipo] || 'bg-gray-500'} opacity-50 hover:opacity-75`
+                          }`}
+                        >
+                          {tipo}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {exoticDataForm.tipos.map((tipo, idx) => (
+                      <span
+                        key={idx}
+                        className={`px-3 py-1 rounded-md text-xs font-bold text-white shadow-md ${TYPE_STYLES[tipo] || 'bg-gray-400'}`}
+                        style={{ clipPath: 'polygon(0 0, 90% 0, 100% 50%, 90% 100%, 0 100%)' }}
+                      >
+                        {tipo}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
@@ -10221,7 +12620,237 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+
+        {/* MODAL DE CONFIGURAÇÃO DE POKÉMON EXÓTICO */}
+        {showExoticConfigModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowExoticConfigModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Configuração de Pokémon Exótico
+                  </h3>
+                  <button onClick={() => {
+                    setShowExoticConfigModal(false)
+                    setExoticConfigSearch('')
+                    setSelectedExoticConfig(null)
+                  }} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                {/* Species Search Dropdown */}
+                <div className="mb-6">
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                    Espécie Exótica
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={exoticConfigSearch}
+                      onChange={(e) => setExoticConfigSearch(e.target.value)}
+                      placeholder="Pesquisar espécie exótica..."
+                      className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                    />
+                    {exoticConfigSearch && (
+                      <div className={`absolute z-10 w-full mt-1 max-h-60 overflow-y-auto rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} shadow-lg`}>
+                        {globalExoticSpecies
+                          .filter(e => e.nome.toLowerCase().includes(exoticConfigSearch.toLowerCase()))
+                          .map(species => (
+                            <button
+                              key={species.nome}
+                              onClick={() => {
+                                setSelectedExoticConfig(species.nome)
+                                setExoticConfigSearch(species.nome)
+
+                                // Load exotic species data - converter ataqueEspecial/defesaEspecial para ataqueEsp/defesaEsp
+                                setExoticConfigForm({
+                                  dexNumber: species.dexNumber || '',
+                                  altura: species.altura || '',
+                                  peso: species.peso || '',
+                                  genero: species.genero || '',
+                                  tipos: species.tipos || [],
+                                  habitats: species.habitats || [],
+                                  statusBasais: {
+                                    saude: species.statusBasais?.saude || '',
+                                    ataque: species.statusBasais?.ataque || '',
+                                    defesa: species.statusBasais?.defesa || '',
+                                    ataqueEsp: species.statusBasais?.ataqueEspecial || '',
+                                    defesaEsp: species.statusBasais?.defesaEspecial || '',
+                                    velocidade: species.statusBasais?.velocidade || ''
+                                  },
+                                  habilidades: species.habilidades || [],
+                                  habilidadesAltas: species.habilidadesAltas || [],
+                                  habilidadesOcultas: species.habilidadesOcultas || [],
+                                  minimoLevel: species.minimoLevel || '',
+                                  estagio: species.estagio || 'Básico',
+                                  evolucaoDe: species.evolucao || '',
+                                  evolucaoModo: species.evolucaoModo || '',
+                                  evolucaoLevel: species.evolucaoNivel || '',
+                                  evolucaoItem: species.evolucaoItem || ''
+                                })
+                              }}
+                              className={`w-full px-4 py-2 text-left hover:bg-purple-500 hover:text-white transition-colors ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}
+                            >
+                              {species.nome}
+                            </button>
+                          ))}
+                        {globalExoticSpecies.filter(e => e.nome.toLowerCase().includes(exoticConfigSearch.toLowerCase())).length === 0 && (
+                          <div className={`px-4 py-2 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Nenhuma espécie exótica encontrada
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Edit Form - Only show when species is selected */}
+                {selectedExoticConfig && (
+                  <div className={`p-6 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <h4 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                      Editando: {selectedExoticConfig}
+                    </h4>
+
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Número da Dex</label>
+                        <input type="number" value={exoticConfigForm.dexNumber} onChange={(e) => setExoticConfigForm({...exoticConfigForm, dexNumber: e.target.value})} placeholder="000" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Altura (metros)</label>
+                        <input type="text" value={exoticConfigForm.altura} onChange={(e) => setExoticConfigForm({...exoticConfigForm, altura: e.target.value})} placeholder="0.0" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Peso (kg)</label>
+                        <input type="text" value={exoticConfigForm.peso} onChange={(e) => setExoticConfigForm({...exoticConfigForm, peso: e.target.value})} placeholder="0.0" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Distribuição de Gênero</label>
+                        <input type="text" value={exoticConfigForm.genero} onChange={(e) => setExoticConfigForm({...exoticConfigForm, genero: e.target.value})} placeholder="Ex: 50% ♂ / 50% ♀" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                    </div>
+
+                    {/* Types */}
+                    <div className="mb-4">
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Tipos (separados por vírgula)</label>
+                      <input type="text" value={exoticConfigForm.tipos.join(', ')} onChange={(e) => setExoticConfigForm({...exoticConfigForm, tipos: e.target.value.split(',').map(t => t.trim()).filter(t => t)})} placeholder="Ex: Fogo, Voador" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                    </div>
+
+                    {/* Habitats */}
+                    <div className="mb-4">
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Habitats (separados por vírgula)</label>
+                      <input type="text" value={exoticConfigForm.habitats.join(', ')} onChange={(e) => setExoticConfigForm({...exoticConfigForm, habitats: e.target.value.split(',').map(h => h.trim()).filter(h => h)})} placeholder="Ex: Floresta, Montanha" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                    </div>
+
+                    {/* Base Stats */}
+                    <div className="mb-4">
+                      <h5 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status Basais</h5>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Saúde</label>
+                          <input type="number" value={exoticConfigForm.statusBasais.saude} onChange={(e) => setExoticConfigForm({...exoticConfigForm, statusBasais: {...exoticConfigForm.statusBasais, saude: e.target.value}})} placeholder="0" className={`w-full px-3 py-2 border rounded ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Ataque</label>
+                          <input type="number" value={exoticConfigForm.statusBasais.ataque} onChange={(e) => setExoticConfigForm({...exoticConfigForm, statusBasais: {...exoticConfigForm.statusBasais, ataque: e.target.value}})} placeholder="0" className={`w-full px-3 py-2 border rounded ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Defesa</label>
+                          <input type="number" value={exoticConfigForm.statusBasais.defesa} onChange={(e) => setExoticConfigForm({...exoticConfigForm, statusBasais: {...exoticConfigForm.statusBasais, defesa: e.target.value}})} placeholder="0" className={`w-full px-3 py-2 border rounded ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Ataque Esp.</label>
+                          <input type="number" value={exoticConfigForm.statusBasais.ataqueEsp} onChange={(e) => setExoticConfigForm({...exoticConfigForm, statusBasais: {...exoticConfigForm.statusBasais, ataqueEsp: e.target.value}})} placeholder="0" className={`w-full px-3 py-2 border rounded ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Defesa Esp.</label>
+                          <input type="number" value={exoticConfigForm.statusBasais.defesaEsp} onChange={(e) => setExoticConfigForm({...exoticConfigForm, statusBasais: {...exoticConfigForm.statusBasais, defesaEsp: e.target.value}})} placeholder="0" className={`w-full px-3 py-2 border rounded ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-1`}>Velocidade</label>
+                          <input type="number" value={exoticConfigForm.statusBasais.velocidade} onChange={(e) => setExoticConfigForm({...exoticConfigForm, statusBasais: {...exoticConfigForm.statusBasais, velocidade: e.target.value}})} placeholder="0" className={`w-full px-3 py-2 border rounded ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Abilities */}
+                    <div className="mb-4">
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Habilidades (separadas por vírgula)</label>
+                      <input type="text" value={exoticConfigForm.habilidades.join(', ')} onChange={(e) => setExoticConfigForm({...exoticConfigForm, habilidades: e.target.value.split(',').map(h => h.trim()).filter(h => h)})} placeholder="Ex: Chama, Corpo em Chamas" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                    </div>
+
+                    <div className="mb-4">
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Habilidades Altas (separadas por vírgula)</label>
+                      <input type="text" value={exoticConfigForm.habilidadesAltas.join(', ')} onChange={(e) => setExoticConfigForm({...exoticConfigForm, habilidadesAltas: e.target.value.split(',').map(h => h.trim()).filter(h => h)})} placeholder="Ex: Habilidade Alta 1" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                    </div>
+
+                    <div className="mb-4">
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Habilidades Ocultas (separadas por vírgula)</label>
+                      <input type="text" value={exoticConfigForm.habilidadesOcultas.join(', ')} onChange={(e) => setExoticConfigForm({...exoticConfigForm, habilidadesOcultas: e.target.value.split(',').map(h => h.trim()).filter(h => h)})} placeholder="Ex: Velocidade Máxima" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                    </div>
+
+                    {/* Evolution Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Nível Mínimo para Captura</label>
+                        <input type="number" value={exoticConfigForm.minimoLevel} onChange={(e) => setExoticConfigForm({...exoticConfigForm, minimoLevel: e.target.value})} placeholder="5" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Estágio</label>
+                        <select value={exoticConfigForm.estagio} onChange={(e) => setExoticConfigForm({...exoticConfigForm, estagio: e.target.value})} className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`}>
+                          <option value="Básico">Básico</option>
+                          <option value="Estágio 1">Estágio 1</option>
+                          <option value="Estágio 2">Estágio 2</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Evolução De</label>
+                        <input type="text" value={exoticConfigForm.evolucaoDe} onChange={(e) => setExoticConfigForm({...exoticConfigForm, evolucaoDe: e.target.value})} placeholder="Nome do pokémon anterior" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Modo de Evolução</label>
+                        <input type="text" value={exoticConfigForm.evolucaoModo} onChange={(e) => setExoticConfigForm({...exoticConfigForm, evolucaoModo: e.target.value})} placeholder="Ex: Level, Item, Troca" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Level de Evolução</label>
+                        <input type="number" value={exoticConfigForm.evolucaoLevel} onChange={(e) => setExoticConfigForm({...exoticConfigForm, evolucaoLevel: e.target.value})} placeholder="Level necessário" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>Item de Evolução</label>
+                        <input type="text" value={exoticConfigForm.evolucaoItem} onChange={(e) => setExoticConfigForm({...exoticConfigForm, evolucaoItem: e.target.value})} placeholder="Nome do item" className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button onClick={() => {
+                    setShowExoticConfigModal(false)
+                    setExoticConfigSearch('')
+                    setSelectedExoticConfig(null)
+                  }} className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
+                    Cancelar
+                  </button>
+                  {selectedExoticConfig && (
+                    <button onClick={handleSaveExoticConfig} className="flex-1 bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 font-semibold">
+                      Salvar Configurações
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
@@ -10232,7 +12861,8 @@ function App() {
     )
 
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
@@ -10643,7 +13273,7 @@ function App() {
                 )}
               </div>
 
-              {selectedPokemonToReceiveItem && mainTeam.find(p => p.id === parseInt(selectedPokemonToReceiveItem))?.heldItem && (
+              {selectedPokemonToReceiveItem && mainTeam.find(p => p.id == selectedPokemonToReceiveItem)?.heldItem && (
                 <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-yellow-900/30 border border-yellow-600' : 'bg-yellow-50 border border-yellow-400'}`}>
                   <p className={`text-sm ${darkMode ? 'text-yellow-400' : 'text-yellow-700'}`}>
                     ⚠️ Este Pokémon já possui um item. O item atual será substituído.
@@ -10803,7 +13433,9 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
@@ -10814,7 +13446,8 @@ function App() {
     const hiddenItems = mestreConfig ? JSON.parse(mestreConfig).hiddenPokelojaItems || [] : []
 
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
@@ -11049,14 +13682,178 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+        {accountDataModal}
+      </>
+    )
+  }
+
+  // ÁREA INSÍGNIAS
+  if (currentUser.type === 'treinador' && currentArea === 'Insígnias') {
+    const regions = ['Kanto', 'Johto', 'Hoenn', 'Sinnoh', 'Unova', 'Kalos']
+
+    return (
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Insígnias</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>
+                    {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  </button>
+                  <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {treinadorAreas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className={`px-4 py-2 rounded-lg text-sm font-semibold shadow-md ${area === 'Insígnias' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'}`}>{area === 'Características & Talentos' ? 'C & T' : area}</button>)}
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              {/* Botões de Regiões */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                {regions.map(region => (
+                  <button
+                    key={region}
+                    onClick={() => setSelectedRegion(region)}
+                    className={`flex items-center justify-center gap-2 px-6 py-4 rounded-lg font-bold text-lg transition-all ${
+                      selectedRegion === region
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg scale-105'
+                        : `${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`
+                    }`}
+                  >
+                    <Award size={24} />
+                    {region}
+                  </button>
+                ))}
+              </div>
+
+              {/* Grid de Insígnias */}
+              {selectedRegion && (
+                <div className="mt-8">
+                  <h3 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Insígnias de {selectedRegion}
+                  </h3>
+
+                  {/* Imagem de fundo */}
+                  <div className="relative mb-6">
+                    <img
+                      src={`/badges/${selectedRegion.toLowerCase()}.png`}
+                      alt={`Insígnias de ${selectedRegion}`}
+                      className="w-full max-w-2xl mx-auto rounded-lg"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.nextElementSibling.style.display = 'grid'
+                      }}
+                    />
+
+                    {/* Grid de fallback (quando imagem não existe) */}
+                    <div className={`hidden ${selectedRegion === 'Unova' ? 'grid-rows-4' : 'grid-cols-3'} gap-2 max-w-2xl mx-auto p-4 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'} rounded-lg`}>
+                      {badges[selectedRegion].slice(0, selectedRegion === 'Unova' ? 12 : 9).map((collected, index) => (
+                        <button
+                          key={`fallback-${index}`}
+                          onClick={() => (selectedRegion === 'Unova' ? (index !== 4 && index !== 9) : index !== 4) && toggleBadge(selectedRegion, index)}
+                          className={`aspect-square rounded-lg border-4 ${
+                            darkMode ? 'border-gray-600' : 'border-gray-400'
+                          } transition-all hover:border-yellow-400 ${
+                            (selectedRegion === 'Unova' ? (index === 4 || index === 9) : index === 4) ? 'cursor-default' : 'cursor-pointer'
+                          } ${collected ? 'bg-gradient-to-br from-yellow-400 to-orange-500' : 'bg-gray-500'}`}
+                        >
+                          {(selectedRegion === 'Unova' ? (index !== 4 && index !== 9) : index !== 4) && (
+                            <div className="flex items-center justify-center h-full">
+                              <span className="text-2xl">{collected ? '✓' : '?'}</span>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Grid sobreposto - específico para cada região */}
+                    {selectedRegion === 'Unova' ? (
+                      // Grid 3x4 para Unova (12 posições: 0-11, fixos: 4 e 9)
+                      <div className="absolute inset-0 grid grid-cols-3 grid-rows-4 gap-0 max-w-2xl mx-auto">
+                        {Array.from({ length: 12 }, (_, i) => i).map((index) => {
+                          const isFixed = index === 4 || index === 9
+                          // Garantir que badges.Unova sempre tenha 12 posições
+                          const unovaBadges = [...(badges.Unova || []), ...Array(12)].slice(0, 12).map(b => b === true)
+                          const isCollected = unovaBadges[index]
+                          const shouldShowDark = !isCollected && !isFixed
+
+                          return (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                if (!isFixed) {
+                                  // Garantir que o array tenha 12 posições antes de fazer toggle
+                                  setBadges(prev => {
+                                    const currentUnova = [...(prev.Unova || []), ...Array(12).fill(false)].slice(0, 12)
+                                    const newUnova = currentUnova.map((collected, i) => i === index ? !collected : collected)
+                                    return {
+                                      ...prev,
+                                      Unova: newUnova
+                                    }
+                                  })
+                                }
+                              }}
+                              className={`transition-all ${isFixed ? 'cursor-default' : 'cursor-pointer hover:opacity-80'}`}
+                              style={{
+                                backgroundColor: shouldShowDark ? 'rgba(0, 0, 0, 0.8)' : 'transparent',
+                                backdropFilter: shouldShowDark ? 'blur(2px)' : 'none'
+                              }}
+                            />
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      // Grid 3x3 padrão para outras regiões
+                      <div className="absolute inset-0 grid grid-cols-3 gap-0 max-w-2xl mx-auto">
+                        {badges[selectedRegion].slice(0, 9).map((collected, index) => (
+                          <button
+                            key={index}
+                            onClick={() => index !== 4 && toggleBadge(selectedRegion, index)}
+                            className={`aspect-square transition-all ${
+                              index === 4 ? 'cursor-default' : 'cursor-pointer hover:opacity-80'
+                            }`}
+                            style={{
+                              backgroundColor: collected || index === 4 ? 'transparent' : 'rgba(0, 0, 0, 0.8)',
+                              backdropFilter: collected || index === 4 ? 'none' : 'blur(2px)'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contador */}
+                  <div className={`text-center text-lg font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Coletadas: {badges[selectedRegion].filter((c, i) => c && (selectedRegion === 'Unova' ? (i !== 4 && i !== 9) : i !== 4)).length} / {selectedRegion === 'Unova' ? '10' : '8'}
+                  </div>
+                </div>
+              )}
+
+              {!selectedRegion && (
+                <div className={`text-center text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Selecione uma região acima para visualizar as insígnias
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
   // ÁREA CARACTERÍSTICAS & TALENTOS
   if (currentUser.type === 'treinador' && currentArea === 'Características & Talentos') {
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
@@ -11571,16 +14368,19 @@ function App() {
           </div>
         )}
 
-      </div>
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 
   // ÁREA ENCICLOPÉDIA
   if (currentUser.type === 'treinador' && currentArea === 'Enciclopédia') {
-    const encyclopediaSections = ['Golpedex', 'Descritordex', 'Tag de Concursodex', 'Períciadex']
+    const encyclopediaSections = ['Golpedex', 'Descritordex', 'Tag de Concursodex', 'Períciadex', 'Habilidadedex', 'Capacidadex', 'Condiçõesdex']
 
     return (
-      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex justify-between items-center mb-4">
@@ -12087,8 +14887,842 @@ function App() {
               </div>
             </div>
           )}
+
+          {/* Habilidadedex */}
+          {encyclopediaSection === 'Habilidadedex' && (
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <h3 className={`text-3xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Habilidadedex
+              </h3>
+              <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Pesquise até 8 habilidades simultaneamente para comparar suas características
+              </p>
+
+              {/* Grid 4x2 de Barras de Pesquisa */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {habilidadedexSearches.map((search, index) => (
+                  <div key={index} className="relative">
+                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Habilidade #{index + 1}
+                    </label>
+                    <div className="relative">
+                      <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} size={20} />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => {
+                          const newSearches = [...habilidadedexSearches]
+                          newSearches[index] = e.target.value
+                          setHabilidadedexSearches(newSearches)
+                        }}
+                        placeholder="Digite o nome da habilidade..."
+                        className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-teal-500'
+                            : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-teal-500'
+                        } focus:outline-none transition-all`}
+                        list={`habilidades-datalist-${index}`}
+                      />
+                      <datalist id={`habilidades-datalist-${index}`}>
+                        {HABILIDADES_NAMES.filter(nome =>
+                          nome.toLowerCase().includes(search.toLowerCase())
+                        ).slice(0, 50).map(nome => (
+                          <option key={nome} value={nome} />
+                        ))}
+                      </datalist>
+                      {search && (
+                        <button
+                          onClick={() => {
+                            const newSearches = [...habilidadedexSearches]
+                            newSearches[index] = ''
+                            setHabilidadedexSearches(newSearches)
+                          }}
+                          className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                            darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                          }`}
+                        >
+                          <X size={20} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Exibir informações da habilidade se selecionada */}
+                    {search && HABILIDADES_DATA[search] && (
+                      <div className={`mt-3 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${darkMode ? 'bg-teal-900 text-teal-300' : 'bg-teal-100 text-teal-800'}`}>
+                              {HABILIDADES_DATA[search].ativacao || 'N/A'}
+                            </span>
+                          </div>
+
+                          <div className={`pt-2 border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              <span className="font-semibold">Efeito:</span> {HABILIDADES_DATA[search].efeito}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Capacidadex */}
+          {encyclopediaSection === 'Capacidadex' && (
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <h3 className={`text-3xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Capacidadex
+              </h3>
+              <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Pesquise até 8 capacidades simultaneamente para comparar suas características
+              </p>
+
+              {/* Grid 4x2 de Barras de Pesquisa */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {capacidadexSearches.map((search, index) => (
+                  <div key={index} className="relative">
+                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Capacidade #{index + 1}
+                    </label>
+                    <div className="relative">
+                      <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} size={20} />
+                      <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => {
+                          const newSearches = [...capacidadexSearches]
+                          newSearches[index] = e.target.value
+                          setCapacidadexSearches(newSearches)
+                        }}
+                        placeholder="Digite o nome da capacidade..."
+                        className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:border-indigo-500'
+                            : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-indigo-500'
+                        } focus:outline-none transition-all`}
+                        list={`capacidades-datalist-${index}`}
+                      />
+                      <datalist id={`capacidades-datalist-${index}`}>
+                        {CAPACIDADES_NAMES.filter(nome =>
+                          nome.toLowerCase().includes(search.toLowerCase())
+                        ).slice(0, 50).map(nome => (
+                          <option key={nome} value={nome} />
+                        ))}
+                      </datalist>
+                      {search && (
+                        <button
+                          onClick={() => {
+                            const newSearches = [...capacidadexSearches]
+                            newSearches[index] = ''
+                            setCapacidadexSearches(newSearches)
+                          }}
+                          className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                            darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'
+                          }`}
+                        >
+                          <X size={20} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Exibir informações da capacidade se selecionada */}
+                    {search && CAPACIDADES_DATA[search] && (
+                      <div className={`mt-3 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <div className="space-y-2">
+                          <div className={`pt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            <p className={`text-sm leading-relaxed`}>
+                              {CAPACIDADES_DATA[search]}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Condiçõesdex */}
+          {encyclopediaSection === 'Condiçõesdex' && (
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <h3 className={`text-3xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Condiçõesdex
+              </h3>
+              <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Clique em uma condição para expandir e ver suas informações detalhadas
+              </p>
+
+              {/* Grid 3x3 de Condições */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {condicoes.map((condicao) => {
+                  const isExpanded = expandedCondicoes.includes(condicao.nome)
+
+                  return (
+                    <div
+                      key={condicao.nome}
+                      className={`${
+                        darkMode ? 'bg-gray-700' : 'bg-gray-100'
+                      } rounded-lg overflow-hidden transition-all ${
+                        isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''
+                      }`}
+                    >
+                      <button
+                        onClick={() => {
+                          if (isExpanded) {
+                            setExpandedCondicoes(expandedCondicoes.filter(nome => nome !== condicao.nome))
+                          } else {
+                            setExpandedCondicoes([...expandedCondicoes, condicao.nome])
+                          }
+                        }}
+                        className={`w-full p-4 text-left flex justify-between items-center ${
+                          darkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
+                        } transition-colors`}
+                      >
+                        <span className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                          {condicao.nome}
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp className={darkMode ? 'text-gray-300' : 'text-gray-600'} size={24} />
+                        ) : (
+                          <ChevronDown className={darkMode ? 'text-gray-300' : 'text-gray-600'} size={24} />
+                        )}
+                      </button>
+
+                      {isExpanded && (
+                        <div className={`p-6 ${darkMode ? 'bg-gray-750' : 'bg-white'} border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                          <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} leading-relaxed mb-4`}>
+                            {condicao.descricao}
+                          </p>
+
+                          {condicao.tabela && (
+                            <div className="mt-4">
+                              <h4 className={`font-bold text-lg mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                {condicao.tabela.titulo}
+                              </h4>
+                              <div className="overflow-x-auto">
+                                <table className={`w-full border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                                  <thead>
+                                    <tr className={darkMode ? 'bg-gray-600' : 'bg-gray-200'}>
+                                      {condicao.tabela.colunas.map((coluna, idx) => (
+                                        <th
+                                          key={idx}
+                                          className={`px-4 py-2 text-left font-semibold ${
+                                            darkMode ? 'text-white' : 'text-gray-800'
+                                          } border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
+                                        >
+                                          {coluna}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {condicao.tabela.linhas.map((linha, idx) => (
+                                      <tr
+                                        key={idx}
+                                        className={`${
+                                          idx % 2 === 0
+                                            ? darkMode ? 'bg-gray-700' : 'bg-gray-50'
+                                            : darkMode ? 'bg-gray-750' : 'bg-white'
+                                        }`}
+                                      >
+                                        {linha.map((celula, cellIdx) => (
+                                          <td
+                                            key={cellIdx}
+                                            className={`px-4 py-2 ${
+                                              darkMode ? 'text-gray-300' : 'text-gray-700'
+                                            } border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
+                                          >
+                                            {celula}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+        </div>
+        {accountDataModal}
+      </>
+    )
+  }
+
+  // ÁREA PROGRESSÃO
+  if (currentUser.type === 'treinador' && currentArea === 'Progressão') {
+    const handleAddVivencia = () => {
+      if (!novaVivenciaNome.trim() || !novaVivenciaEfeito.trim()) {
+        alert('Nome e Efeito são obrigatórios!')
+        return
+      }
+
+      const newVivencia = {
+        id: Date.now(),
+        nome: novaVivenciaNome.trim(),
+        frequencia: novaVivenciaFrequencia.trim(),
+        alvo: novaVivenciaAlvo.trim(),
+        gatilho: novaVivenciaGatilho.trim(),
+        efeito: novaVivenciaEfeito.trim()
+      }
+
+      setVivencias([...vivencias, newVivencia])
+      setShowNovaVivenciaModal(false)
+      setNovaVivenciaNome('')
+      setNovaVivenciaFrequencia('')
+      setNovaVivenciaAlvo('')
+      setNovaVivenciaGatilho('')
+      setNovaVivenciaEfeito('')
+    }
+
+    return (
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Progressão</h2>
+              <div className="flex gap-2">
+                <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>
+                  {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
+                <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {treinadorAreas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className={`px-4 py-2 rounded-lg text-sm font-semibold ${area === 'Progressão' ? 'bg-gradient-to-r from-blue-600 to-purple-700 text-white' : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{area}</button>)}
+            </div>
+          </div>
+        </div>
+
+        {/* Navegação de Subáreas */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-md`}>
+          <div className="max-w-7xl mx-auto px-4 py-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setProgressaoSection('Vivências')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  progressaoSection === 'Vivências'
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                    : darkMode
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Vivências
+              </button>
+              <button
+                onClick={() => setProgressaoSection('Diário da Jornada')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  progressaoSection === 'Diário da Jornada'
+                    ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-lg'
+                    : darkMode
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Diário da Jornada
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* VIVÊNCIAS */}
+          {progressaoSection === 'Vivências' && (
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Vivências
+                </h3>
+                <button
+                  onClick={() => setShowNovaVivenciaModal(true)}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold flex items-center gap-2 shadow-lg"
+                >
+                  <Plus size={20} />
+                  Nova Vivência
+                </button>
+              </div>
+
+              {vivencias.length === 0 ? (
+                <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p className="text-lg">Nenhuma vivência cadastrada</p>
+                  <p className="text-sm mt-2">Clique em "Nova Vivência" para adicionar</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {vivencias.map((vivencia) => (
+                    <div key={vivencia.id} className={`rounded-lg border-2 transition-all ${
+                      expandedVivencia === vivencia.id
+                        ? darkMode
+                          ? 'bg-gray-700 border-green-500'
+                          : 'bg-green-50 border-green-500'
+                        : darkMode
+                        ? 'bg-gray-700 border-gray-600 hover:border-gray-500'
+                        : 'bg-white border-gray-300 hover:border-gray-400'
+                    }`}>
+                      <div className="flex items-center justify-between p-4">
+                        <button
+                          onClick={() => setExpandedVivencia(expandedVivencia === vivencia.id ? null : vivencia.id)}
+                          className="flex-1 text-left"
+                        >
+                          <h4 className={`font-bold text-lg ${
+                            expandedVivencia === vivencia.id
+                              ? darkMode ? 'text-green-400' : 'text-green-700'
+                              : darkMode ? 'text-white' : 'text-gray-800'
+                          }`}>
+                            {vivencia.nome}
+                          </h4>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Deseja excluir a vivência "${vivencia.nome}"?`)) {
+                              setVivencias(vivencias.filter(v => v.id !== vivencia.id))
+                              if (expandedVivencia === vivencia.id) {
+                                setExpandedVivencia(null)
+                              }
+                            }
+                          }}
+                          className={`ml-2 p-1 rounded hover:bg-red-500 hover:text-white transition-colors ${
+                            darkMode ? 'text-gray-400' : 'text-gray-500'
+                          }`}
+                          title="Excluir vivência"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+
+                      {expandedVivencia === vivencia.id && (
+                        <div className={`px-4 pb-4 space-y-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {vivencia.frequencia && (
+                            <div>
+                              <span className="font-semibold">Frequência:</span> {vivencia.frequencia}
+                            </div>
+                          )}
+                          {vivencia.alvo && (
+                            <div>
+                              <span className="font-semibold">Alvo:</span> {vivencia.alvo}
+                            </div>
+                          )}
+                          {vivencia.gatilho && (
+                            <div>
+                              <span className="font-semibold">Gatilho:</span> {vivencia.gatilho}
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-semibold">Efeito:</span> {vivencia.efeito}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* DIÁRIO DA JORNADA */}
+          {progressaoSection === 'Diário da Jornada' && (
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Diário da Jornada
+                </h3>
+                <button
+                  onClick={() => {
+                    setConquistaEditando(null)
+                    setNovaConquistaNome('')
+                    setNovaConquistaLevelUp(false)
+                    setNovaConquistaDescricao('')
+                    setShowNovaConquistaModal(true)
+                  }}
+                  className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-6 py-3 rounded-lg hover:from-amber-700 hover:to-yellow-700 font-semibold flex items-center gap-2 shadow-lg"
+                >
+                  <Plus size={20} />
+                  Conquistas
+                </button>
+              </div>
+
+              {/* Linha do Tempo */}
+              <div className="relative py-12">
+                {/* Ponto Inicial */}
+                <div className="relative mb-16">
+                  <div className="flex items-center justify-center">
+                    <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
+                      <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                        Qual o nome do meu neto?
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Linha vertical - só até antes do ponto final */}
+                {conquistas.length > 0 && (
+                  <div
+                    className={`absolute left-1/2 transform -translate-x-1/2 w-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
+                    style={{
+                      top: '6rem',
+                      height: `calc(100% - 12rem)`
+                    }}
+                  ></div>
+                )}
+
+                {/* Conquistas */}
+                {conquistas.map((conquista, index) => (
+                  <div key={conquista.id} className={`relative mb-16 ${index % 2 === 0 ? 'text-right pr-[52%]' : 'text-left pl-[52%]'}`}>
+                    <div className="relative inline-block">
+                      {/* Ponto na linha do tempo */}
+                      <div className={`absolute top-1/2 ${index % 2 === 0 ? '-right-6' : '-left-6'} transform -translate-y-1/2 w-4 h-4 rounded-full ${
+                        conquista.levelUp
+                          ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
+                          : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                      } border-4 ${darkMode ? 'border-gray-800' : 'border-white'} z-10`}></div>
+
+                      {/* Botão de Editar */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConquistaEditando(conquista.id)
+                          setNovaConquistaNome(conquista.nome)
+                          setNovaConquistaLevelUp(conquista.levelUp)
+                          setNovaConquistaDescricao(conquista.descricao || '')
+                          setShowNovaConquistaModal(true)
+                        }}
+                        className="absolute -top-2 -right-10 w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center z-20 transition-colors shadow-lg"
+                        title="Editar conquista"
+                      >
+                        <Edit size={14} />
+                      </button>
+
+                      {/* Botão de Excluir */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (confirm(`Deseja excluir a conquista "${conquista.nome}"?`)) {
+                            setConquistas(conquistas.filter(c => c.id !== conquista.id))
+                            if (selectedConquista?.id === conquista.id) {
+                              setSelectedConquista(null)
+                            }
+                          }
+                        }}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 transition-colors shadow-lg"
+                        title="Excluir conquista"
+                      >
+                        <X size={14} />
+                      </button>
+
+                      {/* Caixa da Conquista */}
+                      <button
+                        onClick={() => setSelectedConquista(conquista)}
+                        className={`relative inline-block px-6 py-4 rounded-lg shadow-lg transition-all hover:shadow-xl hover:scale-105 ${
+                          conquista.levelUp
+                            ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900'
+                            : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                        } font-bold text-lg border-2 ${
+                          conquista.levelUp ? 'border-yellow-600' : 'border-blue-700'
+                        }`}
+                      >
+                        {conquista.nome}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Ponto Final */}
+                <div className="relative mt-8">
+                  <div className="flex items-center justify-center">
+                    <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
+                      <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                        Acordei do coma?
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Nova Vivência */}
+        {showNovaVivenciaModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowNovaVivenciaModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Nova Vivência
+                  </h3>
+                  <button onClick={() => setShowNovaVivenciaModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Nome */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Nome <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={novaVivenciaNome}
+                      onChange={(e) => setNovaVivenciaNome(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                      placeholder="Nome da vivência"
+                    />
+                  </div>
+
+                  {/* Frequência */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Frequência
+                    </label>
+                    <input
+                      type="text"
+                      value={novaVivenciaFrequencia}
+                      onChange={(e) => setNovaVivenciaFrequencia(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                      placeholder="Ex: Diária, Semanal, etc."
+                    />
+                  </div>
+
+                  {/* Alvo */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Alvo
+                    </label>
+                    <input
+                      type="text"
+                      value={novaVivenciaAlvo}
+                      onChange={(e) => setNovaVivenciaAlvo(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                      placeholder="Alvo da vivência"
+                    />
+                  </div>
+
+                  {/* Gatilho */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Gatilho
+                    </label>
+                    <input
+                      type="text"
+                      value={novaVivenciaGatilho}
+                      onChange={(e) => setNovaVivenciaGatilho(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                      placeholder="Gatilho da vivência"
+                    />
+                  </div>
+
+                  {/* Efeito */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Efeito <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={novaVivenciaEfeito}
+                      onChange={(e) => setNovaVivenciaEfeito(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                      placeholder="Efeito da vivência"
+                      rows={4}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowNovaVivenciaModal(false)}
+                    className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddVivencia}
+                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold"
+                  >
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Nova Conquista */}
+        {showNovaConquistaModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowNovaConquistaModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {conquistaEditando ? 'Editar Conquista' : 'Nova Conquista'}
+                  </h3>
+                  <button onClick={() => {
+                    setShowNovaConquistaModal(false)
+                    setConquistaEditando(null)
+                  }} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Nome */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Nome
+                    </label>
+                    <input
+                      type="text"
+                      value={novaConquistaNome}
+                      onChange={(e) => setNovaConquistaNome(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                      placeholder="Nome da conquista"
+                    />
+                  </div>
+
+                  {/* Lvl Up */}
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="levelUpCheckbox"
+                      checked={novaConquistaLevelUp}
+                      onChange={(e) => setNovaConquistaLevelUp(e.target.checked)}
+                      className="w-5 h-5 rounded cursor-pointer"
+                    />
+                    <label htmlFor="levelUpCheckbox" className={`text-sm font-bold cursor-pointer ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Lvl Up
+                    </label>
+                  </div>
+
+                  {/* Descrição */}
+                  <div>
+                    <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Descrição
+                    </label>
+                    <textarea
+                      value={novaConquistaDescricao}
+                      onChange={(e) => setNovaConquistaDescricao(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                      placeholder="Descrição da conquista"
+                      rows={4}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowNovaConquistaModal(false)
+                      setConquistaEditando(null)
+                      setNovaConquistaNome('')
+                      setNovaConquistaLevelUp(false)
+                      setNovaConquistaDescricao('')
+                    }}
+                    className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!novaConquistaNome.trim()) {
+                        alert('Nome é obrigatório!')
+                        return
+                      }
+
+                      if (conquistaEditando) {
+                        // Editar conquista existente
+                        setConquistas(conquistas.map(c =>
+                          c.id === conquistaEditando
+                            ? {
+                                ...c,
+                                nome: novaConquistaNome.trim(),
+                                levelUp: novaConquistaLevelUp,
+                                descricao: novaConquistaDescricao.trim()
+                              }
+                            : c
+                        ))
+                      } else {
+                        // Adicionar nova conquista
+                        const newConquista = {
+                          id: Date.now(),
+                          nome: novaConquistaNome.trim(),
+                          levelUp: novaConquistaLevelUp,
+                          descricao: novaConquistaDescricao.trim()
+                        }
+                        setConquistas([...conquistas, newConquista])
+                      }
+
+                      setShowNovaConquistaModal(false)
+                      setConquistaEditando(null)
+                      setNovaConquistaNome('')
+                      setNovaConquistaLevelUp(false)
+                      setNovaConquistaDescricao('')
+                    }}
+                    className="flex-1 bg-gradient-to-r from-amber-600 to-yellow-600 text-white py-3 rounded-lg hover:from-amber-700 hover:to-yellow-700 font-semibold"
+                  >
+                    {conquistaEditando ? 'Salvar' : 'Adicionar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Detalhes da Conquista */}
+        {selectedConquista && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedConquista(null)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {selectedConquista.nome}
+                  </h3>
+                  <button onClick={() => setSelectedConquista(null)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                {selectedConquista.levelUp && (
+                  <div className="mb-4">
+                    <span className="inline-block px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 font-bold">
+                      Level Up!
+                    </span>
+                  </div>
+                )}
+
+                <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <p className="text-base leading-relaxed whitespace-pre-wrap">
+                    {selectedConquista.descricao || 'Sem descrição'}
+                  </p>
+                </div>
+
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={() => setSelectedConquista(null)}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
+        {accountDataModal}
+      </>
     )
   }
 

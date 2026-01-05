@@ -472,7 +472,7 @@ const HABILIDADES_DATA = {
     ativacao: "Gatilho Constante: ser Atordoado",
     efeito: "eleva uma Fase de Velocidade."
   },
-  "Infiltração": {
+  "Infiltrador": {
     ativacao: "Constante",
     efeito: "o pokémon ignora Ameaças, Barreiras e Coberturas."
   },
