@@ -154,7 +154,7 @@ const POKEMON_ABILITIES = {
       "Tenacidade"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Rattata de Alola": {
@@ -172,7 +172,7 @@ const POKEMON_ABILITIES = {
       "Tenacidade"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Raticate de Alola": {
@@ -280,7 +280,7 @@ const POKEMON_ABILITIES = {
       "Rivalidade"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Nidorina": {
@@ -289,7 +289,7 @@ const POKEMON_ABILITIES = {
       "Rivalidade"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Nidoqueen": {
@@ -307,7 +307,7 @@ const POKEMON_ABILITIES = {
       "Rivalidade"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Nidorino": {
@@ -316,7 +316,7 @@ const POKEMON_ABILITIES = {
       "Rivalidade"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Nidoking": {
@@ -1667,7 +1667,7 @@ const POKEMON_ABILITIES = {
   },
   "Togepi": {
     "habilidades": [
-      "Entusiasmo",
+      "Conquista",
       "Graça Serena"
     ],
     "altasHabilidades": [
@@ -1676,7 +1676,7 @@ const POKEMON_ABILITIES = {
   },
   "Togetic": {
     "habilidades": [
-      "Entusiasmo",
+      "Conquista",
       "Graça Serena"
     ],
     "altasHabilidades": [
@@ -2084,7 +2084,7 @@ const POKEMON_ABILITIES = {
   },
   "Corsola": {
     "habilidades": [
-      "Entusiasmo",
+      "Conquista",
       "Recuperação"
     ],
     "altasHabilidades": [
@@ -2093,7 +2093,7 @@ const POKEMON_ABILITIES = {
   },
   "Remoraid": {
     "habilidades": [
-      "Entusiasmo",
+      "Velocidade na Água",
       "Franco-Atirador"
     ],
     "altasHabilidades": [
@@ -2102,7 +2102,6 @@ const POKEMON_ABILITIES = {
   },
   "Octillery": {
     "habilidades": [
-      "Entusiasmo",
       "Franco-Atirador"
     ],
     "altasHabilidades": [
@@ -2112,7 +2111,7 @@ const POKEMON_ABILITIES = {
   },
   "Delibird": {
     "habilidades": [
-      "Entusiasmo",
+      "Conquista",
       "Espírito Vigoroso"
     ],
     "altasHabilidades": [
@@ -3700,7 +3699,7 @@ const POKEMON_ABILITIES = {
       "Mel"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Vespiquen": {
@@ -4154,7 +4153,7 @@ const POKEMON_ABILITIES = {
   },
   "Togekiss": {
     "habilidades": [
-      "Entusiasmo",
+      "Conquista",
       "Graça Serena"
     ],
     "altasHabilidades": [
@@ -4887,7 +4886,7 @@ const POKEMON_ABILITIES = {
   },
   "Darumaka": {
     "habilidades": [
-      "Entusiasmo"
+      "Conquista"
     ],
     "altasHabilidades": [
       "Foco Interior"
@@ -4895,7 +4894,7 @@ const POKEMON_ABILITIES = {
   },
   "Darmanitan": {
     "habilidades": [
-      "Entusiasmo"
+      "Conquista"
     ],
     "altasHabilidades": [
       "Força Bruta",
@@ -5514,7 +5513,7 @@ const POKEMON_ABILITIES = {
       "Visão Aguçada"
     ],
     "altasHabilidades": [
-      "Entusiasmo"
+      "Conquista"
     ]
   },
   "Braviary": {
@@ -5555,7 +5554,7 @@ const POKEMON_ABILITIES = {
   },
   "Durant": {
     "habilidades": [
-      "Entusiasmo",
+      "Conquista",
       "Preguiça"
     ],
     "altasHabilidades": [
@@ -5564,19 +5563,19 @@ const POKEMON_ABILITIES = {
   },
   "Deino": {
     "habilidades": [
-      "Entusiasmo"
+      "Conquista"
     ],
     "altasHabilidades": []
   },
   "Zweilous": {
     "habilidades": [
-      "Entusiasmo"
+      "Conquista"
     ],
     "altasHabilidades": []
   },
   "Hydreigon": {
     "habilidades": [
-      "Entusiasmo"
+      "Conquista"
     ],
     "altasHabilidades": [
       "Levitação"

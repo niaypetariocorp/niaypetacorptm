@@ -1933,7 +1933,7 @@ export const TALENTOS_DATA = {
     {
       nome: 'Dê Tudo de Si!',
       requisitos: 'SAB 14',
-      referencia: 'C, V',
+      referencia: 'L, V',
       frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional',
       alvo: 'você ou um aliado',
       efeito: 'o alvo pode lançar um Golpe que usa a Ação Padrão dele para executar, independente de sua Frequência. Isso não permite lançar Golpes Z, Golpes com Frequência Especial ou Movimentos dos Talentos de Coreógrafo.'

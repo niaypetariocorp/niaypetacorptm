@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, Settings2 } from 'lucide-react'
 import AccountDataModal from './AccountDataModal'
 import pokedexData from './pokemonData'
 import GOLPES_DATA_IMPORTED from './golpesData'
 import HABILIDADES_DATA_IMPORTED, { HABILIDADES_NAMES as HABILIDADES_NAMES_IMPORTED } from './habilidadesData'
 import CARACTERISTICAS_DATA_IMPORTED, { TALENTOS_DATA as TALENTOS_DATA_IMPORTED, TALENTOS_NAMES as TALENTOS_NAMES_IMPORTED } from './caracteristicasETalentosData'
 import POKEMON_ABILITIES from './pokemonAbilities'
+import { generatePokemonMoves } from './pokemonMoveGenerator'
 
 // Cores dos tipos de Pokémon
 const TYPE_COLORS = {
@@ -356,28 +357,116 @@ const ATRIBUTOS_PERICIAS_DATA = [
     nome: "Ataque",
     explicacao: "O Modificador de Ataque (MA) é adicionado a qualquer ataque improvisado. Também, quando quiser uma proeza atlética, o Narrador definirá com qual Perícia de Ataque ela mais se aproxima.",
     pericias: [
-      { nome: "Corrida", descricao: "Esta Perícia é usada para correr, permitindo recuperar o atraso em perseguições. Resultado 1: Tropeça e cai; 5: Cãibra impõe -1 ao deslocamento; 10: Deslocamento Normal; 15: +2 ao deslocamento; 20: +4 ao deslocamento; 30: Deslocamento x4 (apenas terrestre)." },
-      { nome: "Força", descricao: "Auxilia a empurrar ou levantar objetos pesados. Um indivíduo destreinado pode suspender/empurrar metade de seu peso. Resultado 1: Derruba o objeto e fica atordoado; 5: Força normal; 10: Igual a seu peso; 15: Peso x2; 20: Peso x3; 30: Peso x4." },
+      {
+        nome: "Corrida",
+        descricao: "Esta Perícia é usada para correr, permitindo recuperar o atraso em perseguições.",
+        tabela: [
+          { resultado: "1", efeito: "Tropeça e cai" },
+          { resultado: "5", efeito: "Cãibra impõe -1 ao deslocamento" },
+          { resultado: "10", efeito: "Deslocamento Normal" },
+          { resultado: "15", efeito: "+2 ao deslocamento" },
+          { resultado: "20", efeito: "+4 ao deslocamento" },
+          { resultado: "30", efeito: "Deslocamento x4 (apenas terrestre)" }
+        ]
+      },
+      {
+        nome: "Força",
+        descricao: "Auxilia a empurrar ou levantar objetos pesados. Um indivíduo destreinado pode suspender/empurrar metade de seu peso.",
+        tabela: [
+          { resultado: "1", efeito: "Derruba o objeto e fica atordoado" },
+          { resultado: "5", efeito: "Força normal (metade do peso)" },
+          { resultado: "10", efeito: "Igual a seu peso" },
+          { resultado: "15", efeito: "Peso x2" },
+          { resultado: "20", efeito: "Peso x3" },
+          { resultado: "30", efeito: "Peso x4" }
+        ]
+      },
       { nome: "Intimidação", descricao: "Usada contra humanos e pokémons. Sempre rolada contra NPCs, quanto mais alto melhor." },
-      { nome: "Salto", descricao: "Pular mais alto e mais distante. Humanos padrão: 60cm vertical. Resultado 1: Tropeça e cai; 5: Altura padrão (60cm) ou horizontal (1,5m); 10: Altura 1,2m e horizontal 3m; 15: Altura 1,5m e horizontal 3,6m; 20: Altura 2,4m e horizontal 6m; 30: Altura 3m e horizontal 9m." }
+      {
+        nome: "Salto",
+        descricao: "Pular mais alto e mais distante. Humanos padrão: 60cm vertical.",
+        tabela: [
+          { resultado: "1", altura: "Tropeça e cai", horizontal: "-" },
+          { resultado: "5", altura: "60cm", horizontal: "1,5m" },
+          { resultado: "10", altura: "1,2m", horizontal: "3m" },
+          { resultado: "15", altura: "1,5m", horizontal: "3,6m" },
+          { resultado: "20", altura: "2,4m", horizontal: "6m" },
+          { resultado: "30", altura: "3m", horizontal: "9m" }
+        ]
+      }
     ]
   },
   {
     nome: "Defesa",
     explicacao: "O Modificador de Defesa (MD) será usado sob a forma de Perícia de Defesa quando se realiza uma proeza de resistência, como resistir ao sono ou à fome. Normalmente, a Defesa será a maneira mais comum pela qual um personagem pode evitar sofrer dano aos seus Pontos de Vida.",
     pericias: [
-      { nome: "Concentração", descricao: "Ajuda a manter foco mesmo ferido ou distraído. Resultado 1: Menor estímulo interrompe; 5: Sofre até 10 dano; 10: Sofre até 20 dano; 15: Sofre até 50 dano; 20: Sofre até 150 dano; 30: Nenhum dano atrapalha." },
+      {
+        nome: "Concentração",
+        descricao: "Ajuda a manter foco mesmo ferido ou distraído.",
+        tabela: [
+          { resultado: "1", efeito: "Menor estímulo interrompe" },
+          { resultado: "5", efeito: "Sofre até 10 dano" },
+          { resultado: "10", efeito: "Sofre até 20 dano" },
+          { resultado: "15", efeito: "Sofre até 50 dano" },
+          { resultado: "20", efeito: "Sofre até 150 dano" },
+          { resultado: "30", efeito: "Nenhum dano atrapalha" }
+        ]
+      },
       { nome: "Deflexão", descricao: "Interceptar objetos atirados (defletindo ou pegando). Não funciona contra Golpes pokémons não-físicos. Rolada contra NPCs, quanto mais alto melhor." },
-      { nome: "Incansável", descricao: "Manter-se sem dormir. Teste após 24h sem sono e a cada 2h seguintes. Resultado 1: Adormece 1d4 horas; 5: Perde 25% PV máximo; 10: Perde 15% PV máximo; 15: Perde 5% PV máximo; 20: Não perde PV; 30: Não perde PV e não testa 2h depois." },
-      { nome: "Regeneração", descricao: "Recuperação aprimorada durante descanso (padrão: 10% PV em 8h). Resultado 1: Nenhuma recuperação; 5: Cura 10% PV máximo; 10: Cura 15%; 15: Cura 25%; 20: Cura 50%; 30: Cura total e remove aflições." }
+      {
+        nome: "Incansável",
+        descricao: "Manter-se sem dormir. Teste após 24h sem sono e a cada 2h seguintes.",
+        tabela: [
+          { resultado: "1", efeito: "Adormece 1d4 horas" },
+          { resultado: "5", efeito: "Perde 25% PV máximo" },
+          { resultado: "10", efeito: "Perde 15% PV máximo" },
+          { resultado: "15", efeito: "Perde 5% PV máximo" },
+          { resultado: "20", efeito: "Não perde PV" },
+          { resultado: "30", efeito: "Não perde PV e não testa 2h depois" }
+        ]
+      },
+      {
+        nome: "Regeneração",
+        descricao: "Recuperação aprimorada durante descanso (padrão: 10% PV em 8h).",
+        tabela: [
+          { resultado: "1", efeito: "Nenhuma recuperação" },
+          { resultado: "5", efeito: "Cura 10% PV máximo" },
+          { resultado: "10", efeito: "Cura 15%" },
+          { resultado: "15", efeito: "Cura 25%" },
+          { resultado: "20", efeito: "Cura 50%" },
+          { resultado: "30", efeito: "Cura total e remove aflições" }
+        ]
+      }
     ]
   },
   {
     nome: "Ataque Especial",
     explicacao: "Sempre que realizar um ato que exija conhecimento acadêmico, experiência ou inteligência geral, seu Narrador colocará este teste em um teste de Perícias de Ataque Especial.",
     pericias: [
-      { nome: "Engenharia", descricao: "Compreensão e operação de máquinas. Resultado 1: Objeto estranho; 5: Supõe propósito; 10: Entende objetivo, liga/desliga; 15: Opera e repara; 20: Usa mesmo defeituoso; 30: Entende plenamente e pode replicar." },
-      { nome: "História", descricao: "Conhecimento sobre o passado. Resultado 1: Não sabe nada; 5: Ouviu falar mas não prestou atenção; 10: Sabe sobre pessoas famosas e marcos; 15: Sabe especificidades e detalhes; 20: Sabe detalhes ignorados por livros; 30: Como se tivesse presenciado." },
+      {
+        nome: "Engenharia",
+        descricao: "Compreensão e operação de máquinas.",
+        tabela: [
+          { resultado: "1", efeito: "Objeto estranho" },
+          { resultado: "5", efeito: "Supõe propósito" },
+          { resultado: "10", efeito: "Entende objetivo, liga/desliga" },
+          { resultado: "15", efeito: "Opera e repara" },
+          { resultado: "20", efeito: "Usa mesmo defeituoso" },
+          { resultado: "30", efeito: "Entende plenamente e pode replicar" }
+        ]
+      },
+      {
+        nome: "História",
+        descricao: "Conhecimento sobre o passado.",
+        tabela: [
+          { resultado: "1", efeito: "Não sabe nada" },
+          { resultado: "5", efeito: "Ouviu falar mas não prestou atenção" },
+          { resultado: "10", efeito: "Sabe sobre pessoas famosas e marcos" },
+          { resultado: "15", efeito: "Sabe especificidades e detalhes" },
+          { resultado: "20", efeito: "Sabe detalhes ignorados por livros" },
+          { resultado: "30", efeito: "Como se tivesse presenciado" }
+        ]
+      },
       { nome: "Investigação", descricao: "Entender propósitos e procurar ativamente. Encontra objetos importantes rapidamente. Rolada contra cenário do Narrador." },
       { nome: "Programação", descricao: "Acesso a computadores e redes. Tarefas incluem: acessar dispositivos/computadores/redes, danificar programações, ativar/desativar remotos, alterar senhas, manipular hardware, ocultar evidências." }
     ]
@@ -387,7 +476,18 @@ const ATRIBUTOS_PERICIAS_DATA = [
     explicacao: "O Modificador de Defesa Especial (MDE) é usado para definir a percepção sensorial e a força da personalidade do personagem. Sempre que realizar um ato que exija blefar, mediar, convencer, achar contatos ou se portar com outros de maneira geral, pode usar uma Perícia de Defesa Especial.",
     pericias: [
       { nome: "Empatia", descricao: "Entender e amansar pokémons chateados (amedrontados, preocupados, zangados, agressivos). Usada apenas contra pokémons, não funciona em pokémons de alta Inteligência. Rolada contra NPCs." },
-      { nome: "Manha", descricao: "Ter contatos e entender dinâmica local. Resultado 1: Não sabe nada; 5: Ouviu sobre empresários; 10: Sabe lugares inseguros e serviços questionáveis; 15: Sabe grupos e onde agem; 20: Sabe detalhes dos líderes; 30: Pode se passar por membro." },
+      {
+        nome: "Manha",
+        descricao: "Ter contatos e entender dinâmica local.",
+        tabela: [
+          { resultado: "1", efeito: "Não sabe nada" },
+          { resultado: "5", efeito: "Ouviu sobre empresários" },
+          { resultado: "10", efeito: "Sabe lugares inseguros e serviços questionáveis" },
+          { resultado: "15", efeito: "Sabe grupos e onde agem" },
+          { resultado: "20", efeito: "Sabe detalhes dos líderes" },
+          { resultado: "30", efeito: "Pode se passar por membro" }
+        ]
+      },
       { nome: "Manipulação", descricao: "Convencer através de argumentos ou mentiras. Garante que alguém compre seu ponto de vista ou faça algo sugerido. Rolada contra NPCs." },
       { nome: "Percepção", descricao: "Notar coisas que passariam despercebidas. Rolada contra cenário do Narrador ou contra Furtividade." }
     ]
@@ -396,9 +496,30 @@ const ATRIBUTOS_PERICIAS_DATA = [
     nome: "Velocidade",
     explicacao: "Sempre que um ato exigir precisão, equilíbrio, flexibilidade ou rapidez, seu Narrador pode pedir que você faça um teste de uma Perícia de Velocidade. Adicione seu Modificador de Velocidade (MV) a este teste.",
     pericias: [
-      { nome: "Acrobacia", descricao: "Equilíbrio, escalar, atravessar locais oscilantes. Resultado 1: Você cai; 5: Superfície larga ou escada comum; 10: Saliência/tronco ou escala 3m; 15: Caminhos estreitos e escala prédio; 20: Sem problemas." },
+      {
+        nome: "Acrobacia",
+        descricao: "Equilíbrio, escalar, atravessar locais oscilantes.",
+        tabela: [
+          { resultado: "1", equilibrio: "Você cai", escalada: "-" },
+          { resultado: "5", equilibrio: "Superfície larga", escalada: "Escada comum" },
+          { resultado: "10", equilibrio: "Saliência/tronco", escalada: "Escala 3m" },
+          { resultado: "15", equilibrio: "Caminhos estreitos", escalada: "Escala prédio" },
+          { resultado: "20", equilibrio: "Sem problemas", escalada: "Sem problemas" }
+        ]
+      },
       { nome: "Furtividade", descricao: "Mover-se sorrateiramente, deslocar silenciosamente e se esconder. Rolada contra humanos e pokémons." },
-      { nome: "Performance", descricao: "Tocar instrumentos, cantar, dançar ou atuar. Resultado 1: Medo de palco; 5: Passos/notas perdidos; 10: Salva de palmas; 15: Ovação de pé (até 100 créditos diários); 20: Gritos por minutos, desempenho primoroso (até 1000 créditos diários), fama local; 30: Inspira movimentos sociais." },
+      {
+        nome: "Performance",
+        descricao: "Tocar instrumentos, cantar, dançar ou atuar.",
+        tabela: [
+          { resultado: "1", efeito: "Medo de palco" },
+          { resultado: "5", efeito: "Passos/notas perdidos" },
+          { resultado: "10", efeito: "Salva de palmas" },
+          { resultado: "15", efeito: "Ovação de pé (até 100 créditos diários)" },
+          { resultado: "20", efeito: "Gritos por minutos, desempenho primoroso (até 1000 créditos diários), fama local" },
+          { resultado: "30", efeito: "Inspira movimentos sociais" }
+        ]
+      },
       { nome: "Prestidigitação", descricao: "Movimento manual rápido e discreto. Bater carteiras, esconder coisas, encantar com mágica. Rolada contra humanos e pokémons." }
     ]
   }
@@ -406,9 +527,48 @@ const ATRIBUTOS_PERICIAS_DATA = [
 
 // Dados de Capacidades
 const CAPACIDADES_DATA = {
-  "Força": "Representa a potência muscular do pokémon. Possui valor de 1 a 10, indicando o peso médio que o pokémon pode erguer fisicamente. Pode aumentar com treinamento e alimentação adequados. Tabela: Força 1 = 5 kg; 2 = 23 kg; 3 = 45 kg; 4 = 90 kg; 5 = 158 kg; 6 = 227 kg; 7 = 340 kg; 8 = 455 kg; 9 = 1135 kg; 10 = 1815 kg.",
-  "Inteligência": "Quantificada de 1 a 7, representa o intelecto médio da espécie. Influencia autonomia, planejamento e comportamento social. Tabela: 1 Vegetal (incapaz de pensamentos); 2 Animal Autoconsciente; 3 Animal Inteligente (segue ordens); 4 Deficiente (cria e usa ferramentas); 5 Humano; 6 Superior (liderança); 7 Gênio (cálculos complexos, múltiplas línguas).",
-  "Salto": "Quantificada de 1 a 10, indica a altura máxima que o pokémon consegue saltar. Usar Salto consome o Deslocamento da rodada. Tabela: 1=1m; 2=2m; 3=3m; 4=4,5m; 5=6m; 6=7,6m; 7=10,6m; 8=15,2m; 9=21m; 10=30m.",
+  "Força": {
+    descricao: "A Força representa a potência muscular do pokémon. Esta Capacidade possui um valor que varia de 1 a 10, correspondente ao peso que este pokémon pode suspender fisicamente. O peso dado é uma média, e dependendo de quão bem treinados são os seus pokémons, eles podem ser capazes de erguer um pouco mais que a média. Com base em quanto eles podem levantar, é possível prever o quanto eles podem empurrar ou quanta força eles podem colocar em seus ataques. Se um pokémon for alimentado e treinado apropriadamente tendo em vista o aumento de sua massa muscular, o Narrador pode permitir o aumento da Força de um pokémon em 1.",
+    tabela: [
+      { força: "1", peso: "5 kg" },
+      { força: "2", peso: "23 kg" },
+      { força: "3", peso: "45 kg" },
+      { força: "4", peso: "90 kg" },
+      { força: "5", peso: "158 kg" },
+      { força: "6", peso: "227 kg" },
+      { força: "7", peso: "340 kg" },
+      { força: "8", peso: "455 kg" },
+      { força: "9", peso: "1135 kg" },
+      { força: "10", peso: "1815 kg" }
+    ]
+  },
+  "Inteligência": {
+    descricao: "A Capacidade inteligência é quantificada de 1 a 7, representando o intelecto do pokémon. A Inteligência é uma expectativa média de todos os membros daquela espécie pokémon. Quanto mais esperto for o pokémon, mais fácil será que aja por conta própria se não for possível comandá-lo. Isso também significa que as espécies de pokémons mais inteligentes são uma ameaça muito maior, pois planejam e desenvolvem sociedades completamente próprias.",
+    tabela: [
+      { inteligência: "1", intelecto: "Vegetal", pensamentos: "Incapaz dos mais simples pensamentos" },
+      { inteligência: "2", intelecto: "Animal", pensamentos: "Autoconsciente" },
+      { inteligência: "3", intelecto: "Animal Inteligente", pensamentos: "Não desenvolve tarefas por si próprio, mas é capaz de seguir a liderança e as ordens alheias" },
+      { inteligência: "4", intelecto: "Deficiente", pensamentos: "Pode criar e usar Ferramentas" },
+      { inteligência: "5", intelecto: "Humano", pensamentos: "Como uma pessoa comum" },
+      { inteligência: "6", intelecto: "Superior", pensamentos: "Pode agir como um líder" },
+      { inteligência: "7", intelecto: "Gênio", pensamentos: "Exemplos: calcula como supercomputadores e falar muitas línguas diferentes" }
+    ]
+  },
+  "Salto": {
+    descricao: "Esta Capacidade é quantificada de 1 a 10, indicando a altura máximo que o pokémon é capaz de saltar no ar. Se o seu Pokémon usar sua Capacidade Salto durante uma rodada de um encontro, ele será considerado como usando seu Deslocamento para aquela rodada (e se lembre de que não se pula apenas para cima).",
+    tabela: [
+      { salto: "1", altura: "1 m" },
+      { salto: "2", altura: "2 m" },
+      { salto: "3", altura: "3 m" },
+      { salto: "4", altura: "4,5 m" },
+      { salto: "5", altura: "6 m" },
+      { salto: "6", altura: "7,6 m" },
+      { salto: "7", altura: "10,6 m" },
+      { salto: "8", altura: "15,2 m" },
+      { salto: "9", altura: "21 m" },
+      { salto: "10", altura: "30 m" }
+    ]
+  },
   "Adesão": "Permite tratar terreno vertical e tetos como Terreno Regular, usando Deslocamento Terrestre, mesmo em superfícies lisas.",
   "Afundamento": "O pokémon não pode nadar nem se mover na água. A cada rodada submerso perde 25% dos PV máximos e pode morrer por sufocamento.",
   "Alcance": "Permite realizar ataques corpo a corpo contra alvos a até 5 metros de distância, geralmente devido a tamanho, membros extensíveis ou arremesso.",
@@ -418,12 +578,42 @@ const CAPACIDADES_DATA = {
   "Calor": "O pokémon é sempre quente ao toque.",
   "Camuflagem": "Usuário avançado de Silêncio. Golpes à distância não podem alvocá-lo em Terreno Acidentado, e ataques contra ele têm Dificuldade de Acurácia +2.",
   "Combustão": "Permite produzir e controlar chamas, desde pequenas até grandes explosões de fogo.",
-  "Congelação": "Permite congelar terreno usando Ação de Movimento em rodadas alternadas. Tabela (1d20): 1=1m²; 6=5m²; 9=7m²; 12=10m²; 15=15m²; 18=20m²; 20=30m².",
+  "Congelação": {
+    descricao: "Permite congelar terreno usando Ação de Movimento em rodadas alternadas.",
+    tabela: [
+      { resultado: "1", área: "1 m²" },
+      { resultado: "6", área: "5 m²" },
+      { resultado: "9", área: "7 m²" },
+      { resultado: "12", área: "10 m²" },
+      { resultado: "15", área: "15 m²" },
+      { resultado: "18", área: "20 m²" },
+      { resultado: "20", área: "30 m²" }
+    ]
+  },
   "Eletricidade": "Produz eletricidade controlada. Pode recarregar dispositivos com rolagem 1d20 (sucesso com 13+).",
   "Encolhimento": "Reduz o tamanho para até 75% sem alterar peso. Ataques contra ele têm Dificuldade de Acurácia +3.",
   "Escalada": "Trata terreno vertical como Terreno Regular, exceto superfícies lisas.",
-  "Família": "Machos e fêmeas são espécies distintas mas contam como uma só para procriação. Tabela: Ilumise/Volbeat; Latias/Latios; Lunatone/Solrock; Miltank/Tauros; Plusle/Minun; Nidoran/Nidorina/Nidoqueen vs Nidoran/Nidorino/Nidoking; Smoochum/Jynx vs Mime Jr./Mr. Mime; Vullaby/Mandibuzz vs Rufflet/Braviary.",
-  "Faro": "Permite rastrear odores. Tabela de rolagem 1d20: 11+ após cheirar alvo ou pertence; 16+ odor aleatório; 20 odor específico sem referência. Uso: 1 vez por hora.",
+  "Família": {
+    descricao: "Machos e fêmeas são espécies distintas mas contam como uma só para procriação.",
+    tabela: [
+      { par: "Ilumise / Volbeat" },
+      { par: "Latias / Latios" },
+      { par: "Lunatone / Solrock" },
+      { par: "Miltank / Tauros" },
+      { par: "Plusle / Minun" },
+      { par: "Nidoran♀ / Nidorina / Nidoqueen vs Nidoran♂ / Nidorino / Nidoking" },
+      { par: "Smoochum / Jynx vs Mime Jr. / Mr. Mime" },
+      { par: "Vullaby / Mandibuzz vs Rufflet / Braviary" }
+    ]
+  },
+  "Faro": {
+    descricao: "Permite rastrear odores. Uso: 1 vez por hora.",
+    tabela: [
+      { resultado: "11+", condição: "Após cheirar alvo ou pertence" },
+      { resultado: "16+", condição: "Odor aleatório" },
+      { resultado: "20", condição: "Odor específico sem referência" }
+    ]
+  },
   "Fiação": "Permite disparar fios (seda, teia, vinha) até 10m usando Ação de Movimento. Teste de Acurácia 6 se usado contra criaturas.",
   "Frio": "O pokémon é sempre frio ao toque.",
   "Geleira": "Trata Terreno Gelado como Terreno Regular se vantajoso.",
@@ -453,7 +643,7 @@ const CAPACIDADES_DATA = {
   "Virtualidade": "Pode entrar em dispositivos eletrônicos, viajar por cabos, ler dados 1 vez/dia e tentar controlar aparelhos (1d20, sucesso 16+)."
 }
 
-const CAPACIDADES_NAMES = Object.keys(CAPACIDADES_DATA).filter(cap => !['Força', 'Inteligência', 'Salto'].includes(cap)).sort()
+const CAPACIDADES_NAMES = Object.keys(CAPACIDADES_DATA).sort()
 
 // Dados de Golpes - importados do arquivo golpesData.js
 const GOLPES_DATA = GOLPES_DATA_IMPORTED
@@ -532,6 +722,109 @@ const getItemImage = (itemName) => {
   }
   // Se não encontrar, retornar imagem padrão baseada no nome
   return `/pokeballs/${itemName.toLowerCase().replace(/\s+/g, '')}.png`
+}
+
+// Função para renderizar o efeito de um golpe (com suporte a tabelas)
+const renderGolpeEfeito = (efeito, darkMode) => {
+  // Se o efeito é uma string simples, retornar como está
+  if (typeof efeito === 'string') {
+    return efeito
+  }
+
+  // Se o efeito é um objeto com tabela(s), renderizar com formatação especial
+  if (typeof efeito === 'object' && (efeito.tabela || efeito.tabelaDano || efeito.tabelaTipo)) {
+    return (
+      <div className="space-y-3">
+        {/* Descrição do efeito */}
+        {efeito.descricao && (
+          <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+            {efeito.descricao}
+          </p>
+        )}
+
+        {/* Tabela principal */}
+        {efeito.tabela && (
+          <div className={`overflow-x-auto rounded-lg ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'} border-b-2`}>
+                  {Object.keys(efeito.tabela[0]).map((key, idx) => (
+                    <th key={idx} className={`px-3 py-2 text-left font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                      {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {efeito.tabela.map((row, idx) => (
+                  <tr key={idx} className={`${darkMode ? 'border-gray-700' : 'border-gray-300'} border-b last:border-b-0`}>
+                    {Object.values(row).map((value, cellIdx) => (
+                      <td key={cellIdx} className={`px-3 py-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {value}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tabela de Dano (para Poder Oculto) */}
+        {efeito.tabelaDano && (
+          <div className={`overflow-x-auto rounded-lg ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+            <div className={`px-3 py-2 font-bold ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-200 text-gray-800'}`}>
+              Tabela de Dano Basal (1d4)
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'} border-b-2`}>
+                  <th className={`px-3 py-2 text-left font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Resultado</th>
+                  <th className={`px-3 py-2 text-left font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Dano Basal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {efeito.tabelaDano.map((row, idx) => (
+                  <tr key={idx} className={`${darkMode ? 'border-gray-700' : 'border-gray-300'} border-b last:border-b-0`}>
+                    <td className={`px-3 py-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.resultado}</td>
+                    <td className={`px-3 py-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.danoBasal}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tabela de Tipo (para Poder Oculto) */}
+        {efeito.tabelaTipo && (
+          <div className={`overflow-x-auto rounded-lg ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+            <div className={`px-3 py-2 font-bold ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-gray-200 text-gray-800'}`}>
+              Tabela de Tipo (1d20)
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-200 border-gray-300'} border-b-2`}>
+                  <th className={`px-3 py-2 text-left font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Resultado</th>
+                  <th className={`px-3 py-2 text-left font-bold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>Tipo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {efeito.tabelaTipo.map((row, idx) => (
+                  <tr key={idx} className={`${darkMode ? 'border-gray-700' : 'border-gray-300'} border-b last:border-b-0`}>
+                    <td className={`px-3 py-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.resultado}</td>
+                    <td className={`px-3 py-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.tipo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Fallback: retornar como string
+  return String(efeito)
 }
 
 const POKELOJA_DATA = {
@@ -639,6 +932,8 @@ function App() {
   const [currentPokemonTurn, setCurrentPokemonTurn] = useState(0) // Índice do turno atual dos pokémon
   const [trainerRound, setTrainerRound] = useState(1) // Rodada atual dos treinadores
   const [pokemonRound, setPokemonRound] = useState(1) // Rodada atual dos pokémon
+  const [battlePokemonConditions, setBattlePokemonConditions] = useState({}) // Condições dos pokémons em batalha {pokemonId: [{condition, rounds}, ...]}
+  const pokemonBattleRefs = useRef([]) // Refs para os elementos dos pokémons em batalha
 
   // Modais
   const [showLevelModal, setShowLevelModal] = useState(false)
@@ -934,6 +1229,48 @@ function App() {
   const [novaConquistaDescricao, setNovaConquistaDescricao] = useState('')
   const [selectedConquista, setSelectedConquista] = useState(null) // Conquista selecionada para ver detalhes
   const [conquistaEditando, setConquistaEditando] = useState(null) // Conquista sendo editada (ID)
+  const [selectedDiarioTrainer, setSelectedDiarioTrainer] = useState('') // Treinador selecionado para ver o diário
+
+  // Estados para Interlúdio
+  const [interludioPlayers, setInterludioPlayers] = useState([
+    { username: 'Alocin', jnChecked: false, rtChecked: false, jnPoints: 5, rtPoints: 5 },
+    { username: 'Lila', jnChecked: false, rtChecked: false, jnPoints: 5, rtPoints: 5 },
+    { username: 'Ludovic', jnChecked: false, rtChecked: false, jnPoints: 5, rtPoints: 5 },
+    { username: 'Noryat', jnChecked: false, rtChecked: false, jnPoints: 5, rtPoints: 5 },
+    { username: 'Pedro', jnChecked: false, rtChecked: false, jnPoints: 5, rtPoints: 5 }
+  ])
+  const [chatMessages, setChatMessages] = useState([]) // Mensagens do chat
+  const [chatInput, setChatInput] = useState('') // Input do chat
+  const [showCustomModal, setShowCustomModal] = useState(false) // Modal de ação customizada
+  const [customActionName, setCustomActionName] = useState('') // Nome da ação customizada
+  const [customActionCost, setCustomActionCost] = useState('') // Custo da ação customizada
+  const [customActionPlayer, setCustomActionPlayer] = useState(null) // Player que está criando ação customizada
+  const [customActionType, setCustomActionType] = useState('') // 'jn' ou 'rt'
+
+  // Ações de JN (Jogo de Narração)
+  const acoesJN = [
+    { nome: 'Participar de Concurso', custo: 1 },
+    { nome: 'Participar de Torneio', custo: 1 },
+    { nome: 'Procurar Pokémon', custo: 1 },
+    { nome: 'Procurar Batalhas', custo: 1 },
+    { nome: 'Escanear Pokémons', custo: 1 },
+    { nome: 'Adicionar recompensa', custo: 2 },
+    { nome: 'Em busca da Lenda', custo: 5 },
+    { nome: 'Em busca do Alvo', custo: 4 }
+  ]
+
+  // Ações de RT (Roteiro)
+  const acoesRT = [
+    { nome: 'Adicionar NPC Treinador', custo: 1 },
+    { nome: 'Adicionar NPC de História', custo: 1 },
+    { nome: 'Adicionar NPC Vilão', custo: 3 },
+    { nome: 'Adicionar Obstáculo Fácil', custo: 1 },
+    { nome: 'Adicionar Obstáculo Médio', custo: 3 },
+    { nome: 'Adicionar Obstáculo Difícil', custo: 3 },
+    { nome: 'Adicionar Quest Fácil', custo: 2 },
+    { nome: 'Adicionar Quest Médio', custo: 3 },
+    { nome: 'Adicionar Quest Difícil', custo: 4 }
+  ]
 
   // Estados para Visão do Mestre
   const [visaoMestreSection, setVisaoMestreSection] = useState('Perfis') // 'Perfis', 'Pokéloja Config'
@@ -1183,8 +1520,8 @@ function App() {
     { username: 'Pedro', type: 'treinador', gradient: 'linear-gradient(135deg, #0000CD, #4169E1, #00CED1, #32CD32)' }
   ]
 
-  const mestreAreas = ['Gerador Pokémon', 'Treinador NPC', 'Pokémon NPC', 'Batalha', 'Enciclopédia M', 'Visão do Mestre', 'PokeApp']
-  const treinadorAreas = ['Treinador', 'PC', 'Pokédex', 'Mochila', 'Características & Talentos', 'Pokéloja', 'Insígnias', 'Enciclopédia', 'Progressão']
+  const mestreAreas = ['Gerador Pokémon', 'Treinador NPC', 'Pokémon NPC', 'Batalha', 'Enciclopédia M', 'Visão do Mestre', 'PokeApp', 'Interlúdio']
+  const treinadorAreas = ['Treinador', 'PC', 'Pokédex', 'Mochila', 'Características & Talentos', 'Pokéloja', 'Insígnias', 'Enciclopédia', 'Progressão', 'Batalha Pkm', 'Interlúdio']
 
   const allClasses = [
     { name: 'Artista', color: '#87CEEB', isMaster: true }, { name: 'Beldade', color: '#87CEEB' },
@@ -1684,6 +2021,176 @@ function App() {
 
   // ==================== FIM DAS FUNÇÕES DE PERSISTÊNCIA ====================
 
+  // Funções para Interlúdio
+  const handleToggleJN = (username) => {
+    // Verifica se o usuário atual tem permissão
+    if (!currentUser || currentUser.username !== username) return
+
+    setInterludioPlayers(prevPlayers => prevPlayers.map(player =>
+      player.username === username
+        ? { ...player, jnChecked: !player.jnChecked, rtChecked: false }
+        : player
+    ))
+  }
+
+  const handleToggleRT = (username) => {
+    // Verifica se o usuário atual tem permissão
+    if (!currentUser || currentUser.username !== username) return
+
+    setInterludioPlayers(prevPlayers => prevPlayers.map(player =>
+      player.username === username
+        ? { ...player, rtChecked: !player.rtChecked, jnChecked: false }
+        : player
+    ))
+  }
+
+  const handleAcaoJN = (username, acao) => {
+    // Verifica se o usuário atual tem permissão
+    if (!currentUser || currentUser.username !== username) return
+
+    const player = interludioPlayers.find(p => p.username === username)
+    if (!player || player.jnPoints < acao.custo) return
+
+    // Deduz os pontos
+    setInterludioPlayers(prevPlayers => prevPlayers.map(p =>
+      p.username === username
+        ? { ...p, jnPoints: p.jnPoints - acao.custo }
+        : p
+    ))
+
+    // Envia mensagem ao chat
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: username,
+      text: `${acao.nome} (JN - ${acao.custo} pts)`,
+      timestamp,
+      isDiceRoll: false,
+      isAction: true
+    }])
+  }
+
+  const handleAcaoRT = (username, acao) => {
+    // Verifica se o usuário atual tem permissão
+    if (!currentUser || currentUser.username !== username) return
+
+    const player = interludioPlayers.find(p => p.username === username)
+    if (!player || player.rtPoints < acao.custo) return
+
+    // Deduz os pontos
+    setInterludioPlayers(prevPlayers => prevPlayers.map(p =>
+      p.username === username
+        ? { ...p, rtPoints: p.rtPoints - acao.custo }
+        : p
+    ))
+
+    // Envia mensagem ao chat
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: username,
+      text: `${acao.nome} (RT - ${acao.custo} pts)`,
+      timestamp,
+      isDiceRoll: false,
+      isAction: true
+    }])
+  }
+
+  const handleResetPoints = (username) => {
+    // Verifica se o usuário atual tem permissão
+    if (!currentUser || currentUser.username !== username) return
+
+    setInterludioPlayers(prevPlayers => prevPlayers.map(player =>
+      player.username === username
+        ? { ...player, jnPoints: 5, rtPoints: 5 }
+        : player
+    ))
+  }
+
+  const handleOpenCustomModal = (username, type) => {
+    // Verifica se o usuário atual tem permissão
+    if (!currentUser || currentUser.username !== username) return
+
+    setCustomActionPlayer(username)
+    setCustomActionType(type)
+    setShowCustomModal(true)
+  }
+
+  const handleCustomActionSubmit = () => {
+    if (!customActionName.trim() || !customActionCost) return
+
+    const cost = parseInt(customActionCost)
+    if (isNaN(cost) || cost <= 0) return
+
+    const player = interludioPlayers.find(p => p.username === customActionPlayer)
+    const pointsField = customActionType === 'jn' ? 'jnPoints' : 'rtPoints'
+
+    if (!player || player[pointsField] < cost) return
+
+    // Deduz os pontos
+    setInterludioPlayers(prevPlayers => prevPlayers.map(p =>
+      p.username === customActionPlayer
+        ? { ...p, [pointsField]: p[pointsField] - cost }
+        : p
+    ))
+
+    // Envia mensagem ao chat
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const typeLabel = customActionType === 'jn' ? 'JN' : 'RT'
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: customActionPlayer,
+      text: `${customActionName} (${typeLabel} - ${cost} pts)`,
+      timestamp,
+      isDiceRoll: false,
+      isAction: true
+    }])
+
+    // Fecha o modal e limpa os campos
+    setShowCustomModal(false)
+    setCustomActionName('')
+    setCustomActionCost('')
+    setCustomActionPlayer(null)
+    setCustomActionType('')
+  }
+
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return
+
+    const message = chatInput.trim()
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+    // Verifica se é comando de rolagem de dados
+    if (message.startsWith('/r ') || message.startsWith('/roll ')) {
+      const expression = message.replace(/^\/(r|roll)\s+/, '')
+      const result = rollDiceExpression(expression)
+
+      if (result.error) {
+        setChatMessages(prevMessages => [...prevMessages, {
+          username: 'Sistema',
+          text: `❌ Erro: ${result.error}`,
+          timestamp,
+          isDiceRoll: false
+        }])
+      } else {
+        setChatMessages(prevMessages => [...prevMessages, {
+          username: currentUser.username,
+          text: `🎲 ${expression}`,
+          timestamp,
+          isDiceRoll: true,
+          diceResult: result.total,
+          diceDetails: result.formula
+        }])
+      }
+    } else {
+      setChatMessages(prevMessages => [...prevMessages, {
+        username: currentUser.username,
+        text: message,
+        timestamp,
+        isDiceRoll: false
+      }])
+    }
+
+    setChatInput('')
+  }
+
   // Handlers para Account Data
   const handleDownloadAccountData = () => {
     if (!currentUser) return
@@ -1917,7 +2424,12 @@ function App() {
   const handleOpenTutoria = (pokemon, type) => {
     setSelectedPokemonForTutoria(pokemon)
     setSelectedPokemonTypeForTutoria(type)
-    setTutoriaSelectedGolpes(pokemon.golpes || [])
+    // Extrair nomes dos golpes, tratando tanto formato antigo (string) quanto novo (objeto)
+    const golpesNomes = (pokemon.golpes || [])
+      .filter(g => g !== null)
+      .map(g => typeof g === 'string' ? g : g?.nome)
+      .filter(g => g)
+    setTutoriaSelectedGolpes(golpesNomes)
     setTutoriaGolpesSearch('')
     setShowTutoriaModal(true)
   }
@@ -1942,7 +2454,20 @@ function App() {
       return
     }
 
-    const updatedPokemon = { ...selectedPokemonForTutoria, golpes: tutoriaSelectedGolpes }
+    // Converter strings de golpes para objetos {nome, usos} e preencher até 8 slots
+    const golpesArray = []
+    for (let i = 0; i < 8; i++) {
+      if (i < tutoriaSelectedGolpes.length) {
+        golpesArray.push({
+          nome: tutoriaSelectedGolpes[i],
+          usos: null
+        })
+      } else {
+        golpesArray.push(null)
+      }
+    }
+
+    const updatedPokemon = { ...selectedPokemonForTutoria, golpes: golpesArray }
 
     if (selectedPokemonTypeForTutoria === 'team') {
       setMainTeam(mainTeam.map(p => p.id === selectedPokemonForTutoria.id ? updatedPokemon : p))
@@ -3561,6 +4086,9 @@ function App() {
       // Atribuir habilidades ao pokémon
       const pokemonWithAbilities = assignAbilitiesToPokemon(pokemon)
 
+      console.log('Pokémon sendo adicionado aos NPCs:', pokemonWithAbilities)
+      console.log('Golpes do Pokémon:', pokemonWithAbilities.golpesAprendidos)
+
       setNpcPokemon(prev => [...prev, pokemonWithAbilities])
       setNpcPokemonList(prev => prev.map(p =>
         p.id === pokemonId ? { ...p, addedToNpc: true } : p
@@ -3710,6 +4238,29 @@ function App() {
         if (pokemonToSend.habilidade1) habilidadesArray.push(pokemonToSend.habilidade1)
         if (pokemonToSend.habilidade2) habilidadesArray.push(pokemonToSend.habilidade2)
 
+        // Preparar golpes do pokémon NPC (slots vazios até 8)
+        const golpesArray = []
+        if (pokemonToSend.golpesAprendidos && pokemonToSend.golpesAprendidos.length > 0) {
+          // Preencher até 8 slots com os golpes existentes
+          for (let i = 0; i < 8; i++) {
+            if (i < pokemonToSend.golpesAprendidos.length) {
+              golpesArray.push({
+                nome: pokemonToSend.golpesAprendidos[i],
+                usos: null // null significa usos infinitos ou não aplicável
+              })
+            } else {
+              golpesArray.push(null) // Slot vazio
+            }
+          }
+        } else {
+          // Se não tem golpes, criar 8 slots vazios
+          for (let i = 0; i < 8; i++) {
+            golpesArray.push(null)
+          }
+        }
+
+        console.log('Golpes sendo enviados para o treinador:', golpesArray)
+
         // Preparar dados do pokémon para envio
         const pokemonData = {
           id: `${Date.now()}-${Math.random()}`,
@@ -3737,7 +4288,8 @@ function App() {
           shiny: pokemonToSend.shiny || false,
           gender: pokemonToSend.gender,
           dexNumber: pokemonToSend.dexNumber,
-          habilidades: habilidadesArray
+          habilidades: habilidadesArray,
+          golpes: golpesArray
         }
 
         // Verificar se o time principal tem menos de 6 pokémons
@@ -3748,6 +4300,25 @@ function App() {
           trainerData.mainTeam = [...mainTeam, pokemonData]
         } else {
           trainerData.pcPokemon = [...pcPokemon, pokemonData]
+        }
+
+        // Atualizar Pokédex: adicionar como capturado e escaneado
+        const pokedex = trainerData.pokedex || []
+        const existingEntry = pokedex.find(p => p.species === sendPokemonSpecies)
+
+        if (existingEntry) {
+          // Se já existe na Pokédex, marcar como capturado
+          trainerData.pokedex = pokedex.map(p =>
+            p.species === sendPokemonSpecies
+              ? { ...p, isCaptured: true }
+              : p
+          )
+        } else {
+          // Se não existe, adicionar como capturado
+          trainerData.pokedex = [...pokedex, {
+            species: sendPokemonSpecies,
+            isCaptured: true
+          }]
         }
 
         // Salvar dados atualizados do treinador
@@ -3934,8 +4505,41 @@ function App() {
       // Volta para o início e incrementa a rodada
       setCurrentPokemonTurn(0)
       setPokemonRound(prev => prev + 1)
+
+      // Incrementar contador de rodadas de todas as condições
+      const updatedConditions = {}
+      Object.keys(battlePokemonConditions).forEach(pokemonId => {
+        const conditions = battlePokemonConditions[pokemonId]
+        updatedConditions[pokemonId] = conditions.map(cond => {
+          if (cond !== null) {
+            return { ...cond, rounds: cond.rounds + 1 }
+          }
+          return null
+        })
+      })
+      setBattlePokemonConditions(updatedConditions)
+
+      // Rolar para o primeiro Pokémon
+      setTimeout(() => {
+        if (pokemonBattleRefs.current[0]) {
+          pokemonBattleRefs.current[0].scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          })
+        }
+      }, 100)
     } else {
       setCurrentPokemonTurn(nextTurn)
+
+      // Rolar para o próximo Pokémon
+      setTimeout(() => {
+        if (pokemonBattleRefs.current[nextTurn]) {
+          pokemonBattleRefs.current[nextTurn].scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          })
+        }
+      }, 100)
     }
   }
 
@@ -3953,12 +4557,34 @@ function App() {
         console.log('Pokémon recebido do gerador:', pokemonData)
         console.log('Species:', pokemonData.species)
         console.log('Name:', pokemonData.name)
+
+        // Gerar golpes automaticamente para o Pokémon NPC
+        const speciesName = pokemonData.species || pokemonData.name
+        console.log('Espécie para buscar golpes:', speciesName)
+        console.log('Gênero do Pokémon:', pokemonData.gender)
+
+        const generatedMoves = generatePokemonMoves(
+          speciesName,
+          pokemonData.level || 5,
+          false, // includeEvolutionMove - pode ser ajustado conforme necessário
+          pokemonData.gender // Passa o gênero para espécies como Meowstic
+        )
+
+        console.log('Golpes gerados:', generatedMoves)
+
+        // Adicionar golpes ao pokemonData
+        const pokemonWithMoves = {
+          ...pokemonData,
+          golpesAprendidos: generatedMoves,
+          addedToNpc: false
+        }
+
         // Armazenar na lista de Pokémon gerados recentemente
         setNpcPokemonList(prev => {
           // Evitar duplicatas verificando se já existe
           const exists = prev.some(p => p.id === pokemonData.id)
           if (exists) return prev
-          return [...prev, { ...pokemonData, addedToNpc: false }]
+          return [...prev, pokemonWithMoves]
         })
       }
     }
@@ -5421,6 +6047,36 @@ function App() {
                           </div>
                         </div>
 
+                        {/* Golpes */}
+                        {(() => {
+                          console.log('Renderizando card de:', pokemon.species || pokemon.name)
+                          console.log('Golpes disponíveis:', pokemon.golpesAprendidos)
+                          console.log('Tem golpes?', pokemon.golpesAprendidos && pokemon.golpesAprendidos.length > 0)
+                          return null
+                        })()}
+                        {pokemon.golpesAprendidos && pokemon.golpesAprendidos.length > 0 && (
+                          <div className="mt-2">
+                            <h4 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Golpes</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {pokemon.golpesAprendidos.map((golpe, idx) => (
+                                <span
+                                  key={idx}
+                                  onClick={() => {
+                                    setSelectedGolpeForDetail(golpe)
+                                    setShowGolpeDetailModal(true)
+                                  }}
+                                  className={`px-2 py-1 text-xs rounded-lg font-medium cursor-pointer hover:opacity-80 transition-opacity ${
+                                    darkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-500 text-white'
+                                  }`}
+                                  title="Clique para ver detalhes"
+                                >
+                                  {golpe}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Informações Adicionais */}
                         {(pokemon.migration || pokemon.habitats?.length > 0) && (
                           <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -5576,9 +6232,175 @@ function App() {
                           </p>
                         </div>
                       )}
+
+                      {/* Tabela da Habilidade (se houver) */}
+                      {abilityData.tabela && (
+                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <div className="overflow-x-auto">
+                            <table className={`w-full text-sm border-collapse ${
+                              darkMode ? 'border-gray-600' : 'border-gray-300'
+                            }`}>
+                              <thead>
+                                <tr className={darkMode ? 'bg-gray-800' : 'bg-teal-100'}>
+                                  {Object.keys(abilityData.tabela[0]).map(key => (
+                                    <th key={key} className={`border p-2 font-semibold text-left ${
+                                      darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
+                                    }`}>
+                                      {key === 'resultado' ? 'Resultado' :
+                                       key === 'efeito' ? 'Efeito' :
+                                       key === 'item' ? 'Item' :
+                                       key === 'clima' ? 'Clima' :
+                                       key === 'tipo' ? 'Tipo' :
+                                       key === 'dado' ? 'Dado' :
+                                       key.charAt(0).toUpperCase() + key.slice(1)}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {abilityData.tabela.map((linha, idx) => (
+                                  <tr key={idx} className={idx % 2 === 0
+                                    ? (darkMode ? 'bg-gray-750' : 'bg-white')
+                                    : (darkMode ? 'bg-gray-700' : 'bg-teal-50')
+                                  }>
+                                    {Object.keys(linha).map(key => (
+                                      <td key={key} className={`border p-2 ${
+                                        key === 'resultado'
+                                          ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                          : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                                      }`}>
+                                        {linha[key]}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalhes do Golpe */}
+        {showGolpeDetailModal && selectedGolpeForDetail && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col`}>
+              {/* Header Fixo */}
+              <div className="p-6 border-b border-gray-700">
+                <div className="flex justify-between items-center">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {selectedGolpeForDetail}
+                  </h3>
+                  <button
+                    onClick={() => setShowGolpeDetailModal(false)}
+                    className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Conteúdo Scrollável */}
+              <div className="overflow-y-auto flex-1 p-6">
+                {(() => {
+                  const golpeData = GOLPES_DATA_IMPORTED[selectedGolpeForDetail]
+
+                  if (!golpeData) {
+                    return (
+                      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Informações do golpe não encontradas.
+                        </p>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Informações Básicas */}
+                      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <div className="grid grid-cols-2 gap-3">
+                          {golpeData.tipo && (
+                            <div>
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo</h4>
+                              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{golpeData.tipo}</p>
+                            </div>
+                          )}
+                          {golpeData.aptidao && (
+                            <div>
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aptidão</h4>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.aptidao}</p>
+                            </div>
+                          )}
+                          {golpeData.danoBasal && (
+                            <div>
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal</h4>
+                              <p className={`text-sm font-semibold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{golpeData.danoBasal}</p>
+                            </div>
+                          )}
+                          {golpeData.acuracia && (
+                            <div>
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia</h4>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.acuracia}</p>
+                            </div>
+                          )}
+                          {golpeData.alcance && (
+                            <div>
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alcance</h4>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.alcance}</p>
+                            </div>
+                          )}
+                          {golpeData.frequencia && (
+                            <div>
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência</h4>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.frequencia}</p>
+                            </div>
+                          )}
+                          {golpeData.descritores && (
+                            <div className="col-span-2">
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descritores</h4>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.descritores}</p>
+                            </div>
+                          )}
+                          {golpeData.tagConcurso && (
+                            <div>
+                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tag Concurso</h4>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.tagConcurso}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Efeito */}
+                      {golpeData.efeito && (
+                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <h4 className={`text-sm font-bold mb-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                            Efeito
+                          </h4>
+                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {renderGolpeEfeito(golpeData.efeito, darkMode)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Footer Fixo */}
+              <div className="p-6 border-t border-gray-700">
+                <button
+                  onClick={() => setShowGolpeDetailModal(false)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-700 text-white py-3 rounded-lg hover:from-blue-700 hover:to-purple-800 font-semibold"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
           </div>
@@ -5791,6 +6613,7 @@ function App() {
                 setCurrentPokemonTurn(0)
                 setTrainerRound(1)
                 setPokemonRound(1)
+                setBattlePokemonConditions({})
               }}
               className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-semibold flex items-center gap-2"
             >
@@ -5988,38 +6811,154 @@ function App() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {safePokemonList.map((pokemon, idx) => (
-                        <div
-                          key={pokemon.id}
-                          className={`p-3 rounded-lg border-2 ${
-                            idx === currentPokemonTurn
-                              ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
-                              : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className={`font-semibold ${idx === currentPokemonTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              {idx === currentPokemonTurn && '▶ '}{pokemon.nome}
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                              Vel: {pokemon.velocidade}
-                            </span>
-                          </div>
-                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {pokemon.especie} | HP: {pokemon.hp}/{pokemon.maxHP}
-                          </div>
-                          <div className={`text-xs flex gap-1 mt-1`}>
-                            {(pokemon.tipos || []).map((tipo, i) => (
-                              <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
-                                {tipo}
+                      {safePokemonList.map((pokemon, idx) => {
+                        const pokemonConditions = battlePokemonConditions[pokemon.id] || [null, null, null]
+                        return (
+                          <div
+                            key={pokemon.id}
+                            ref={(el) => (pokemonBattleRefs.current[idx] = el)}
+                            className={`p-3 rounded-lg border-2 ${
+                              idx === currentPokemonTurn
+                                ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
+                                : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className={`font-semibold ${idx === currentPokemonTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                {idx === currentPokemonTurn && '▶ '}{pokemon.nome}
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                                Vel: {pokemon.velocidade}
                               </span>
-                            ))}
+                            </div>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {pokemon.especie} | HP: {pokemon.hp}/{pokemon.maxHP}
+                            </div>
+                            <div className={`text-xs flex gap-1 mt-1`}>
+                              {(pokemon.tipos || []).map((tipo, i) => (
+                                <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
+                                  {tipo}
+                                </span>
+                              ))}
+                            </div>
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
+                            </div>
+
+                            {/* Dropdown e Caixas de Condições */}
+                            <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                              <label className={`text-xs font-semibold mb-1 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                Condições:
+                              </label>
+                              <select
+                                className={`w-full text-xs px-2 py-1 rounded mb-2 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-800 border-gray-300'} border`}
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    const newConditions = [...pokemonConditions]
+                                    const emptySlot = newConditions.findIndex(c => c === null)
+                                    if (emptySlot !== -1) {
+                                      newConditions[emptySlot] = { condition: e.target.value, rounds: 1 }
+                                      setBattlePokemonConditions({
+                                        ...battlePokemonConditions,
+                                        [pokemon.id]: newConditions
+                                      })
+                                    }
+                                    e.target.value = ''
+                                  }
+                                }}
+                                value=""
+                              >
+                                <option value="">Selecione uma condição</option>
+                                <option value="confusao">😵 Confusão</option>
+                                <option value="critico">🍀 Crítico</option>
+                                <option value="paralisia">⚡ Paralisia</option>
+                                <option value="sono">💤 Sono</option>
+                                <option value="atordoamento">🌀 Atordoamento</option>
+                                <option value="congelamento">❄️ Congelamento</option>
+                                <option value="paixao">❤️ Paixão</option>
+                                <option value="queimadura">🔥 Queimadura</option>
+                                <option value="veneno">☠️ Veneno</option>
+                              </select>
+
+                              {/* Caixas de Condições */}
+                              <div className="grid grid-cols-3 gap-1">
+                                {pokemonConditions.map((cond, slotIdx) => (
+                                  <div
+                                    key={slotIdx}
+                                    className={`relative text-center p-2 rounded border-2 ${
+                                      cond
+                                        ? darkMode ? 'bg-gray-700 border-blue-500' : 'bg-blue-50 border-blue-400'
+                                        : darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-100 border-gray-300'
+                                    }`}
+                                  >
+                                    {cond ? (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            const newConditions = [...pokemonConditions]
+                                            newConditions[slotIdx] = null
+                                            setBattlePokemonConditions({
+                                              ...battlePokemonConditions,
+                                              [pokemon.id]: newConditions
+                                            })
+                                          }}
+                                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                                        >
+                                          ×
+                                        </button>
+                                        <div className="text-lg mb-1">
+                                          {cond.condition === 'confusao' && '😵'}
+                                          {cond.condition === 'critico' && '🍀'}
+                                          {cond.condition === 'paralisia' && '⚡'}
+                                          {cond.condition === 'sono' && '💤'}
+                                          {cond.condition === 'atordoamento' && '🌀'}
+                                          {cond.condition === 'congelamento' && '❄️'}
+                                          {cond.condition === 'paixao' && '❤️'}
+                                          {cond.condition === 'queimadura' && '🔥'}
+                                          {cond.condition === 'veneno' && '☠️'}
+                                        </div>
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button
+                                            onClick={() => {
+                                              const newConditions = [...pokemonConditions]
+                                              newConditions[slotIdx].rounds = Math.max(0, newConditions[slotIdx].rounds - 1)
+                                              setBattlePokemonConditions({
+                                                ...battlePokemonConditions,
+                                                [pokemon.id]: newConditions
+                                              })
+                                            }}
+                                            className={`w-5 h-5 rounded text-xs font-bold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                          >
+                                            -
+                                          </button>
+                                          <span className={`text-xs font-bold min-w-[20px] ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                            {cond.rounds}
+                                          </span>
+                                          <button
+                                            onClick={() => {
+                                              const newConditions = [...pokemonConditions]
+                                              newConditions[slotIdx].rounds += 1
+                                              setBattlePokemonConditions({
+                                                ...battlePokemonConditions,
+                                                [pokemon.id]: newConditions
+                                              })
+                                            }}
+                                            className={`w-5 h-5 rounded text-xs font-bold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                          >
+                                            +
+                                          </button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>-</div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           </div>
-                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -6275,9 +7214,9 @@ function App() {
                             )}
 
                             <div className={`pt-2 border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                <span className="font-semibold">Efeito:</span> {GOLPES_DATA[search].efeito}
-                              </p>
+                              <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <span className="font-semibold">Efeito:</span> {renderGolpeEfeito(GOLPES_DATA[search].efeito, darkMode)}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -6462,9 +7401,65 @@ function App() {
                               <h6 className={`font-bold text-lg mb-2 ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
                                 {pericia.nome}
                               </h6>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              <p className={`text-sm mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                 {pericia.descricao}
                               </p>
+
+                              {/* Tabela da Perícia (se houver) */}
+                              {pericia.tabela && (
+                                <div className="mt-3 overflow-x-auto">
+                                  <table className={`w-full text-sm border-collapse ${
+                                    darkMode ? 'border-gray-500' : 'border-gray-300'
+                                  }`}>
+                                    <thead>
+                                      <tr className={darkMode ? 'bg-gray-700' : 'bg-blue-100'}>
+                                        <th className={`border p-2 font-semibold text-left ${
+                                          darkMode ? 'border-gray-500 text-blue-200' : 'border-gray-300 text-blue-900'
+                                        }`}>
+                                          Resultado
+                                        </th>
+                                        {/* Cabeçalhos dinâmicos baseados nas colunas da tabela */}
+                                        {Object.keys(pericia.tabela[0])
+                                          .filter(key => key !== 'resultado')
+                                          .map(key => (
+                                            <th key={key} className={`border p-2 font-semibold text-left ${
+                                              darkMode ? 'border-gray-500 text-blue-200' : 'border-gray-300 text-blue-900'
+                                            }`}>
+                                              {key === 'efeito' ? 'Efeito' :
+                                               key === 'altura' ? 'Altura' :
+                                               key === 'horizontal' ? 'Horizontal' :
+                                               key === 'equilibrio' ? 'Equilíbrio' :
+                                               key === 'escalada' ? 'Escalada' : key}
+                                            </th>
+                                          ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {pericia.tabela.map((linha, idx) => (
+                                        <tr key={idx} className={idx % 2 === 0
+                                          ? (darkMode ? 'bg-gray-650' : 'bg-white')
+                                          : (darkMode ? 'bg-gray-600' : 'bg-blue-50')
+                                        }>
+                                          <td className={`border p-2 font-bold ${
+                                            darkMode ? 'border-gray-500 text-blue-300' : 'border-gray-300 text-blue-700'
+                                          }`}>
+                                            {linha.resultado}
+                                          </td>
+                                          {Object.keys(linha)
+                                            .filter(key => key !== 'resultado')
+                                            .map(key => (
+                                              <td key={key} className={`border p-2 ${
+                                                darkMode ? 'border-gray-500 text-gray-300' : 'border-gray-300 text-gray-700'
+                                              }`}>
+                                                {linha[key]}
+                                              </td>
+                                            ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -6547,6 +7542,52 @@ function App() {
                               <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                 <span className="font-semibold">Efeito:</span> {HABILIDADES_DATA[search].efeito}
                               </p>
+
+                              {/* Tabela da Habilidade (se houver) */}
+                              {HABILIDADES_DATA[search].tabela && (
+                                <div className="mt-3 overflow-x-auto">
+                                  <table className={`w-full text-sm border-collapse ${
+                                    darkMode ? 'border-gray-600' : 'border-gray-300'
+                                  }`}>
+                                    <thead>
+                                      <tr className={darkMode ? 'bg-gray-800' : 'bg-teal-100'}>
+                                        {/* Cabeçalhos dinâmicos baseados nas colunas da tabela */}
+                                        {Object.keys(HABILIDADES_DATA[search].tabela[0]).map(key => (
+                                          <th key={key} className={`border p-2 font-semibold text-left ${
+                                            darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
+                                          }`}>
+                                            {key === 'resultado' ? 'Resultado' :
+                                             key === 'efeito' ? 'Efeito' :
+                                             key === 'item' ? 'Item' :
+                                             key === 'clima' ? 'Clima' :
+                                             key === 'tipo' ? 'Tipo' :
+                                             key === 'dado' ? 'Dado' :
+                                             key.charAt(0).toUpperCase() + key.slice(1)}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {HABILIDADES_DATA[search].tabela.map((linha, idx) => (
+                                        <tr key={idx} className={idx % 2 === 0
+                                          ? (darkMode ? 'bg-gray-750' : 'bg-white')
+                                          : (darkMode ? 'bg-gray-700' : 'bg-teal-50')
+                                        }>
+                                          {Object.keys(linha).map(key => (
+                                            <td key={key} className={`border p-2 ${
+                                              key === 'resultado'
+                                                ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                                : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                                            }`}>
+                                              {linha[key]}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -6621,8 +7662,61 @@ function App() {
                           <div className="space-y-2">
                             <div className={`pt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                               <p className={`text-sm leading-relaxed`}>
-                                {CAPACIDADES_DATA[search]}
+                                {typeof CAPACIDADES_DATA[search] === 'string'
+                                  ? CAPACIDADES_DATA[search]
+                                  : CAPACIDADES_DATA[search].descricao}
                               </p>
+
+                              {/* Tabela da Capacidade (se houver) */}
+                              {typeof CAPACIDADES_DATA[search] === 'object' && CAPACIDADES_DATA[search].tabela && (
+                                <div className="mt-3 overflow-x-auto">
+                                  <table className={`w-full text-sm border-collapse ${
+                                    darkMode ? 'border-gray-600' : 'border-gray-300'
+                                  }`}>
+                                    <thead>
+                                      <tr className={darkMode ? 'bg-gray-800' : 'bg-teal-100'}>
+                                        {/* Cabeçalhos dinâmicos baseados nas colunas da tabela */}
+                                        {Object.keys(CAPACIDADES_DATA[search].tabela[0]).map(key => (
+                                          <th key={key} className={`border p-2 font-semibold text-left ${
+                                            darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
+                                          }`}>
+                                            {key === 'força' ? 'Força' :
+                                             key === 'peso' ? 'Peso Erguido' :
+                                             key === 'inteligência' ? 'Inteligência' :
+                                             key === 'intelecto' ? 'Intelecto' :
+                                             key === 'pensamentos' ? 'Pensamentos' :
+                                             key === 'salto' ? 'Salto' :
+                                             key === 'altura' ? 'Altura' :
+                                             key === 'resultado' ? 'Resultado' :
+                                             key === 'área' ? 'Área' :
+                                             key === 'par' ? 'Par de Espécies' :
+                                             key === 'condição' ? 'Condição' :
+                                             key.charAt(0).toUpperCase() + key.slice(1)}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {CAPACIDADES_DATA[search].tabela.map((linha, idx) => (
+                                        <tr key={idx} className={idx % 2 === 0
+                                          ? (darkMode ? 'bg-gray-750' : 'bg-white')
+                                          : (darkMode ? 'bg-gray-700' : 'bg-teal-50')
+                                        }>
+                                          {Object.keys(linha).map(key => (
+                                            <td key={key} className={`border p-2 ${
+                                              ['força', 'inteligência', 'salto', 'resultado'].includes(key)
+                                                ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                                : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                                            }`}>
+                                              {linha[key]}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -6643,8 +7737,8 @@ function App() {
                   Clique em uma condição para expandir e ver suas informações detalhadas
                 </p>
 
-                {/* Grid 3x3 de Condições */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Lista de Condições em coluna única */}
+                <div className="grid grid-cols-1 gap-4">
                   {condicoes.map((condicao) => {
                     const isExpanded = expandedCondicoesM.includes(condicao.nome)
 
@@ -6653,9 +7747,7 @@ function App() {
                         key={condicao.nome}
                         className={`${
                           darkMode ? 'bg-gray-700' : 'bg-gray-100'
-                        } rounded-lg overflow-hidden transition-all ${
-                          isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''
-                        }`}
+                        } rounded-lg overflow-hidden transition-all`}
                       >
                         <button
                           onClick={() => {
@@ -7349,25 +8441,114 @@ function App() {
                 {/* Itens Customizados */}
                 <div>
                   <h4 className={`text-lg font-bold mb-3 ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
-                    Itens Customizados
+                    Itens Customizados {trainerData?.customItems ? `(${trainerData.customItems.length})` : ''}
                   </h4>
+                  {(() => {
+                    console.log('TrainerData customItems:', trainerData?.customItems)
+                    return null
+                  })()}
                   {trainerData?.customItems && trainerData.customItems.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
+                      {/* Cabeçalho da tabela */}
+                      <div className={`grid grid-cols-12 gap-2 px-3 py-2 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                        <div className="col-span-5">
+                          <span className={`text-xs font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Item</span>
+                        </div>
+                        <div className="col-span-5">
+                          <span className={`text-xs font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Descrição</span>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <span className={`text-xs font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Qtd</span>
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <span className={`text-xs font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Bolso</span>
+                        </div>
+                      </div>
+
+                      {/* Linhas de itens */}
                       {trainerData.customItems.map((item, index) => (
-                        <div key={index} className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <div className="flex justify-between items-start mb-2">
+                        <div key={index} className={`grid grid-cols-12 gap-2 p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <div className="col-span-5 flex items-center">
                             <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                               {item.name}
                             </span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${darkMode ? 'bg-blue-600' : 'bg-blue-500'} text-white`}>
+                          </div>
+                          <div className="col-span-5 flex items-center">
+                            {item.description && (
+                              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="col-span-1 flex items-center justify-center">
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${darkMode ? 'bg-blue-600' : 'bg-blue-500'} text-white`}>
                               x{item.quantity}
                             </span>
                           </div>
-                          {item.description && (
-                            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                              {item.description}
-                            </p>
-                          )}
+                          <div className="col-span-1 flex flex-col items-center justify-center gap-1">
+                            <button
+                              onClick={() => {
+                                if (index > 0) {
+                                  const key = `trainer_${selectedTrainer}`
+                                  const saved = localStorage.getItem(key)
+                                  if (saved) {
+                                    const data = JSON.parse(saved)
+                                    const items = [...data.customItems]
+                                    // Trocar posição com o item anterior
+                                    const temp = items[index]
+                                    items[index] = items[index - 1]
+                                    items[index - 1] = temp
+                                    data.customItems = items
+                                    localStorage.setItem(key, JSON.stringify(data))
+                                    // Atualizar estado
+                                    setTrainerData(data)
+                                  }
+                                }
+                              }}
+                              disabled={index === 0}
+                              className={`px-2 py-1 rounded text-sm font-bold transition-colors ${
+                                index === 0
+                                  ? 'opacity-30 cursor-not-allowed text-gray-400'
+                                  : darkMode
+                                  ? 'hover:bg-gray-600 text-gray-300 hover:text-white'
+                                  : 'hover:bg-gray-200 text-gray-700 hover:text-black'
+                              }`}
+                              title="Mover para cima"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (index < trainerData.customItems.length - 1) {
+                                  const key = `trainer_${selectedTrainer}`
+                                  const saved = localStorage.getItem(key)
+                                  if (saved) {
+                                    const data = JSON.parse(saved)
+                                    const items = [...data.customItems]
+                                    // Trocar posição com o próximo item
+                                    const temp = items[index]
+                                    items[index] = items[index + 1]
+                                    items[index + 1] = temp
+                                    data.customItems = items
+                                    localStorage.setItem(key, JSON.stringify(data))
+                                    // Atualizar estado
+                                    setTrainerData(data)
+                                  }
+                                }
+                              }}
+                              disabled={index === trainerData.customItems.length - 1}
+                              className={`px-2 py-1 rounded text-sm font-bold transition-colors ${
+                                index === trainerData.customItems.length - 1
+                                  ? 'opacity-30 cursor-not-allowed text-gray-400'
+                                  : darkMode
+                                  ? 'hover:bg-gray-600 text-gray-300 hover:text-white'
+                                  : 'hover:bg-gray-200 text-gray-700 hover:text-black'
+                              }`}
+                              title="Mover para baixo"
+                            >
+                              ▼
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -9011,20 +10192,21 @@ function App() {
                                 <div className="grid grid-cols-4 gap-2">
                                   {[...Array(8)].map((_, slotIdx) => {
                                     const golpe = pokemon.golpes && pokemon.golpes[slotIdx]
-                                    const golpeTipo = golpe && GOLPES_DATA[golpe] ? GOLPES_DATA[golpe].tipo : null
+                                    const golpeNome = golpe?.nome
+                                    const golpeTipo = golpeNome && GOLPES_DATA[golpeNome] ? GOLPES_DATA[golpeNome].tipo : null
                                     const golpeColor = golpeTipo ? TYPE_STYLES[golpeTipo] : null
                                     return (
                                       <button
                                         key={slotIdx}
-                                        onClick={() => golpe && handleOpenGolpeDetail(golpe)}
+                                        onClick={() => golpeNome && handleOpenGolpeDetail(golpeNome)}
                                         className={`p-2 rounded text-xs font-semibold transition-all ${
-                                          golpe
+                                          golpeNome
                                             ? `${golpeColor || (darkMode ? 'bg-orange-600' : 'bg-orange-500')} text-white hover:opacity-80 cursor-pointer`
                                             : `${darkMode ? 'bg-gray-600 text-gray-400' : 'bg-gray-200 text-gray-500'} cursor-default`
                                         }`}
-                                        disabled={!golpe}
+                                        disabled={!golpeNome}
                                       >
-                                        {golpe || 'Seu pokémon quer aprender...'}
+                                        {golpeNome || 'Seu pokémon quer aprender...'}
                                       </button>
                                     )
                                   })}
@@ -10347,9 +11529,9 @@ function App() {
         {/* Modal de Detalhes do Golpe */}
         {showGolpeDetailModal && selectedGolpeForDetail && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowGolpeDetailModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-gray-700">
+                <div className="flex justify-between items-center">
                   <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                     {selectedGolpeForDetail}
                   </h3>
@@ -10357,7 +11539,9 @@ function App() {
                     <X size={24} />
                   </button>
                 </div>
+              </div>
 
+              <div className="overflow-y-auto flex-1 p-6">
                 <div className={`space-y-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                   <div className="grid grid-cols-2 gap-4">
                     <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -10395,18 +11579,18 @@ function App() {
                   </div>
                   <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <div className={`text-sm font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito</div>
-                    <div className="text-base">{GOLPES_DATA[selectedGolpeForDetail].efeito}</div>
+                    <div className="text-base">{renderGolpeEfeito(GOLPES_DATA[selectedGolpeForDetail].efeito, darkMode)}</div>
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-6">
-                  <button
-                    onClick={() => setShowGolpeDetailModal(false)}
-                    className={`w-full py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
-                  >
-                    Fechar
-                  </button>
-                </div>
+              <div className="p-6 border-t border-gray-700">
+                <button
+                  onClick={() => setShowGolpeDetailModal(false)}
+                  className={`w-full py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                >
+                  Fechar
+                </button>
               </div>
             </div>
           </div>
@@ -10781,7 +11965,7 @@ function App() {
         {/* Modal de Detalhes da Habilidade - Treinador */}
         {showHabilidadeDetailModal && selectedHabilidadeForDetail && HABILIDADES_DATA?.[selectedHabilidadeForDetail] && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowHabilidadeDetailModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
                 <h3 className={`text-2xl font-bold ${darkMode ? 'text-teal-400' : 'text-teal-700'}`}>{selectedHabilidadeForDetail}</h3>
                 <button onClick={() => setShowHabilidadeDetailModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
@@ -10799,6 +11983,51 @@ function App() {
               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
                 <p className="font-semibold mb-2">Efeito:</p>
                 <p>{HABILIDADES_DATA[selectedHabilidadeForDetail]?.efeito || 'Descrição não disponível'}</p>
+
+                {/* Tabela da Habilidade (se houver) */}
+                {HABILIDADES_DATA[selectedHabilidadeForDetail]?.tabela && (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className={`w-full text-sm border-collapse ${
+                      darkMode ? 'border-gray-600' : 'border-gray-300'
+                    }`}>
+                      <thead>
+                        <tr className={darkMode ? 'bg-gray-700' : 'bg-teal-100'}>
+                          {Object.keys(HABILIDADES_DATA[selectedHabilidadeForDetail].tabela[0]).map(key => (
+                            <th key={key} className={`border p-2 font-semibold text-left ${
+                              darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
+                            }`}>
+                              {key === 'resultado' ? 'Resultado' :
+                               key === 'efeito' ? 'Efeito' :
+                               key === 'item' ? 'Item' :
+                               key === 'clima' ? 'Clima' :
+                               key === 'tipo' ? 'Tipo' :
+                               key === 'dado' ? 'Dado' :
+                               key.charAt(0).toUpperCase() + key.slice(1)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {HABILIDADES_DATA[selectedHabilidadeForDetail].tabela.map((linha, idx) => (
+                          <tr key={idx} className={idx % 2 === 0
+                            ? (darkMode ? 'bg-gray-800' : 'bg-white')
+                            : (darkMode ? 'bg-gray-750' : 'bg-teal-50')
+                          }>
+                            {Object.keys(linha).map(key => (
+                              <td key={key} className={`border p-2 ${
+                                key === 'resultado'
+                                  ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                  : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                              }`}>
+                                {linha[key]}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end mt-6">
                 <button
@@ -10815,7 +12044,7 @@ function App() {
         {/* Modal de Informação de Capacidade - Treinador */}
         {showCapacityInfoModal && selectedCapacityForInfo && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
                 <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
                 <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
@@ -10823,7 +12052,59 @@ function App() {
                 </button>
               </div>
               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
-                {CAPACIDADES_DATA[selectedCapacityForInfo]}
+                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'string'
+                  ? CAPACIDADES_DATA[selectedCapacityForInfo]
+                  : CAPACIDADES_DATA[selectedCapacityForInfo].descricao}
+
+                {/* Tabela da Capacidade (se houver) */}
+                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'object' && CAPACIDADES_DATA[selectedCapacityForInfo].tabela && (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className={`w-full text-sm border-collapse ${
+                      darkMode ? 'border-gray-600' : 'border-gray-300'
+                    }`}>
+                      <thead>
+                        <tr className={darkMode ? 'bg-gray-700' : 'bg-gray-100'}>
+                          {Object.keys(CAPACIDADES_DATA[selectedCapacityForInfo].tabela[0]).map(key => (
+                            <th key={key} className={`border p-2 font-semibold text-left ${
+                              darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-gray-800'
+                            }`}>
+                              {key === 'força' ? 'Força' :
+                               key === 'peso' ? 'Peso Erguido' :
+                               key === 'inteligência' ? 'Inteligência' :
+                               key === 'intelecto' ? 'Intelecto' :
+                               key === 'pensamentos' ? 'Pensamentos' :
+                               key === 'salto' ? 'Salto' :
+                               key === 'altura' ? 'Altura' :
+                               key === 'resultado' ? 'Resultado' :
+                               key === 'área' ? 'Área' :
+                               key === 'par' ? 'Par de Espécies' :
+                               key === 'condição' ? 'Condição' :
+                               key.charAt(0).toUpperCase() + key.slice(1)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {CAPACIDADES_DATA[selectedCapacityForInfo].tabela.map((linha, idx) => (
+                          <tr key={idx} className={idx % 2 === 0
+                            ? (darkMode ? 'bg-gray-800' : 'bg-white')
+                            : (darkMode ? 'bg-gray-750' : 'bg-gray-50')
+                          }>
+                            {Object.keys(linha).map(key => (
+                              <td key={key} className={`border p-2 ${
+                                ['força', 'inteligência', 'salto', 'resultado'].includes(key)
+                                  ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                  : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                              }`}>
+                                {linha[key]}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end mt-6">
                 <button
@@ -11293,60 +12574,66 @@ function App() {
 
                 <div className="space-y-3">
                   {selectedPokemonForPCGolpes.golpes && selectedPokemonForPCGolpes.golpes.length > 0 ? (
-                    selectedPokemonForPCGolpes.golpes.map((golpe, idx) => (
-                      <div key={idx} className={`rounded-lg overflow-hidden ${TYPE_STYLES[GOLPES_DATA[golpe].tipo] || (darkMode ? 'bg-gray-700' : 'bg-gray-100')}`}>
-                        <button
-                          onClick={() => setExpandedGolpeInPC(expandedGolpeInPC === golpe ? null : golpe)}
-                          className={`w-full p-4 text-left font-semibold text-white transition-colors flex items-center justify-between hover:opacity-80`}
-                        >
-                          <span>{golpe}</span>
-                          <span className="text-sm">{expandedGolpeInPC === golpe ? '▼' : '▶'}</span>
-                        </button>
+                    selectedPokemonForPCGolpes.golpes
+                      .filter(g => g !== null)
+                      .map((golpe, idx) => {
+                        const golpeNome = typeof golpe === 'string' ? golpe : golpe?.nome
+                        if (!golpeNome) return null
+                        return (
+                          <div key={idx} className={`rounded-lg overflow-hidden ${TYPE_STYLES[GOLPES_DATA[golpeNome]?.tipo] || (darkMode ? 'bg-gray-700' : 'bg-gray-100')}`}>
+                            <button
+                              onClick={() => setExpandedGolpeInPC(expandedGolpeInPC === golpeNome ? null : golpeNome)}
+                              className={`w-full p-4 text-left font-semibold text-white transition-colors flex items-center justify-between hover:opacity-80`}
+                            >
+                              <span>{golpeNome}</span>
+                              <span className="text-sm">{expandedGolpeInPC === golpeNome ? '▼' : '▶'}</span>
+                            </button>
 
-                        {expandedGolpeInPC === golpe && (
-                          <div className={`p-4 border-t-2 ${darkMode ? 'border-gray-600 text-white' : 'border-gray-300 text-gray-800'}`}>
-                            <div className="grid grid-cols-2 gap-3 mb-3">
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].tipo}</div>
+                            {expandedGolpeInPC === golpeNome && (
+                              <div className={`p-4 border-t-2 ${darkMode ? 'border-gray-600 text-white' : 'border-gray-300 text-gray-800'}`}>
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.tipo}</div>
+                                  </div>
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aptidão</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.aptidao}</div>
+                                  </div>
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.danoBasal || '-'}</div>
+                                  </div>
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.acuracia}</div>
+                                  </div>
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.frequencia}</div>
+                                  </div>
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alcance</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.alcance}</div>
+                                  </div>
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descritores</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.descritores || '-'}</div>
+                                  </div>
+                                  <div>
+                                    <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tag Concurso</div>
+                                    <div className="font-bold">{GOLPES_DATA[golpeNome]?.tagConcurso}</div>
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito</div>
+                                  <div className="text-sm">{renderGolpeEfeito(GOLPES_DATA[golpeNome]?.efeito, darkMode)}</div>
+                                </div>
                               </div>
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aptidão</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].aptidao}</div>
-                              </div>
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].danoBasal || '-'}</div>
-                              </div>
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].acuracia}</div>
-                              </div>
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].frequencia}</div>
-                              </div>
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alcance</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].alcance}</div>
-                              </div>
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descritores</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].descritores || '-'}</div>
-                              </div>
-                              <div>
-                                <div className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tag Concurso</div>
-                                <div className="font-bold">{GOLPES_DATA[golpe].tagConcurso}</div>
-                              </div>
-                            </div>
-                            <div>
-                              <div className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito</div>
-                              <div className="text-sm">{GOLPES_DATA[golpe].efeito}</div>
-                            </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))
+                        )
+                      })
                   ) : (
                     <div className={`p-8 text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       Nenhum golpe selecionado. Use a Tutoria para adicionar golpes!
@@ -12132,7 +13419,7 @@ function App() {
         {/* Modal de Detalhes da Habilidade - PC */}
         {showHabilidadeDetailModal && selectedHabilidadeForDetail && HABILIDADES_DATA?.[selectedHabilidadeForDetail] && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowHabilidadeDetailModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
                 <h3 className={`text-2xl font-bold ${darkMode ? 'text-teal-400' : 'text-teal-700'}`}>{selectedHabilidadeForDetail}</h3>
                 <button onClick={() => setShowHabilidadeDetailModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
@@ -12150,6 +13437,51 @@ function App() {
               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
                 <p className="font-semibold mb-2">Efeito:</p>
                 <p>{HABILIDADES_DATA[selectedHabilidadeForDetail]?.efeito || 'Descrição não disponível'}</p>
+
+                {/* Tabela da Habilidade (se houver) */}
+                {HABILIDADES_DATA[selectedHabilidadeForDetail]?.tabela && (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className={`w-full text-sm border-collapse ${
+                      darkMode ? 'border-gray-600' : 'border-gray-300'
+                    }`}>
+                      <thead>
+                        <tr className={darkMode ? 'bg-gray-700' : 'bg-teal-100'}>
+                          {Object.keys(HABILIDADES_DATA[selectedHabilidadeForDetail].tabela[0]).map(key => (
+                            <th key={key} className={`border p-2 font-semibold text-left ${
+                              darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
+                            }`}>
+                              {key === 'resultado' ? 'Resultado' :
+                               key === 'efeito' ? 'Efeito' :
+                               key === 'item' ? 'Item' :
+                               key === 'clima' ? 'Clima' :
+                               key === 'tipo' ? 'Tipo' :
+                               key === 'dado' ? 'Dado' :
+                               key.charAt(0).toUpperCase() + key.slice(1)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {HABILIDADES_DATA[selectedHabilidadeForDetail].tabela.map((linha, idx) => (
+                          <tr key={idx} className={idx % 2 === 0
+                            ? (darkMode ? 'bg-gray-800' : 'bg-white')
+                            : (darkMode ? 'bg-gray-750' : 'bg-teal-50')
+                          }>
+                            {Object.keys(linha).map(key => (
+                              <td key={key} className={`border p-2 ${
+                                key === 'resultado'
+                                  ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                  : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                              }`}>
+                                {linha[key]}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end mt-6">
                 <button
@@ -12166,7 +13498,7 @@ function App() {
         {/* Modal de Informação de Capacidade - PC */}
         {showCapacityInfoModal && selectedCapacityForInfo && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
                 <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
                 <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
@@ -12174,7 +13506,59 @@ function App() {
                 </button>
               </div>
               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
-                {CAPACIDADES_DATA[selectedCapacityForInfo]}
+                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'string'
+                  ? CAPACIDADES_DATA[selectedCapacityForInfo]
+                  : CAPACIDADES_DATA[selectedCapacityForInfo].descricao}
+
+                {/* Tabela da Capacidade (se houver) */}
+                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'object' && CAPACIDADES_DATA[selectedCapacityForInfo].tabela && (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className={`w-full text-sm border-collapse ${
+                      darkMode ? 'border-gray-600' : 'border-gray-300'
+                    }`}>
+                      <thead>
+                        <tr className={darkMode ? 'bg-gray-700' : 'bg-gray-100'}>
+                          {Object.keys(CAPACIDADES_DATA[selectedCapacityForInfo].tabela[0]).map(key => (
+                            <th key={key} className={`border p-2 font-semibold text-left ${
+                              darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-gray-800'
+                            }`}>
+                              {key === 'força' ? 'Força' :
+                               key === 'peso' ? 'Peso Erguido' :
+                               key === 'inteligência' ? 'Inteligência' :
+                               key === 'intelecto' ? 'Intelecto' :
+                               key === 'pensamentos' ? 'Pensamentos' :
+                               key === 'salto' ? 'Salto' :
+                               key === 'altura' ? 'Altura' :
+                               key === 'resultado' ? 'Resultado' :
+                               key === 'área' ? 'Área' :
+                               key === 'par' ? 'Par de Espécies' :
+                               key === 'condição' ? 'Condição' :
+                               key.charAt(0).toUpperCase() + key.slice(1)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {CAPACIDADES_DATA[selectedCapacityForInfo].tabela.map((linha, idx) => (
+                          <tr key={idx} className={idx % 2 === 0
+                            ? (darkMode ? 'bg-gray-800' : 'bg-white')
+                            : (darkMode ? 'bg-gray-750' : 'bg-gray-50')
+                          }>
+                            {Object.keys(linha).map(key => (
+                              <td key={key} className={`border p-2 ${
+                                ['força', 'inteligência', 'salto', 'resultado'].includes(key)
+                                  ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                  : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                              }`}>
+                                {linha[key]}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end mt-6">
                 <button
@@ -13000,6 +14384,7 @@ function App() {
                       <th className="p-3 text-left font-bold">Nome</th>
                       <th className="p-3 text-center font-bold">Quantidade</th>
                       <th className="p-3 text-left font-bold">Descrição</th>
+                      <th className="p-3 text-center font-bold">Bolso</th>
                       <th className="p-3 text-center font-bold">Editar</th>
                       <th className="p-3 text-center font-bold">Excluir</th>
                     </tr>
@@ -13027,6 +14412,46 @@ function App() {
                         </td>
                         <td className="p-3">
                           <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{item.description}</span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <button
+                              onClick={() => {
+                                if (idx === 0) return
+                                const newItems = [...customItems]
+                                const temp = newItems[idx]
+                                newItems[idx] = newItems[idx - 1]
+                                newItems[idx - 1] = temp
+                                setCustomItems(newItems)
+                                const userData = JSON.parse(localStorage.getItem(`trainer_${currentUser.username}`))
+                                userData.customItems = newItems
+                                localStorage.setItem(`trainer_${currentUser.username}`, JSON.stringify(userData))
+                              }}
+                              disabled={idx === 0}
+                              className={`text-sm font-bold ${idx === 0 ? 'text-gray-400 cursor-not-allowed' : (darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700')}`}
+                              title="Mover para cima"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (idx === customItems.length - 1) return
+                                const newItems = [...customItems]
+                                const temp = newItems[idx]
+                                newItems[idx] = newItems[idx + 1]
+                                newItems[idx + 1] = temp
+                                setCustomItems(newItems)
+                                const userData = JSON.parse(localStorage.getItem(`trainer_${currentUser.username}`))
+                                userData.customItems = newItems
+                                localStorage.setItem(`trainer_${currentUser.username}`, JSON.stringify(userData))
+                              }}
+                              disabled={idx === customItems.length - 1}
+                              className={`text-sm font-bold ${idx === customItems.length - 1 ? 'text-gray-400 cursor-not-allowed' : (darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700')}`}
+                              title="Mover para baixo"
+                            >
+                              ▼
+                            </button>
+                          </div>
                         </td>
                         <td className="p-3 text-center">
                           <button
@@ -14543,9 +15968,9 @@ function App() {
                           )}
 
                           <div className={`pt-2 border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
-                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              <span className="font-semibold">Efeito:</span> {GOLPES_DATA[search].efeito}
-                            </p>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              <span className="font-semibold">Efeito:</span> {renderGolpeEfeito(GOLPES_DATA[search].efeito, darkMode)}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -14870,11 +16295,67 @@ function App() {
                                   }`}>
                                     {pericia.nome}
                                   </h6>
-                                  <p className={`text-sm leading-relaxed ${
+                                  <p className={`text-sm leading-relaxed mb-3 ${
                                     darkMode ? 'text-gray-300' : 'text-gray-700'
                                   }`}>
                                     {pericia.descricao}
                                   </p>
+
+                                  {/* Tabela da Perícia (se houver) */}
+                                  {pericia.tabela && (
+                                    <div className="mt-3 overflow-x-auto">
+                                      <table className={`w-full text-sm border-collapse ${
+                                        darkMode ? 'border-gray-600' : 'border-gray-300'
+                                      }`}>
+                                        <thead>
+                                          <tr className={darkMode ? 'bg-gray-700' : 'bg-blue-100'}>
+                                            <th className={`border p-2 font-semibold text-left ${
+                                              darkMode ? 'border-gray-600 text-blue-200' : 'border-gray-300 text-blue-900'
+                                            }`}>
+                                              Resultado
+                                            </th>
+                                            {/* Cabeçalhos dinâmicos baseados nas colunas da tabela */}
+                                            {Object.keys(pericia.tabela[0])
+                                              .filter(key => key !== 'resultado')
+                                              .map(key => (
+                                                <th key={key} className={`border p-2 font-semibold text-left ${
+                                                  darkMode ? 'border-gray-600 text-blue-200' : 'border-gray-300 text-blue-900'
+                                                }`}>
+                                                  {key === 'efeito' ? 'Efeito' :
+                                                   key === 'altura' ? 'Altura' :
+                                                   key === 'horizontal' ? 'Horizontal' :
+                                                   key === 'equilibrio' ? 'Equilíbrio' :
+                                                   key === 'escalada' ? 'Escalada' : key}
+                                                </th>
+                                              ))}
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {pericia.tabela.map((linha, idx) => (
+                                            <tr key={idx} className={idx % 2 === 0
+                                              ? (darkMode ? 'bg-gray-750' : 'bg-white')
+                                              : (darkMode ? 'bg-gray-800' : 'bg-blue-50')
+                                            }>
+                                              <td className={`border p-2 font-bold ${
+                                                darkMode ? 'border-gray-600 text-blue-300' : 'border-gray-300 text-blue-700'
+                                              }`}>
+                                                {linha.resultado}
+                                              </td>
+                                              {Object.keys(linha)
+                                                .filter(key => key !== 'resultado')
+                                                .map(key => (
+                                                  <td key={key} className={`border p-2 ${
+                                                    darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'
+                                                  }`}>
+                                                    {linha[key]}
+                                                  </td>
+                                                ))}
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -14960,6 +16441,52 @@ function App() {
                             <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                               <span className="font-semibold">Efeito:</span> {HABILIDADES_DATA[search].efeito}
                             </p>
+
+                            {/* Tabela da Habilidade (se houver) */}
+                            {HABILIDADES_DATA[search].tabela && (
+                              <div className="mt-3 overflow-x-auto">
+                                <table className={`w-full text-sm border-collapse ${
+                                  darkMode ? 'border-gray-600' : 'border-gray-300'
+                                }`}>
+                                  <thead>
+                                    <tr className={darkMode ? 'bg-gray-800' : 'bg-teal-100'}>
+                                      {/* Cabeçalhos dinâmicos baseados nas colunas da tabela */}
+                                      {Object.keys(HABILIDADES_DATA[search].tabela[0]).map(key => (
+                                        <th key={key} className={`border p-2 font-semibold text-left ${
+                                          darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
+                                        }`}>
+                                          {key === 'resultado' ? 'Resultado' :
+                                           key === 'efeito' ? 'Efeito' :
+                                           key === 'item' ? 'Item' :
+                                           key === 'clima' ? 'Clima' :
+                                           key === 'tipo' ? 'Tipo' :
+                                           key === 'dado' ? 'Dado' :
+                                           key.charAt(0).toUpperCase() + key.slice(1)}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {HABILIDADES_DATA[search].tabela.map((linha, idx) => (
+                                      <tr key={idx} className={idx % 2 === 0
+                                        ? (darkMode ? 'bg-gray-750' : 'bg-white')
+                                        : (darkMode ? 'bg-gray-700' : 'bg-teal-50')
+                                      }>
+                                        {Object.keys(linha).map(key => (
+                                          <td key={key} className={`border p-2 ${
+                                            key === 'resultado'
+                                              ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                              : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                                          }`}>
+                                            {linha[key]}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -15034,8 +16561,61 @@ function App() {
                         <div className="space-y-2">
                           <div className={`pt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             <p className={`text-sm leading-relaxed`}>
-                              {CAPACIDADES_DATA[search]}
+                              {typeof CAPACIDADES_DATA[search] === 'string'
+                                ? CAPACIDADES_DATA[search]
+                                : CAPACIDADES_DATA[search].descricao}
                             </p>
+
+                            {/* Tabela da Capacidade (se houver) */}
+                            {typeof CAPACIDADES_DATA[search] === 'object' && CAPACIDADES_DATA[search].tabela && (
+                              <div className="mt-3 overflow-x-auto">
+                                <table className={`w-full text-sm border-collapse ${
+                                  darkMode ? 'border-gray-600' : 'border-gray-300'
+                                }`}>
+                                  <thead>
+                                    <tr className={darkMode ? 'bg-gray-800' : 'bg-teal-100'}>
+                                      {/* Cabeçalhos dinâmicos baseados nas colunas da tabela */}
+                                      {Object.keys(CAPACIDADES_DATA[search].tabela[0]).map(key => (
+                                        <th key={key} className={`border p-2 font-semibold text-left ${
+                                          darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
+                                        }`}>
+                                          {key === 'força' ? 'Força' :
+                                           key === 'peso' ? 'Peso Erguido' :
+                                           key === 'inteligência' ? 'Inteligência' :
+                                           key === 'intelecto' ? 'Intelecto' :
+                                           key === 'pensamentos' ? 'Pensamentos' :
+                                           key === 'salto' ? 'Salto' :
+                                           key === 'altura' ? 'Altura' :
+                                           key === 'resultado' ? 'Resultado' :
+                                           key === 'área' ? 'Área' :
+                                           key === 'par' ? 'Par de Espécies' :
+                                           key === 'condição' ? 'Condição' :
+                                           key.charAt(0).toUpperCase() + key.slice(1)}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {CAPACIDADES_DATA[search].tabela.map((linha, idx) => (
+                                      <tr key={idx} className={idx % 2 === 0
+                                        ? (darkMode ? 'bg-gray-750' : 'bg-white')
+                                        : (darkMode ? 'bg-gray-700' : 'bg-teal-50')
+                                      }>
+                                        {Object.keys(linha).map(key => (
+                                          <td key={key} className={`border p-2 ${
+                                            ['força', 'inteligência', 'salto', 'resultado'].includes(key)
+                                              ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
+                                              : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
+                                          }`}>
+                                            {linha[key]}
+                                          </td>
+                                        ))}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -15056,8 +16636,8 @@ function App() {
                 Clique em uma condição para expandir e ver suas informações detalhadas
               </p>
 
-              {/* Grid 3x3 de Condições */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Lista de Condições em coluna única */}
+              <div className="grid grid-cols-1 gap-4">
                 {condicoes.map((condicao) => {
                   const isExpanded = expandedCondicoes.includes(condicao.nome)
 
@@ -15066,9 +16646,7 @@ function App() {
                       key={condicao.nome}
                       className={`${
                         darkMode ? 'bg-gray-700' : 'bg-gray-100'
-                      } rounded-lg overflow-hidden transition-all ${
-                        isExpanded ? 'col-span-1 md:col-span-2 lg:col-span-3' : ''
-                      }`}
+                      } rounded-lg overflow-hidden transition-all`}
                     >
                       <button
                         onClick={() => {
@@ -15340,116 +16918,154 @@ function App() {
                 <h3 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
                   Diário da Jornada
                 </h3>
-                <button
-                  onClick={() => {
-                    setConquistaEditando(null)
-                    setNovaConquistaNome('')
-                    setNovaConquistaLevelUp(false)
-                    setNovaConquistaDescricao('')
-                    setShowNovaConquistaModal(true)
-                  }}
-                  className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-6 py-3 rounded-lg hover:from-amber-700 hover:to-yellow-700 font-semibold flex items-center gap-2 shadow-lg"
+                {!selectedDiarioTrainer && (
+                  <button
+                    onClick={() => {
+                      setConquistaEditando(null)
+                      setNovaConquistaNome('')
+                      setNovaConquistaLevelUp(false)
+                      setNovaConquistaDescricao('')
+                      setShowNovaConquistaModal(true)
+                    }}
+                    className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-6 py-3 rounded-lg hover:from-amber-700 hover:to-yellow-700 font-semibold flex items-center gap-2 shadow-lg"
+                  >
+                    <Plus size={20} />
+                    Conquistas
+                  </button>
+                )}
+              </div>
+
+              {/* Dropdown para selecionar treinador */}
+              <div className="mb-6">
+                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Ver Diário de:
+                </label>
+                <select
+                  value={selectedDiarioTrainer}
+                  onChange={(e) => setSelectedDiarioTrainer(e.target.value)}
+                  className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-800'}`}
                 >
-                  <Plus size={20} />
-                  Conquistas
-                </button>
+                  <option value="">Meu Diário</option>
+                  {users.filter(u => u.type === 'treinador' && u.username !== currentUser.username).map(trainer => (
+                    <option key={trainer.username} value={trainer.username}>{trainer.username}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Linha do Tempo */}
               <div className="relative py-12">
-                {/* Ponto Inicial */}
-                <div className="relative mb-16">
-                  <div className="flex items-center justify-center">
-                    <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
-                      <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                        Qual o nome do meu neto?
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                {(() => {
+                  // Determinar quais conquistas exibir
+                  let conquistasToDisplay = conquistas
 
-                {/* Linha vertical - só até antes do ponto final */}
-                {conquistas.length > 0 && (
-                  <div
-                    className={`absolute left-1/2 transform -translate-x-1/2 w-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
-                    style={{
-                      top: '6rem',
-                      height: `calc(100% - 12rem)`
-                    }}
-                  ></div>
-                )}
+                  if (selectedDiarioTrainer) {
+                    // Carregar conquistas do treinador selecionado do localStorage
+                    const trainerData = JSON.parse(localStorage.getItem(`trainer_${selectedDiarioTrainer}`))
+                    conquistasToDisplay = trainerData?.conquistas || []
+                  }
 
-                {/* Conquistas */}
-                {conquistas.map((conquista, index) => (
-                  <div key={conquista.id} className={`relative mb-16 ${index % 2 === 0 ? 'text-right pr-[52%]' : 'text-left pl-[52%]'}`}>
-                    <div className="relative inline-block">
-                      {/* Ponto na linha do tempo */}
-                      <div className={`absolute top-1/2 ${index % 2 === 0 ? '-right-6' : '-left-6'} transform -translate-y-1/2 w-4 h-4 rounded-full ${
-                        conquista.levelUp
-                          ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
-                          : 'bg-gradient-to-r from-blue-500 to-indigo-600'
-                      } border-4 ${darkMode ? 'border-gray-800' : 'border-white'} z-10`}></div>
+                  return (
+                    <>
+                      {/* Ponto Inicial */}
+                      <div className="relative mb-16">
+                        <div className="flex items-center justify-center">
+                          <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
+                            <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                              Qual o nome do meu neto?
+                            </p>
+                          </div>
+                        </div>
+                      </div>
 
-                      {/* Botão de Editar */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setConquistaEditando(conquista.id)
-                          setNovaConquistaNome(conquista.nome)
-                          setNovaConquistaLevelUp(conquista.levelUp)
-                          setNovaConquistaDescricao(conquista.descricao || '')
-                          setShowNovaConquistaModal(true)
-                        }}
-                        className="absolute -top-2 -right-10 w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center z-20 transition-colors shadow-lg"
-                        title="Editar conquista"
-                      >
-                        <Edit size={14} />
-                      </button>
+                      {/* Linha vertical - só até antes do ponto final */}
+                      {conquistasToDisplay.length > 0 && (
+                        <div
+                          className={`absolute left-1/2 transform -translate-x-1/2 w-1 ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}`}
+                          style={{
+                            top: '6rem',
+                            height: `calc(100% - 12rem)`
+                          }}
+                        ></div>
+                      )}
 
-                      {/* Botão de Excluir */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (confirm(`Deseja excluir a conquista "${conquista.nome}"?`)) {
-                            setConquistas(conquistas.filter(c => c.id !== conquista.id))
-                            if (selectedConquista?.id === conquista.id) {
-                              setSelectedConquista(null)
-                            }
-                          }
-                        }}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 transition-colors shadow-lg"
-                        title="Excluir conquista"
-                      >
-                        <X size={14} />
-                      </button>
+                      {/* Conquistas */}
+                      {conquistasToDisplay.map((conquista, index) => (
+                        <div key={conquista.id} className={`relative mb-16 ${index % 2 === 0 ? 'text-right pr-[52%]' : 'text-left pl-[52%]'}`}>
+                          <div className="relative inline-block">
+                            {/* Ponto na linha do tempo */}
+                            <div className={`absolute top-1/2 ${index % 2 === 0 ? '-right-6' : '-left-6'} transform -translate-y-1/2 w-4 h-4 rounded-full ${
+                              conquista.levelUp
+                                ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
+                                : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                            } border-4 ${darkMode ? 'border-gray-800' : 'border-white'} z-10`}></div>
 
-                      {/* Caixa da Conquista */}
-                      <button
-                        onClick={() => setSelectedConquista(conquista)}
-                        className={`relative inline-block px-6 py-4 rounded-lg shadow-lg transition-all hover:shadow-xl hover:scale-105 ${
-                          conquista.levelUp
-                            ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900'
-                            : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                        } font-bold text-lg border-2 ${
-                          conquista.levelUp ? 'border-yellow-600' : 'border-blue-700'
-                        }`}
-                      >
-                        {conquista.nome}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                            {/* Botão de Editar - só aparece se estiver vendo o próprio diário */}
+                            {!selectedDiarioTrainer && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setConquistaEditando(conquista.id)
+                                  setNovaConquistaNome(conquista.nome)
+                                  setNovaConquistaLevelUp(conquista.levelUp)
+                                  setNovaConquistaDescricao(conquista.descricao || '')
+                                  setShowNovaConquistaModal(true)
+                                }}
+                                className="absolute -top-2 -right-10 w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center z-20 transition-colors shadow-lg"
+                                title="Editar conquista"
+                              >
+                                <Edit size={14} />
+                              </button>
+                            )}
 
-                {/* Ponto Final */}
-                <div className="relative mt-8">
-                  <div className="flex items-center justify-center">
-                    <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
-                      <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                        Acordei do coma?
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                            {/* Botão de Excluir - só aparece se estiver vendo o próprio diário */}
+                            {!selectedDiarioTrainer && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (confirm(`Deseja excluir a conquista "${conquista.nome}"?`)) {
+                                    setConquistas(conquistas.filter(c => c.id !== conquista.id))
+                                    if (selectedConquista?.id === conquista.id) {
+                                      setSelectedConquista(null)
+                                    }
+                                  }
+                                }}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 transition-colors shadow-lg"
+                                title="Excluir conquista"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+
+                            {/* Caixa da Conquista */}
+                            <button
+                              onClick={() => setSelectedConquista(conquista)}
+                              className={`relative inline-block px-6 py-4 rounded-lg shadow-lg transition-all hover:shadow-xl hover:scale-105 ${
+                                conquista.levelUp
+                                  ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900'
+                                  : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                              } font-bold text-lg border-2 ${
+                                conquista.levelUp ? 'border-yellow-600' : 'border-blue-700'
+                              }`}
+                            >
+                              {conquista.nome}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Ponto Final */}
+                      <div className="relative mt-8">
+                        <div className="flex items-center justify-center">
+                          <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
+                            <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                              Acordei do coma?
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
           )}
@@ -15721,6 +17337,592 @@ function App() {
           </div>
         )}
         </div>
+        {accountDataModal}
+      </>
+    )
+  }
+
+  // ÁREA BATALHA PKM (Treinador)
+  if (currentUser.type === 'treinador' && currentArea === 'Batalha Pkm') {
+    return (
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Batalha Pkm</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowAccountDataModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`} title="Dados da Conta"><ArrowDownUp size={20} /></button>
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
+                  <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {treinadorAreas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className={`px-4 py-2 rounded-lg text-sm font-semibold ${area === 'Batalha Pkm' ? 'bg-gradient-to-r from-blue-600 to-purple-700 text-white' : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{area}</button>)}
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            {/* Layout de Duas Colunas */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* PARTE 1: Em Batalha - Treinadores */}
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
+                <h3 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                  Treinadores em Batalha
+                </h3>
+                <div className={`p-4 rounded-lg border-2 min-h-[250px] max-h-[400px] overflow-y-auto ${darkMode ? 'bg-gray-700 border-blue-500' : 'bg-blue-50 border-blue-300'}`}>
+                  {battleTrainersList.length === 0 ? (
+                    <p className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Aguardando o mestre montar a batalha
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {battleTrainersList.map((trainer, idx) => (
+                        <div
+                          key={trainer.id}
+                          className={`p-3 rounded-lg border-2 ${
+                            idx === currentTrainerTurn
+                              ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
+                              : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className={`font-semibold ${idx === currentTrainerTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                              {idx === currentTrainerTurn && '▶ '}{trainer.nome}
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                              Vel: {trainer.velocidade}
+                            </span>
+                          </div>
+                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            HP: {trainer.hp}/{trainer.maxHP}
+                          </div>
+                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Em Batalha - Pokémon */}
+                <h3 className={`text-2xl font-bold mb-6 mt-8 text-center ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                  Pokémon em Batalha
+                </h3>
+                <div className={`p-4 rounded-lg border-2 min-h-[250px] max-h-[400px] overflow-y-auto ${darkMode ? 'bg-gray-700 border-red-500' : 'bg-red-50 border-red-300'}`}>
+                  {battlePokemonList.length === 0 ? (
+                    <p className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Aguardando o mestre montar a batalha
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {battlePokemonList.map((pokemon, idx) => {
+                        const pokemonConditions = battlePokemonConditions[pokemon.id] || [null, null, null]
+                        return (
+                          <div
+                            key={pokemon.id}
+                            className={`p-3 rounded-lg border-2 ${
+                              idx === currentPokemonTurn
+                                ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
+                                : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className={`font-semibold ${idx === currentPokemonTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                {idx === currentPokemonTurn && '▶ '}{pokemon.nome}
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                                Vel: {pokemon.velocidade}
+                              </span>
+                            </div>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {pokemon.especie} | HP: {pokemon.hp}/{pokemon.maxHP}
+                            </div>
+                            <div className={`text-xs flex gap-1 mt-1`}>
+                              {(pokemon.tipos || []).map((tipo, i) => (
+                                <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
+                                  {tipo}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Condições */}
+                            {pokemonConditions.some(c => c !== null) && (
+                              <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                                <div className="flex gap-2 items-center flex-wrap">
+                                  {pokemonConditions.map((cond, slotIdx) => (
+                                    cond && (
+                                      <div key={slotIdx} className={`text-center px-2 py-1 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                        <span className="text-sm">
+                                          {cond.condition === 'confusao' && '😵'}
+                                          {cond.condition === 'critico' && '🍀'}
+                                          {cond.condition === 'paralisia' && '⚡'}
+                                          {cond.condition === 'sono' && '💤'}
+                                          {cond.condition === 'atordoamento' && '🌀'}
+                                          {cond.condition === 'congelamento' && '❄️'}
+                                          {cond.condition === 'paixao' && '❤️'}
+                                          {cond.condition === 'queimadura' && '🔥'}
+                                          {cond.condition === 'veneno' && '☠️'}
+                                        </span>
+                                        <span className={`text-xs ml-1 font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                          {cond.rounds}
+                                        </span>
+                                      </div>
+                                    )
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* PARTE 2: Chat */}
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
+                <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Chat de Batalha
+                </h3>
+                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
+                  Use /r ou /roll para rolar dados. Exemplo: /r 1d20+5, /roll 2d6
+                </p>
+
+                {/* Área de Mensagens */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-[600px] overflow-y-auto mb-4`}>
+                  {chatMessages.length === 0 ? (
+                    <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
+                      Nenhuma mensagem ainda. Seja o primeiro a falar!
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {chatMessages.map((msg, idx) => (
+                        <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
+                          <div className="flex justify-between items-start mb-1">
+                            <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                              {msg.username}
+                            </span>
+                            <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {msg.timestamp}
+                            </span>
+                          </div>
+                          {msg.isDiceRoll ? (
+                            <div>
+                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                {msg.text}
+                              </p>
+                              <div className={`mt-2 p-2 rounded ${darkMode ? 'bg-green-900' : 'bg-green-100'}`}>
+                                <p className={`font-bold text-lg ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                                  Resultado: {msg.diceResult}
+                                </p>
+                                <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
+                                  {msg.diceDetails}
+                                </p>
+                              </div>
+                            </div>
+                          ) : msg.isAction ? (
+                            <p className={`text-sm font-semibold text-yellow-500`}>
+                              {msg.text}
+                            </p>
+                          ) : (
+                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {msg.text}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Input de Mensagem */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSendMessage()
+                      }
+                    }}
+                    placeholder="Digite sua mensagem ou /r 1d20..."
+                    className={`flex-1 px-4 py-3 rounded-lg border-2 ${
+                      darkMode
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400'
+                    } focus:outline-none focus:border-blue-500`}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                  >
+                    Enviar
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        {accountDataModal}
+      </>
+    )
+  }
+
+  // ÁREA INTERLÚDIO (Treinador e Mestre)
+  if (currentArea === 'Interlúdio') {
+    return (
+      <>
+        <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-900 via-purple-900 to-red-900'}`}>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Interlúdio {currentUser.type === 'mestre' ? '👑' : ''}
+                </h2>
+                <div className="flex gap-2">
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>
+                    {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  </button>
+                  <button onClick={() => { setCurrentUser(null); setCurrentArea('') }} className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600">Sair</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {currentUser.type === 'mestre'
+                  ? mestreAreas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className={`px-4 py-2 rounded-lg text-sm font-semibold ${area === 'Interlúdio' ? 'bg-gradient-to-r from-blue-600 to-purple-700 text-white' : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{area}</button>)
+                  : treinadorAreas.map(area => <button key={area} onClick={() => setCurrentArea(area)} className={`px-4 py-2 rounded-lg text-sm font-semibold ${area === 'Interlúdio' ? 'bg-gradient-to-r from-blue-600 to-purple-700 text-white' : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{area}</button>)
+                }
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            {/* PARTE 1: Ações dos Jogadores */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8 mb-8`}>
+              <h3 className={`text-2xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Ações dos Jogadores
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {interludioPlayers.map((player) => {
+                  const isCurrentUser = currentUser.username === player.username
+
+                  return (
+                    <div key={player.username} className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4`}>
+                      {/* Nome do Jogador */}
+                      <h4 className={`text-lg font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                        {player.username}
+                      </h4>
+
+                      {/* Checkboxes JN e RT */}
+                      <div className="flex gap-4 mb-4">
+                        <label className={`flex items-center gap-2 ${isCurrentUser ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                          <input
+                            type="checkbox"
+                            checked={player.jnChecked}
+                            onChange={() => handleToggleJN(player.username)}
+                            disabled={!isCurrentUser}
+                            className={`w-4 h-4 ${isCurrentUser ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                          />
+                          <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            JN
+                          </span>
+                        </label>
+                        <label className={`flex items-center gap-2 ${isCurrentUser ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                          <input
+                            type="checkbox"
+                            checked={player.rtChecked}
+                            onChange={() => handleToggleRT(player.username)}
+                            disabled={!isCurrentUser}
+                            className={`w-4 h-4 ${isCurrentUser ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                          />
+                          <span className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Rt
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Caixa de Ações */}
+                      {(player.jnChecked || player.rtChecked) && (
+                        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4 border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                          {/* Pontos e Botões de Controle */}
+                          <div className="mb-3 flex items-center justify-between">
+                            <span className={`text-sm font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                              {player.jnChecked ? `Pontos de Narração: ${player.jnPoints}` : `Pontos de Roteiro: ${player.rtPoints}`}
+                            </span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleResetPoints(player.username)}
+                                disabled={!isCurrentUser}
+                                className={`p-2 rounded ${
+                                  isCurrentUser
+                                    ? darkMode ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-purple-500 hover:bg-purple-600 text-white'
+                                    : 'bg-gray-400 cursor-not-allowed text-gray-200'
+                                } transition-colors`}
+                                title="Resetar Pontos"
+                              >
+                                <RefreshCcw className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenCustomModal(player.username, player.jnChecked ? 'jn' : 'rt')}
+                                disabled={!isCurrentUser}
+                                className={`p-2 rounded ${
+                                  isCurrentUser
+                                    ? darkMode ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                                    : 'bg-gray-400 cursor-not-allowed text-gray-200'
+                                } transition-colors`}
+                                title="Ação Customizada"
+                              >
+                                <Settings2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Lista de Ações */}
+                          <div className="space-y-2">
+                            {(player.jnChecked ? acoesJN : acoesRT).map((acao, idx) => {
+                              const points = player.jnChecked ? player.jnPoints : player.rtPoints
+                              const canAfford = points >= acao.custo
+
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    if (player.jnChecked) {
+                                      handleAcaoJN(player.username, acao)
+                                    } else {
+                                      handleAcaoRT(player.username, acao)
+                                    }
+                                  }}
+                                  disabled={!isCurrentUser || !canAfford}
+                                  className={`w-full text-left px-3 py-2 rounded text-sm ${
+                                    !canAfford
+                                      ? darkMode ? 'bg-gray-900 text-gray-600 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                      : !isCurrentUser
+                                      ? darkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-600 cursor-not-allowed'
+                                      : darkMode
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                                  } transition-colors`}
+                                >
+                                  {acao.nome} <span className="text-xs opacity-75">(${acao.custo} pt)</span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* PARTE 2: Em Desenvolvimento */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8 mb-8`}>
+              <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Funcionalidades Futuras
+              </h3>
+              <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'} text-center py-8`}>
+                🚧 Em Desenvolvimento 🚧
+              </p>
+            </div>
+
+            {/* PARTE 3: Chat com Sistema de Dados */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Chat & Rolagem de Dados
+              </h3>
+              <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Use /r ou /roll para rolar dados. Exemplo: /r 1d20+5, /roll 2d6
+              </p>
+
+              {/* Área de Mensagens */}
+              <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
+                {chatMessages.length === 0 ? (
+                  <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
+                    Nenhuma mensagem ainda. Seja o primeiro a falar!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            {msg.username}
+                          </span>
+                          <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {msg.timestamp}
+                          </span>
+                        </div>
+                        {msg.isDiceRoll ? (
+                          <div>
+                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {msg.text}
+                            </p>
+                            <div className={`mt-2 p-2 rounded ${darkMode ? 'bg-green-900' : 'bg-green-100'}`}>
+                              <p className={`font-bold text-lg ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                                Resultado: {msg.diceResult}
+                              </p>
+                              <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
+                                {msg.diceDetails}
+                              </p>
+                            </div>
+                          </div>
+                        ) : msg.isAction ? (
+                          <p className={`text-sm font-semibold text-yellow-500`}>
+                            {msg.text}
+                          </p>
+                        ) : (
+                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {msg.text}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Input de Mensagem */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder="Digite sua mensagem ou /r 1d20..."
+                  className={`flex-1 px-4 py-3 rounded-lg border-2 ${
+                    darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400'
+                  } focus:outline-none focus:border-blue-500`}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                >
+                  Enviar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal de Ação Customizada */}
+        {showCustomModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowCustomModal(false)
+              setCustomActionName('')
+              setCustomActionCost('')
+              setCustomActionPlayer(null)
+              setCustomActionType('')
+            }}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Ação Customizada ({customActionType === 'jn' ? 'JN' : 'RT'})
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCustomModal(false)
+                    setCustomActionName('')
+                    setCustomActionCost('')
+                    setCustomActionPlayer(null)
+                    setCustomActionType('')
+                  }}
+                  className={`p-1 rounded ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                >
+                  <X className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Nome da Ação
+                  </label>
+                  <input
+                    type="text"
+                    value={customActionName}
+                    onChange={(e) => setCustomActionName(e.target.value)}
+                    placeholder="Ex: Treinar Pokémon"
+                    className={`w-full px-3 py-2 rounded border ${
+                      darkMode
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Custo (Pontos)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={customActionCost}
+                    onChange={(e) => setCustomActionCost(e.target.value)}
+                    placeholder="Ex: 3"
+                    className={`w-full px-3 py-2 rounded border ${
+                      darkMode
+                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      setShowCustomModal(false)
+                      setCustomActionName('')
+                      setCustomActionCost('')
+                      setCustomActionPlayer(null)
+                      setCustomActionType('')
+                    }}
+                    className={`flex-1 px-4 py-2 rounded font-semibold ${
+                      darkMode
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    } transition-colors`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCustomActionSubmit}
+                    disabled={!customActionName.trim() || !customActionCost}
+                    className={`flex-1 px-4 py-2 rounded font-semibold ${
+                      !customActionName.trim() || !customActionCost
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    } transition-colors`}
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {accountDataModal}
       </>
     )
