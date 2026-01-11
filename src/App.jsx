@@ -10258,9 +10258,37 @@ function App() {
                     if (trainerData?.classes) {
                       trainerData.classes.forEach(className => {
                         if (className && CARACTERISTICAS_DATA[className]) {
-                          Object.entries(CARACTERISTICAS_DATA[className]).forEach(([name, data]) => {
-                            userCaracteristicas.push({ name, ...data, className })
-                          })
+                          const caracteristicasObj = CARACTERISTICAS_DATA[className]
+                          // Verificar se é um array ou objeto
+                          if (Array.isArray(caracteristicasObj)) {
+                            // Se for array, iterar diretamente
+                            caracteristicasObj.forEach(carac => {
+                              userCaracteristicas.push({
+                                name: carac.nome || 'Sem nome',
+                                frequencia: carac.frequencia || 'N/A',
+                                referencia: carac.referencia || 'N/A',
+                                alvo: carac.alvo || null,
+                                gatilho: carac.gatilho || null,
+                                efeito: carac.efeito || 'N/A',
+                                especial: carac.especial || null,
+                                className
+                              })
+                            })
+                          } else {
+                            // Se for objeto, usar Object.entries
+                            Object.entries(caracteristicasObj).forEach(([name, data]) => {
+                              userCaracteristicas.push({
+                                name,
+                                frequencia: data.frequencia || 'N/A',
+                                referencia: data.referencia || 'N/A',
+                                alvo: data.alvo || null,
+                                gatilho: data.gatilho || null,
+                                efeito: data.efeito || 'N/A',
+                                especial: data.especial || null,
+                                className
+                              })
+                            })
+                          }
                         }
                       })
                     }
@@ -10281,32 +10309,38 @@ function App() {
                           <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-50'} border-2 ${darkMode ? 'border-blue-500' : 'border-blue-300'}`}>
                             <div className="flex items-start justify-between mb-2">
                               <h5 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                {carac.name}
+                                {typeof carac.name === 'string' ? carac.name : 'Característica'}
                               </h5>
                               <span className={`text-xs px-2 py-1 rounded ml-2 flex-shrink-0 ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                                {carac.className}
+                                {typeof carac.className === 'string' ? carac.className : 'Classe'}
                               </span>
                             </div>
                             <div className="space-y-1 text-sm">
-                              <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                <span className="font-semibold">Frequência:</span> {carac.frequencia}
-                              </p>
-                              <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                <span className="font-semibold">Referência:</span> {carac.referencia}
-                              </p>
-                              {carac.alvo && (
+                              {carac.frequencia && typeof carac.frequencia === 'string' && (
+                                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                                  <span className="font-semibold">Frequência:</span> {carac.frequencia}
+                                </p>
+                              )}
+                              {carac.referencia && typeof carac.referencia === 'string' && (
+                                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                                  <span className="font-semibold">Referência:</span> {carac.referencia}
+                                </p>
+                              )}
+                              {carac.alvo && typeof carac.alvo === 'string' && (
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
                                   <span className="font-semibold">Alvo:</span> {carac.alvo}
                                 </p>
                               )}
-                              {carac.gatilho && (
+                              {carac.gatilho && typeof carac.gatilho === 'string' && (
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
                                   <span className="font-semibold">Gatilho:</span> {carac.gatilho}
                                 </p>
                               )}
-                              <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                <span className="font-semibold">Efeito:</span> {carac.efeito}
-                              </p>
+                              {carac.efeito && typeof carac.efeito === 'string' && (
+                                <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  <span className="font-semibold">Efeito:</span> {carac.efeito}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -10322,21 +10356,30 @@ function App() {
                   </h4>
                   {trainerData?.talentosSelected && trainerData.talentosSelected.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {trainerData.talentosSelected.map((talentoNome, index) => {
-                        // Buscar dados completos do talento pelo nome
+                      {trainerData.talentosSelected.map((talentoItem, index) => {
+                        // Se talentoItem é um objeto, usar diretamente
+                        // Se é uma string, buscar os dados
                         let talentoData = null
+                        let talentoNome = ''
 
-                        // Percorrer todas as classes para encontrar o talento
-                        Object.values(TALENTOS_DATA).forEach(talentosList => {
-                          const found = talentosList.find(t => t.nome === talentoNome)
-                          if (found) talentoData = found
-                        })
+                        if (typeof talentoItem === 'string') {
+                          talentoNome = talentoItem
+                          // Buscar dados completos do talento pelo nome
+                          Object.values(TALENTOS_DATA).forEach(talentosList => {
+                            const found = talentosList.find(t => t.nome === talentoNome)
+                            if (found) talentoData = found
+                          })
+                        } else if (typeof talentoItem === 'object' && talentoItem !== null) {
+                          // Se já é um objeto, usar diretamente
+                          talentoData = talentoItem
+                          talentoNome = talentoItem.nome || 'Talento sem nome'
+                        }
 
                         if (!talentoData) {
                           return (
                             <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-purple-50'} border-2 ${darkMode ? 'border-purple-500' : 'border-purple-300'}`}>
                               <h5 className={`font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                {talentoNome}
+                                {typeof talentoNome === 'string' ? talentoNome : 'Talento desconhecido'}
                               </h5>
                               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                 Detalhes não disponíveis
@@ -10348,29 +10391,35 @@ function App() {
                         return (
                           <div key={index} className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-purple-50'} border-2 ${darkMode ? 'border-purple-500' : 'border-purple-300'}`}>
                             <h5 className={`font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              {talentoData.nome}
+                              {typeof talentoData.nome === 'string' ? talentoData.nome : 'Talento'}
                             </h5>
                             <div className="space-y-1 text-sm">
-                              {talentoData.requisitos && (
+                              {talentoData.requisitos && typeof talentoData.requisitos === 'string' && (
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
                                   <span className="font-semibold">Requisitos:</span> {talentoData.requisitos}
                                 </p>
                               )}
-                              <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                <span className="font-semibold">Frequência:</span> {talentoData.frequencia}
-                              </p>
-                              <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                <span className="font-semibold">Referência:</span> {talentoData.referencia}
-                              </p>
-                              {talentoData.alvo && (
+                              {talentoData.frequencia && typeof talentoData.frequencia === 'string' && (
+                                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                                  <span className="font-semibold">Frequência:</span> {talentoData.frequencia}
+                                </p>
+                              )}
+                              {talentoData.referencia && typeof talentoData.referencia === 'string' && (
+                                <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                                  <span className="font-semibold">Referência:</span> {talentoData.referencia}
+                                </p>
+                              )}
+                              {talentoData.alvo && typeof talentoData.alvo === 'string' && (
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
                                   <span className="font-semibold">Alvo:</span> {talentoData.alvo}
                                 </p>
                               )}
-                              <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                <span className="font-semibold">Efeito:</span> {talentoData.efeito}
-                              </p>
-                              {talentoData.especial && (
+                              {talentoData.efeito && typeof talentoData.efeito === 'string' && (
+                                <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  <span className="font-semibold">Efeito:</span> {talentoData.efeito}
+                                </p>
+                              )}
+                              {talentoData.especial && typeof talentoData.especial === 'string' && (
                                 <p className={`mt-2 italic ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                   {talentoData.especial}
                                 </p>
@@ -11934,7 +11983,7 @@ function App() {
                       key={idx}
                       className={`p-4 rounded-lg border-2 ${pokemon ? pokemon.shiny ? 'border-yellow-500' : darkMode ? 'bg-gray-700 border-blue-500' : 'bg-blue-50 border-blue-300' : darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'}`}
                       style={pokemon?.shiny ? {
-                        backgroundImage: 'url("/efeito shiny.gif")',
+                        backgroundImage: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.2) 100%), url("/efeito shiny.gif")',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat'
@@ -14181,7 +14230,7 @@ function App() {
                     key={pokemon.id || idx}
                     className={`p-4 rounded-lg border-2 ${pokemon.shiny ? 'border-yellow-500' : darkMode ? 'bg-gray-700 border-purple-500' : 'bg-purple-50 border-purple-300'}`}
                     style={pokemon?.shiny ? {
-                      backgroundImage: 'url("/efeito shiny.gif")',
+                      backgroundImage: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.2) 100%), url("/efeito shiny.gif")',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       backgroundRepeat: 'no-repeat'
