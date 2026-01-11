@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, Settings2 } from 'lucide-react'
+import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, Settings2, Hand, Sigma, Dices, Check, Send } from 'lucide-react'
 import AccountDataModal from './AccountDataModal'
 import pokedexData from './pokemonData'
 import GOLPES_DATA_IMPORTED from './golpesData'
@@ -669,6 +669,38 @@ const POKEBALLS_LIST = [
   'Safariball', 'Sportball', 'Timerball', 'NeoGenBall', 'Noryball'
 ]
 
+// Mapa de modificadores de captura por pokébola
+const POKEBALL_MODIFIERS = {
+  'Customball': 'custom',
+  'Pokeball': ['+15'],
+  'Greatball': ['+5'],
+  'Ultraball': ['-5'],
+  'Masterball': ['auto'],
+  'Safariball': ['0'],
+  'Levelball': ['+5', '-15'],
+  'Lureball': ['+0', '-15'],
+  'Lunarball': ['0', '-15'],
+  'Friendball': ['-5'],
+  'Loveball': ['0', '-15'],
+  'Heavyball': ['+5', '0', '-5', '-10', '-15', '-20'],
+  'Fastball': ['+5', '-15'],
+  'Sportball': ['0'],
+  'Premierball': ['0'],
+  'Repeatball': ['+10', '-15'],
+  'Timerball': ['+5', '0', '-5', '-10', '-15', '-20'],
+  'Nestball': ['0', '-15'],
+  'Netball': ['0', '-15'],
+  'Diveball': ['+5', '-15'],
+  'Luxuryball': ['-5'],
+  'Healball': ['-5'],
+  'Quickball': ['-20', '-15', '-10'],
+  'Duskball': ['0', '-15'],
+  'Cherishball': ['-5'],
+  'Parkball': ['0'],
+  'Dreamball': ['0'],
+  'Beastball': ['+45', '-50']
+}
+
 // Lista de pokébolas para o PC (com Custom Pokeball 2)
 const POKEBALLS_PC_LIST = [
   'Custom Pokeball 2',
@@ -934,12 +966,47 @@ function App() {
   const [pokemonRound, setPokemonRound] = useState(1) // Rodada atual dos pokémon
   const [battlePokemonConditions, setBattlePokemonConditions] = useState({}) // Condições dos pokémons em batalha {pokemonId: [{condition, rounds}, ...]}
   const pokemonBattleRefs = useRef([]) // Refs para os elementos dos pokémons em batalha
+  const [selectedTeamPokemon, setSelectedTeamPokemon] = useState(null) // Pokémon selecionado do time principal para ver detalhes
+  const [showBattleMoveModal, setShowBattleMoveModal] = useState(false) // Modal de golpe na batalha
+  const [selectedBattleMove, setSelectedBattleMove] = useState(null) // Golpe selecionado na batalha
+  const [showBattleAbilityModal, setShowBattleAbilityModal] = useState(false) // Modal de habilidade na batalha
+  const [selectedBattleAbility, setSelectedBattleAbility] = useState(null) // Habilidade selecionada na batalha
+  const [userBattleModifiers, setUserBattleModifiers] = useState({}) // {username: [...modifiers]} - Modificadores de batalha por usuário
+  const [showModifierModal, setShowModifierModal] = useState(false) // Modal de adicionar/editar modificador
+  const [modifierForm, setModifierForm] = useState({ nome: '', mod: '', descricao: '', aplicarAcuracia: false, aplicarDano: false, aplicarCaptura: false }) // Formulário de modificador
+  const [editingModifierIndex, setEditingModifierIndex] = useState(null) // Índice do modificador sendo editado
+  const [showModifierDetailsModal, setShowModifierDetailsModal] = useState(false) // Modal de detalhes do modificador
+  const [selectedModifier, setSelectedModifier] = useState(null) // Modificador selecionado para ver detalhes
+  const [userActiveModifiers, setUserActiveModifiers] = useState({}) // {username: [...activeIndexes]} - Lista de índices dos modificadores ativos por usuário
+  const [isCritical, setIsCritical] = useState(false) // Checkbox CRIT
+  const [showCaptureModal, setShowCaptureModal] = useState(false) // Modal de captura
+  const [selectedPokeball, setSelectedPokeball] = useState(null) // Pokébola selecionada para captura
+  const [selectedPokeballModifier, setSelectedPokeballModifier] = useState('') // Modificador selecionado da pokébola
+  const [customPokeballModifier, setCustomPokeballModifier] = useState('') // Modificador customizado
+  const [selectedMasterNpcPokemon, setSelectedMasterNpcPokemon] = useState(null) // Pokémon NPC selecionado pelo mestre na área Batalha
+  const [revealedNpcPokemon, setRevealedNpcPokemon] = useState({}) // {pokemonId: boolean} - controla se nome/tipo está revelado
+  const [revealedTrainers, setRevealedTrainers] = useState({}) // {trainerId: boolean} - controla se nome do treinador está revelado
+  const [pokemonStages, setPokemonStages] = useState({}) // {pokemonId: {ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0}}
+  const [trainerStages, setTrainerStages] = useState({}) // {trainerId: {ataque: 0, defesa: 0, velocidade: 0}}
+  const [battleTrainerConditions, setBattleTrainerConditions] = useState({}) // {trainerId: [{condition, rounds}, null, null]}
+  const [showModifiersSection, setShowModifiersSection] = useState(false) // Controla expansão da seção Modificadores
+  const [showCaptureSection, setShowCaptureSection] = useState(false) // Controla expansão da seção Lançar Pokébola
+  const [showTalentosSection, setShowTalentosSection] = useState(false) // Controla expansão da seção Talentos em Jogo
+  const [talentinhos, setTalentinhos] = useState([]) // Lista de talentinhos [{nome, expressao, alvos: []}, ...]
+  const [showTalentinhoModal, setShowTalentinhoModal] = useState(false) // Modal de adicionar/editar talentinho
+  const [talentinhoForm, setTalentinhoForm] = useState({ nome: '', expressao: '', alvos: [] }) // Formulário de talentinho
+  const [editingTalentinhoIndex, setEditingTalentinhoIndex] = useState(null) // Índice do talentinho sendo editado
+  const [showTalentinhoDetailModal, setShowTalentinhoDetailModal] = useState(false) // Modal de detalhes do talentinho
+  const [selectedTalentinhoDetail, setSelectedTalentinhoDetail] = useState(null) // Talentinho selecionado para ver detalhes
 
   // Modais
   const [showLevelModal, setShowLevelModal] = useState(false)
   const [showClassModal, setShowClassModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
   const [showHPModal, setShowHPModal] = useState(false)
+  const [showBattleHPModal, setShowBattleHPModal] = useState(false)
+  const [battleHpValue, setBattleHpValue] = useState('')
+  const [selectedBattlePokemon, setSelectedBattlePokemon] = useState(null)
   const [showAddPokemonModal, setShowAddPokemonModal] = useState(false)
   const [showXPModal, setShowXPModal] = useState(false)
   const [showHappinessModal, setShowHappinessModal] = useState(false)
@@ -957,7 +1024,6 @@ function App() {
   const [xpToAdd, setXpToAdd] = useState('')
   const [showPokedexDetailModal, setShowPokedexDetailModal] = useState(false)
   const [selectedPokedexEntry, setSelectedPokedexEntry] = useState(null)
-  const [showCaptureModal, setShowCaptureModal] = useState(false)
 
   // States para capacidades
   const [selectedCapacityForInfo, setSelectedCapacityForInfo] = useState(null)
@@ -997,7 +1063,7 @@ function App() {
   const [selectedPokemonForPokeball, setSelectedPokemonForPokeball] = useState(null)
   const [selectedPokemonTypeForPokeball, setSelectedPokemonTypeForPokeball] = useState(null) // 'team' ou 'pc'
   const [pokeballSearch, setPokeballSearch] = useState('')
-  const [selectedPokeball, setSelectedPokeball] = useState('')
+  const [selectedPokeballForPC, setSelectedPokeballForPC] = useState('')
   const [showCustomPokeballOptions, setShowCustomPokeballOptions] = useState(false)
   const [customPokeballUploadType, setCustomPokeballUploadType] = useState('link') // 'link' ou 'file'
   const [customPokeballLink, setCustomPokeballLink] = useState('')
@@ -1241,6 +1307,7 @@ function App() {
   ])
   const [chatMessages, setChatMessages] = useState([]) // Mensagens do chat
   const [chatInput, setChatInput] = useState('') // Input do chat
+  const chatEndRef = useRef(null) // Ref para scroll automático do chat
   const [showCustomModal, setShowCustomModal] = useState(false) // Modal de ação customizada
   const [customActionName, setCustomActionName] = useState('') // Nome da ação customizada
   const [customActionCost, setCustomActionCost] = useState('') // Custo da ação customizada
@@ -2157,8 +2224,13 @@ function App() {
     const message = chatInput.trim()
     const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
-    // Verifica se é comando de rolagem de dados
-    if (message.startsWith('/r ') || message.startsWith('/roll ')) {
+    // Verifica se a mensagem contém comandos @ ou expressões de dados
+    const hasCommand = message.includes('@')
+    const hasDiceExpression = /\d+d\d+/i.test(message)
+    const isRollCommand = message.startsWith('/r ') || message.startsWith('/roll ')
+
+    // Se é comando /r ou /roll, usar o sistema antigo
+    if (isRollCommand) {
       const expression = message.replace(/^\/(r|roll)\s+/, '')
       const result = rollDiceExpression(expression)
 
@@ -2179,7 +2251,49 @@ function App() {
           diceDetails: result.formula
         }])
       }
-    } else {
+    }
+    // Se tem comando @ ou expressão de dado, processar
+    else if (hasCommand || hasDiceExpression) {
+      const result = processCommandExpression(message)
+
+      if (result) {
+        // Construir mensagem formatada
+        let formattedMessage = `🎲 ${result.original}\n`
+
+        // Mostrar dados rolados
+        if (result.diceResults.length > 0) {
+          result.diceResults.forEach(dice => {
+            formattedMessage += `${dice.original} = [${dice.rolls.join(', ')}] = ${dice.total}\n`
+          })
+        }
+
+        // Mostrar substituições de comandos
+        if (result.substitutions.length > 0) {
+          result.substitutions.forEach(sub => {
+            formattedMessage += `${sub.command} = ${sub.value}\n`
+          })
+        }
+
+        formattedMessage += `\nTotal: ${result.finalResult}`
+
+        setChatMessages(prevMessages => [...prevMessages, {
+          username: currentUser.username,
+          text: formattedMessage,
+          timestamp,
+          isDiceRoll: true,
+          diceResult: result.finalResult
+        }])
+      } else {
+        setChatMessages(prevMessages => [...prevMessages, {
+          username: 'Sistema',
+          text: `❌ Erro ao processar expressão`,
+          timestamp,
+          isDiceRoll: false
+        }])
+      }
+    }
+    // Mensagem normal
+    else {
       setChatMessages(prevMessages => [...prevMessages, {
         username: currentUser.username,
         text: message,
@@ -2189,6 +2303,843 @@ function App() {
     }
 
     setChatInput('')
+  }
+
+  // Função para usar golpe na batalha
+  const handleUseBattleMove = (moveName) => {
+    if (!selectedTeamPokemon) return
+
+    const moveData = GOLPES_DATA[moveName]
+    if (!moveData) return
+
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const pokemonName = selectedTeamPokemon.nickname || selectedTeamPokemon.species
+
+    // Verificar se o golpe tem acurácia automática
+    const isAutoAccuracy = moveData.acuracia === 'Automática' || moveData.acuracia === 'Automático'
+
+    // Enviar mensagem do uso do golpe
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: currentUser.username,
+      text: `${pokemonName} usou ${moveName}!`,
+      timestamp,
+      isDiceRoll: false,
+      isAction: true
+    }])
+
+    // Se não for acurácia automática, rolar 1d20
+    if (!isAutoAccuracy) {
+      const accuracyRoll = Math.floor(Math.random() * 20) + 1
+      setTimeout(() => {
+        setChatMessages(prevMessages => [...prevMessages, {
+          username: currentUser.username,
+          text: `🎲 Teste de Acurácia: 1d20`,
+          timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          isDiceRoll: true,
+          diceResult: accuracyRoll,
+          diceDetails: `1d20 = ${accuracyRoll}`
+        }])
+      }, 100)
+    }
+
+    setShowBattleMoveModal(false)
+  }
+
+  // Função para rolar dano do golpe
+  const handleRollMoveDamage = (moveName) => {
+    // Determinar qual Pokémon está selecionado (treinador ou mestre)
+    const activePokemon = selectedTeamPokemon || selectedMasterNpcPokemon
+    if (!activePokemon) return
+
+    const moveData = GOLPES_DATA[moveName]
+    if (!moveData) return
+
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const pokemonName = activePokemon.nickname || activePokemon.nome || activePokemon.species
+
+    // Extrair dano basal
+    const danoBasal = moveData.danoBasal
+    if (!danoBasal || danoBasal === '-' || danoBasal === '') {
+      setChatMessages(prevMessages => [...prevMessages, {
+        username: 'Sistema',
+        text: `❌ Este golpe não possui dano basal`,
+        timestamp,
+        isDiceRoll: false
+      }])
+      return
+    }
+
+    // Determinar se é físico ou especial baseado no campo danoBasal
+    const isFisico = danoBasal.includes('Físico')
+    const isEspecial = danoBasal.includes('Especial')
+
+    // Pegar atributos do pokémon (verificar se é exótico ou NPC)
+    let pokemonData
+    const pokemonSpecies = activePokemon.species || activePokemon.especie
+
+    if (activePokemon.isExotic) {
+      // Buscar dados do exótico em globalExoticSpecies
+      pokemonData = globalExoticSpecies.find(e => e.nome === pokemonSpecies)
+    } else {
+      // Buscar dados do pokémon normal em fullPokedexData
+      pokemonData = fullPokedexData.find(p => p.nome === pokemonSpecies)
+    }
+
+    // Calcular ataque total (base + EVs + natureza)
+    let ataqueTotalRaw = 0
+    if (activePokemon.totalAttributes) {
+      // Pokémon tem totalAttributes já calculado
+      ataqueTotalRaw = isFisico ? activePokemon.totalAttributes.ataque : activePokemon.totalAttributes.ataqueEspecial
+    } else if (activePokemon.baseAttributes && activePokemon.nature && activePokemon.levelPoints) {
+      // Pokémon tem dados completos (do time do treinador) - calcular
+      const attrKey = isFisico ? 'ataque' : 'ataqueEspecial'
+      const attrLabel = isFisico ? 'Ataque' : 'Ataque Especial'
+      ataqueTotalRaw = calculateTotalAttribute(activePokemon, attrKey, attrLabel)
+    } else {
+      // Pokémon antigo sem dados completos - usar apenas atributo base
+      ataqueTotalRaw = isFisico ? (pokemonData?.statusBasais?.ataque || 0) : (pokemonData?.statusBasais?.ataqueEspecial || 0)
+    }
+
+    // Aplicar multiplicador de fase ao ataque total
+    const stages = pokemonStages[activePokemon.id] || {}
+    const ataqueStage = isFisico ? (stages.ataque || 0) : (stages.ataqueEspecial || 0)
+    const ataqueMultiplier = getStageMultiplier(ataqueStage)
+    const ataqueBase = Math.floor(ataqueTotalRaw * ataqueMultiplier)
+
+    // Calcular bônus elemental (STAB)
+    let bonusElemental = 0
+    const pokemonTypes = pokemonData?.tipos || []
+    const moveType = moveData.tipo
+    if (pokemonTypes.includes(moveType)) {
+      bonusElemental = Math.floor((pokemonData?.statusBasais?.saude || 10) / 2)
+    }
+
+    // Rolar os dados do dano basal (extrair apenas a parte numérica)
+    const diceMatch = danoBasal.match(/(\d+)d(\d+)(?:\+(\d+))?/)
+    if (diceMatch) {
+      const [, numDice, diceSides, bonus] = diceMatch
+      let total = 0
+      let danoBasalText = ''
+
+      if (isCritical) {
+        // Modo CRIT: rolar dano basal duas vezes e mostrar separadamente
+        const rolls1 = []
+        const rolls2 = []
+        let total1 = 0
+        let total2 = 0
+
+        // Primeira rolagem
+        for (let i = 0; i < parseInt(numDice); i++) {
+          const roll = Math.floor(Math.random() * parseInt(diceSides)) + 1
+          rolls1.push(roll)
+          total1 += roll
+        }
+        if (bonus) total1 += parseInt(bonus)
+
+        // Segunda rolagem
+        for (let i = 0; i < parseInt(numDice); i++) {
+          const roll = Math.floor(Math.random() * parseInt(diceSides)) + 1
+          rolls2.push(roll)
+          total2 += roll
+        }
+        if (bonus) total2 += parseInt(bonus)
+
+        total = total1 + total2
+        danoBasalText = `CRÍTICO! Dano Basal: ${danoBasal} = [${rolls1.join('+')}${bonus ? `+${bonus}` : ''}] + [${rolls2.join('+')}${bonus ? `+${bonus}` : ''}] = ${total1} + ${total2} = ${total}`
+      } else {
+        // Modo normal: rolar uma vez
+        const rolls = []
+        for (let i = 0; i < parseInt(numDice); i++) {
+          const roll = Math.floor(Math.random() * parseInt(diceSides)) + 1
+          rolls.push(roll)
+          total += roll
+        }
+        if (bonus) total += parseInt(bonus)
+        danoBasalText = `Dano Basal: ${danoBasal} = ${rolls.join('+')}${bonus ? `+${bonus}` : ''} = ${total}`
+      }
+
+      // Adicionar ataque e bônus elemental
+      let finalDamage = total + ataqueBase + bonusElemental
+
+      // Calcular modificadores ativos - apenas do usuário atual
+      let modifiersTotal = 0
+      const modifierDetails = []
+      const currentUserModifiers = userBattleModifiers[currentUser.username] || []
+      const currentUserActiveIndexes = userActiveModifiers[currentUser.username] || []
+
+      for (const modIndex of currentUserActiveIndexes) {
+        const modifier = currentUserModifiers[modIndex]
+        if (!modifier || !modifier.aplicarDano) continue
+
+        const modValue = modifier.mod
+
+        // Usar processCommandExpression para processar comandos @ e expressões
+        const processedMod = processCommandExpression(modValue)
+
+        if (processedMod) {
+          modifiersTotal += processedMod.finalResult
+
+          // Construir detalhes do modificador
+          let detail = `${modifier.nome}: ${modValue}`
+          if (processedMod.diceResults.length > 0) {
+            const diceDetails = processedMod.diceResults.map(d =>
+              `${d.original}=[${d.rolls.join('+')}]=${d.total}`
+            ).join(' ')
+            detail += ` → ${diceDetails}`
+          }
+          if (processedMod.substitutions.length > 0) {
+            const subDetails = processedMod.substitutions.map(s =>
+              `${s.command}=${s.value}`
+            ).join(' ')
+            detail += ` (${subDetails})`
+          }
+          detail += ` = ${processedMod.finalResult}`
+          modifierDetails.push(detail)
+        } else {
+          // Fallback: tentar como número simples
+          const numValue = parseInt(modValue)
+          if (!isNaN(numValue)) {
+            modifiersTotal += numValue
+            modifierDetails.push(`${modifier.nome}: ${numValue >= 0 ? '+' : ''}${numValue}`)
+          }
+        }
+      }
+
+      finalDamage += modifiersTotal
+
+      const detailsParts = [
+        danoBasalText,
+        isFisico ? `Ataque Físico: +${ataqueBase}` : `Ataque Especial: +${ataqueBase}`,
+        bonusElemental > 0 ? `Bônus Elemental (STAB): +${bonusElemental}` : null,
+        ...modifierDetails
+      ].filter(Boolean).join(' | ')
+
+      setChatMessages(prevMessages => [...prevMessages, {
+        username: currentUser.username,
+        text: `🎲 ${pokemonName} - Dano de ${moveName}${isCritical ? ' ⚡CRÍTICO⚡' : ''}`,
+        timestamp,
+        isDiceRoll: true,
+        diceResult: finalDamage,
+        diceDetails: detailsParts
+      }])
+    }
+
+    setShowBattleMoveModal(false)
+  }
+
+  // Função para enviar habilidade no chat
+  const handleSendAbilityToChat = (abilityName) => {
+    const abilityData = HABILIDADES_DATA[abilityName]
+    if (!abilityData) return
+
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const activePokemon = selectedTeamPokemon || selectedMasterNpcPokemon
+    const pokemonName = activePokemon?.nickname || activePokemon?.nome || activePokemon?.species || 'Pokémon'
+
+    // Extrair descrição corretamente (pode ser string ou objeto com ativacao/efeito)
+    let description = ''
+    if (typeof abilityData === 'string') {
+      description = abilityData
+    } else if (abilityData.descricao) {
+      description = abilityData.descricao
+    } else if (abilityData.efeito) {
+      description = `Ativação: ${abilityData.ativacao || 'N/A'}\n\nEfeito: ${abilityData.efeito}`
+    }
+
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: currentUser.username,
+      text: `📖 ${pokemonName} - Habilidade: ${abilityName}\n\n${description}`,
+      timestamp,
+      isDiceRoll: false
+    }])
+
+    setShowBattleAbilityModal(false)
+  }
+
+  // Função para rolar teste de acurácia
+  const handleRollAccuracy = (moveName) => {
+    const moveData = GOLPES_DATA[moveName]
+    if (!moveData) return
+
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const activePokemon = selectedTeamPokemon || selectedMasterNpcPokemon
+    const pokemonName = activePokemon?.nickname || activePokemon?.nome || activePokemon?.species || 'Pokémon'
+
+    // Verificar se é acerto automático
+    if (moveData.acuracia === 'Automático' || moveData.acuracia === 'Automática' || moveData.acuracia === '—' || moveData.acuracia === '-') {
+      setChatMessages(prevMessages => [...prevMessages, {
+        username: currentUser.username,
+        text: `🎯 ${pokemonName} - ${moveName}: Acerto Automático`,
+        timestamp,
+        isDiceRoll: false
+      }])
+      return
+    }
+
+    // Rolar 1d20
+    const d20Roll = Math.floor(Math.random() * 20) + 1
+
+    // Calcular modificadores de acurácia ativos
+    let modifiersTotal = 0
+    const modifierDetails = []
+    const currentUserModifiers = userBattleModifiers[currentUser.username] || []
+    const currentUserActiveIndexes = userActiveModifiers[currentUser.username] || []
+
+    for (const modIndex of currentUserActiveIndexes) {
+      const modifier = currentUserModifiers[modIndex]
+      if (!modifier || !modifier.aplicarAcuracia) continue
+
+      const modValue = modifier.mod
+
+      // Usar processCommandExpression para processar comandos @ e expressões
+      const processedMod = processCommandExpression(modValue)
+
+      if (processedMod) {
+        modifiersTotal += processedMod.finalResult
+
+        // Construir detalhes do modificador
+        let detail = `${modifier.nome}: ${modValue}`
+        if (processedMod.diceResults.length > 0) {
+          const diceDetails = processedMod.diceResults.map(d =>
+            `${d.original}=[${d.rolls.join('+')}]=${d.total}`
+          ).join(' ')
+          detail += ` → ${diceDetails}`
+        }
+        if (processedMod.substitutions.length > 0) {
+          const subDetails = processedMod.substitutions.map(s =>
+            `${s.command}=${s.value}`
+          ).join(' ')
+          detail += ` (${subDetails})`
+        }
+        detail += ` = ${processedMod.finalResult}`
+        modifierDetails.push(detail)
+      } else {
+        // Fallback: tentar como número simples
+        const numValue = parseInt(modValue)
+        if (!isNaN(numValue)) {
+          modifiersTotal += numValue
+          modifierDetails.push(`${modifier.nome}: ${numValue >= 0 ? '+' : ''}${numValue}`)
+        }
+      }
+    }
+
+    // Montar detalhes
+    let detailsParts = `1d20 = ${d20Roll}`
+    if (modifierDetails.length > 0) {
+      detailsParts += ` | Modificadores: ${modifierDetails.join(', ')} = ${modifiersTotal >= 0 ? '+' : ''}${modifiersTotal}`
+    }
+    detailsParts += ` | Acurácia do Golpe: ${moveData.acuracia}`
+
+    const finalResult = d20Roll + modifiersTotal
+
+    // Mostrar resultado do d20 e a acurácia ao lado
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: currentUser.username,
+      text: `🎯 ${pokemonName} - Teste de Acurácia: ${moveName}`,
+      timestamp,
+      isDiceRoll: true,
+      diceResult: finalResult,
+      diceDetails: detailsParts
+    }])
+  }
+
+  // Funções auxiliares para obter modificadores do usuário atual
+  const getUserModifiers = () => {
+    if (!currentUser) return []
+    return userBattleModifiers[currentUser.username] || []
+  }
+
+  const getUserActiveModifiers = () => {
+    if (!currentUser) return []
+    return userActiveModifiers[currentUser.username] || []
+  }
+
+  const setUserModifiers = (modifiers) => {
+    if (!currentUser) return
+    setUserBattleModifiers({
+      ...userBattleModifiers,
+      [currentUser.username]: modifiers
+    })
+  }
+
+  const setUserActiveModifiersForUser = (activeIndexes) => {
+    if (!currentUser) return
+    setUserActiveModifiers({
+      ...userActiveModifiers,
+      [currentUser.username]: activeIndexes
+    })
+  }
+
+  // Funções para gerenciar modificadores de batalha
+  const handleAddModifier = () => {
+    setModifierForm({ nome: '', mod: '', descricao: '', aplicarAcuracia: false, aplicarDano: false, aplicarCaptura: false })
+    setEditingModifierIndex(null)
+    setShowModifierModal(true)
+  }
+
+  const handleSaveModifier = () => {
+    if (!modifierForm.nome || !modifierForm.mod || !currentUser) return
+
+    const currentModifiers = getUserModifiers()
+
+    if (editingModifierIndex !== null) {
+      // Editar modificador existente
+      const updatedModifiers = [...currentModifiers]
+      updatedModifiers[editingModifierIndex] = modifierForm
+      setUserModifiers(updatedModifiers)
+    } else {
+      // Adicionar novo modificador
+      setUserModifiers([...currentModifiers, modifierForm])
+    }
+
+    setShowModifierModal(false)
+    setModifierForm({ nome: '', mod: '', descricao: '', aplicarAcuracia: false, aplicarDano: false, aplicarCaptura: false })
+    setEditingModifierIndex(null)
+  }
+
+  const handleEditModifier = (index) => {
+    const currentModifiers = getUserModifiers()
+    setModifierForm(currentModifiers[index])
+    setEditingModifierIndex(index)
+    setShowModifierModal(true)
+  }
+
+  const handleDeleteModifier = (index) => {
+    const currentModifiers = getUserModifiers()
+    const currentActive = getUserActiveModifiers()
+    setUserModifiers(currentModifiers.filter((_, i) => i !== index))
+    setUserActiveModifiersForUser(currentActive.filter(i => i !== index))
+  }
+
+  const handleToggleModifier = (index) => {
+    const currentActive = getUserActiveModifiers()
+    if (currentActive.includes(index)) {
+      setUserActiveModifiersForUser(currentActive.filter(i => i !== index))
+    } else {
+      setUserActiveModifiersForUser([...currentActive, index])
+    }
+  }
+
+  // Funções para gerenciar talentinhos
+  const handleAddTalentinho = () => {
+    setTalentinhoForm({ nome: '', expressao: '', alvos: [] })
+    setEditingTalentinhoIndex(null)
+    setShowTalentinhoModal(true)
+  }
+
+  const handleSaveTalentinho = () => {
+    if (!talentinhoForm.nome || !talentinhoForm.expressao) return
+
+    // Filtrar alvos vazios antes de salvar
+    const talentinhoToSave = {
+      ...talentinhoForm,
+      alvos: (talentinhoForm.alvos || []).filter(alvo => alvo.trim() !== '')
+    }
+
+    if (editingTalentinhoIndex !== null) {
+      // Editar talentinho existente
+      const updatedTalentinhos = [...talentinhos]
+      updatedTalentinhos[editingTalentinhoIndex] = talentinhoToSave
+      setTalentinhos(updatedTalentinhos)
+    } else {
+      // Adicionar novo talentinho
+      setTalentinhos([...talentinhos, talentinhoToSave])
+    }
+
+    setShowTalentinhoModal(false)
+    setTalentinhoForm({ nome: '', expressao: '', alvos: [] })
+    setEditingTalentinhoIndex(null)
+  }
+
+  const handleEditTalentinho = (index) => {
+    setTalentinhoForm(talentinhos[index])
+    setEditingTalentinhoIndex(index)
+    setShowTalentinhoModal(true)
+  }
+
+  const handleDeleteTalentinho = (index) => {
+    setTalentinhos(talentinhos.filter((_, i) => i !== index))
+  }
+
+  const handleRollTalentinho = (talentinho) => {
+    const result = processCommandExpression(talentinho.expressao)
+
+    if (!result) {
+      alert('Expressão inválida!')
+      return
+    }
+
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+    // Montar mensagem com detalhes da rolagem
+    let messageText = `🎲 ${talentinho.nome}\n`
+
+    if (result.substitutions && result.substitutions.length > 0) {
+      const subs = result.substitutions.map(s => `${s.command} = ${s.value}`).join(', ')
+      messageText += `${subs}\n`
+    }
+
+    if (result.diceResults && result.diceResults.length > 0) {
+      const rolls = result.diceResults.map(r => `${r.original}: [${r.rolls.join(', ')}] = ${r.total}`).join(', ')
+      messageText += `${rolls}\n`
+    }
+
+    messageText += `Total: ${result.finalResult}`
+
+    // Processar alvos se existirem
+    if (talentinho.alvos && talentinho.alvos.length > 0) {
+      messageText += `\n\n📍 Alvos:`
+      talentinho.alvos.forEach((alvoExpr, idx) => {
+        const alvoResult = processCommandExpression(alvoExpr)
+        if (alvoResult) {
+          const comparison = result.finalResult > alvoResult.finalResult ? '✅ SUCESSO' :
+                           result.finalResult === alvoResult.finalResult ? '⚖️ EMPATE' :
+                           '❌ FALHA'
+          messageText += `\nAlvo ${idx + 1}: ${alvoResult.finalResult} - ${comparison}`
+        } else {
+          messageText += `\nAlvo ${idx + 1}: Expressão inválida`
+        }
+      })
+    }
+
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: currentUser.username,
+      text: messageText,
+      timestamp,
+      isDiceRoll: true,
+      diceResult: messageText
+    }])
+  }
+
+  // Função para abrir modal de captura
+  const handleOpenCaptureModal = (pokeballName) => {
+    setSelectedPokeball(pokeballName)
+    const modifiers = POKEBALL_MODIFIERS[pokeballName]
+
+    if (modifiers === 'custom') {
+      setCustomPokeballModifier('')
+      setSelectedPokeballModifier('')
+    } else if (modifiers && modifiers.length > 0) {
+      setSelectedPokeballModifier(modifiers[0])
+    }
+
+    setShowCaptureModal(true)
+  }
+
+  // Função para lançar pokébola
+  const handleThrowPokeball = () => {
+    if (!selectedPokeball) return
+
+    // Customball não precisa estar nos keyItems
+    if (selectedPokeball !== 'Customball') {
+      const pokeballKey = keyItems.find(item => item.name === selectedPokeball)
+      if (!pokeballKey || pokeballKey.quantity <= 0) return
+
+      // Diminuir quantidade da pokébola e remover se chegar a 0
+      const updatedKeyItems = keyItems
+        .map(item =>
+          item.name === selectedPokeball
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter(item => item.quantity > 0) // Remove itens com quantidade 0
+      setKeyItems(updatedKeyItems)
+    }
+
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+    // Verificar se é Masterball (captura automática)
+    if (selectedPokeballModifier === 'auto') {
+      setChatMessages(prevMessages => [...prevMessages, {
+        username: currentUser.username,
+        text: `🎯 Lançou ${selectedPokeball}!\n⚡ CAPTURA AUTOMÁTICA! ⚡`,
+        timestamp,
+        isDiceRoll: true,
+        diceResult: 'AUTO'
+      }])
+      setShowCaptureModal(false)
+      return
+    }
+
+    // Obter modificador (custom ou selecionado)
+    let modifier = selectedPokeball === 'Customball' ? customPokeballModifier : selectedPokeballModifier
+
+    // Processar comandos @ no modificador
+    const processedModifier = processCommandExpression(modifier)
+    let modifierValue = 0
+    let modifierDetails = ''
+
+    if (processedModifier) {
+      modifierValue = processedModifier.finalResult
+      if (processedModifier.substitutions.length > 0) {
+        modifierDetails = ` (${processedModifier.substitutions.map(s => `${s.command}=${s.value}`).join(' ')})`
+      }
+    } else {
+      modifierValue = parseInt(modifier) || 0
+    }
+
+    // Aplicar modificadores de batalha ativos com aplicarCaptura
+    let battleModifiersTotal = 0
+    const battleModifierDetails = []
+    const currentUserModifiers = userBattleModifiers[currentUser.username] || []
+    const currentUserActiveIndexes = userActiveModifiers[currentUser.username] || []
+
+    for (const modIndex of currentUserActiveIndexes) {
+      const battleModifier = currentUserModifiers[modIndex]
+      if (!battleModifier || !battleModifier.aplicarCaptura) continue
+
+      const processedBattleMod = processCommandExpression(battleModifier.mod)
+      if (processedBattleMod) {
+        battleModifiersTotal += processedBattleMod.finalResult
+        battleModifierDetails.push(`${battleModifier.nome}=${processedBattleMod.finalResult}`)
+      } else {
+        const numValue = parseInt(battleModifier.mod) || 0
+        battleModifiersTotal += numValue
+        battleModifierDetails.push(`${battleModifier.nome}=${numValue}`)
+      }
+    }
+
+    // Rolar 1d100
+    const d100Roll = Math.floor(Math.random() * 100) + 1
+
+    // Calcular resultado final
+    const finalResult = d100Roll + modifierValue + battleModifiersTotal
+
+    // Construir mensagem
+    let message = `🎯 Lançou ${selectedPokeball}!\n1d100 = ${d100Roll}`
+    message += ` | Mod: ${modifier}${modifierDetails} = ${modifierValue}`
+    if (battleModifierDetails.length > 0) {
+      message += ` | Buffs: ${battleModifierDetails.join(', ')} = ${battleModifiersTotal}`
+    }
+    message += `\n\nTotal: ${finalResult}`
+
+    setChatMessages(prevMessages => [...prevMessages, {
+      username: currentUser.username,
+      text: message,
+      timestamp,
+      isDiceRoll: true,
+      diceResult: finalResult
+    }])
+
+    setShowCaptureModal(false)
+  }
+
+  // Funções para gerenciar fases de batalha
+  const getStageMultiplier = (stage) => {
+    const multipliers = {
+      '-6': 0.40,
+      '-5': 0.50,
+      '-4': 0.60,
+      '-3': 0.70,
+      '-2': 0.80,
+      '-1': 0.90,
+      '0': 1.00,
+      '1': 1.25,
+      '2': 1.50,
+      '3': 1.75,
+      '4': 2.00,
+      '5': 2.25,
+      '6': 2.50
+    }
+    return multipliers[stage.toString()] || 1.00
+  }
+
+  // Função para processar expressões com comandos @
+  const processCommandExpression = (expression) => {
+    if (!expression || typeof expression !== 'string') return null
+
+    // Remove espaços para facilitar o processamento
+    expression = expression.trim()
+
+    // Obter modificadores e atributos do treinador
+    const MA = getModifier(attributes.ataque)
+    const MD = getModifier(attributes.defesa)
+    const MAE = getModifier(attributes.ataqueEspecial)
+    const MDE = getModifier(attributes.defesaEspecial)
+    const MV = getModifier(attributes.velocidade)
+    const MS = getModifier(attributes.saude)
+
+    const At = attributes.ataque
+    const Dt = attributes.defesa
+    const AEt = attributes.ataqueEspecial
+    const DEt = attributes.defesaEspecial
+    const Vt = attributes.velocidade
+    const St = attributes.saude
+
+    // Mapa de comandos
+    const commandMap = {
+      '@MA': MA,
+      '@MD': MD,
+      '@MAE': MAE,
+      '@MDE': MDE,
+      '@MV': MV,
+      '@MS': MS,
+      '@At': At,
+      '@Dt': Dt,
+      '@AEt': AEt,
+      '@DEt': DEt,
+      '@Vt': Vt,
+      '@St': St
+    }
+
+    let processedExpression = expression
+    let substitutions = []
+
+    // PRIMEIRO: Processar sintaxe @COMMANDOdY (comando como quantidade de dados)
+    // Precisa processar TODOS os comandos possíveis, em ordem de tamanho decrescente
+    // para evitar que @MA seja processado antes de @MAE
+    const sortedCommands = Object.keys(commandMap).sort((a, b) => b.length - a.length)
+
+    sortedCommands.forEach(command => {
+      // Buscar padrão @COMMANDOdNUM (ex: @MAEd6, @MDd8)
+      const regex = new RegExp(command.replace('@', '\\@') + 'd(\\d+)', 'gi')
+      let match
+      while ((match = regex.exec(processedExpression)) !== null) {
+        const sides = match[1]
+        const value = commandMap[command]
+        if (value !== undefined) {
+          const numDice = Math.max(1, Math.abs(value)) // Garantir que seja positivo e mínimo 1
+          const original = `${command}d${sides}`
+          const replacement = `${numDice}d${sides}`
+          processedExpression = processedExpression.replace(original, replacement)
+          substitutions.push({ command: original, value: replacement })
+        }
+      }
+    })
+
+    // SEGUNDO: Substituir comandos @ simples pelos valores (que não foram usados como XdY)
+    sortedCommands.forEach(command => {
+      const regex = new RegExp(command.replace('@', '\\@') + '(?!d)', 'g')
+      if (processedExpression.match(regex)) {
+        const value = commandMap[command]
+        substitutions.push({ command, value })
+        processedExpression = processedExpression.replace(regex, value)
+      }
+    })
+
+    // TERCEIRO: Encontrar expressões de dados (XdY) na expressão JÁ PROCESSADA
+    const diceRegex = /(\d+)d(\d+)/gi
+    const diceMatches = [...processedExpression.matchAll(diceRegex)]
+
+    let results = []
+    let processedForDice = processedExpression
+
+    diceMatches.forEach(match => {
+      const numDice = parseInt(match[1])
+      const sides = parseInt(match[2])
+      const rolls = []
+      let total = 0
+
+      for (let i = 0; i < numDice; i++) {
+        const roll = Math.floor(Math.random() * sides) + 1
+        rolls.push(roll)
+        total += roll
+      }
+
+      results.push({
+        original: match[0],
+        numDice,
+        sides,
+        rolls,
+        total
+      })
+
+      // Substituir XdY pelo total na expressão
+      processedForDice = processedForDice.replace(match[0], total)
+    })
+
+    // Calcular o resultado final
+    // Garantir que a expressão seja válida para eval (suporta +, -, *, /, parênteses)
+    let finalResult
+    try {
+      // Remove espaços e avalia a expressão matemática
+      const cleanExpression = processedForDice.replace(/\s/g, '')
+      finalResult = eval(cleanExpression)
+      // Arredondar para 2 casas decimais se for número decimal
+      if (typeof finalResult === 'number' && !Number.isInteger(finalResult)) {
+        finalResult = Math.round(finalResult * 100) / 100
+      }
+    } catch (e) {
+      console.error('Erro ao avaliar expressão:', e, 'Expressão processada:', processedForDice)
+      return null
+    }
+
+    return {
+      original: expression,
+      processed: processedExpression,
+      substitutions,
+      diceResults: results,
+      finalResult
+    }
+  }
+
+  const adjustTrainerStage = (trainerId, attribute, delta) => {
+    setTrainerStages(prev => {
+      const current = prev[trainerId] || {
+        ataque: 0,
+        defesa: 0,
+        velocidade: 0
+      }
+      const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
+      return {
+        ...prev,
+        [trainerId]: { ...current, [attribute]: newValue }
+      }
+    })
+  }
+
+  const adjustPokemonStage = (pokemonId, attribute, delta) => {
+    setPokemonStages(prev => {
+      const current = prev[pokemonId] || {
+        ataque: 0,
+        ataqueEspecial: 0,
+        defesa: 0,
+        defesaEspecial: 0,
+        velocidade: 0,
+        precisao: 0
+      }
+
+      const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
+
+      const newStages = {
+        ...prev,
+        [pokemonId]: {
+          ...current,
+          [attribute]: newValue
+        }
+      }
+
+      // Atualizar evasões no battlePokemonList se for defesa, defesaEspecial ou velocidade
+      if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
+        setBattlePokemonList(prevList => prevList.map(pokemon => {
+          if (pokemon.originalId === pokemonId && pokemon.totalAttributes) {
+            const stages = newStages[pokemonId]
+            const defesaMultiplier = getStageMultiplier(stages.defesa)
+            const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
+            const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
+
+            const defesaAdjusted = Math.floor(pokemon.totalAttributes.defesa * defesaMultiplier)
+            const defesaEspecialAdjusted = Math.floor(pokemon.totalAttributes.defesaEspecial * defesaEspecialMultiplier)
+            const velocidadeAdjusted = Math.floor(pokemon.totalAttributes.velocidade * velocidadeMultiplier)
+
+            return {
+              ...pokemon,
+              evasaoFisica: Math.floor(defesaAdjusted / 5),
+              evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
+              evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
+            }
+          }
+          return pokemon
+        }))
+      }
+
+      return newStages
+    })
+  }
+
+  const handleShowModifierDetails = (modifier) => {
+    setSelectedModifier(modifier)
+    setShowModifierDetailsModal(true)
   }
 
   // Handlers para Account Data
@@ -2205,6 +3156,7 @@ function App() {
       if (trainerData) {
         const parsedData = JSON.parse(trainerData)
         // Adicionar globalExoticSpecies aos dados do treinador
+        // parsedData já inclui: userBattleModifiers, userActiveModifiers, mainTeam, pcPokemon, etc
         const combinedData = {
           ...parsedData,
           globalExoticSpecies: globalExoticData ? JSON.parse(globalExoticData) : []
@@ -2575,7 +3527,7 @@ function App() {
   const handleOpenPokeballModal = (pokemon, type) => {
     setSelectedPokemonForPokeball(pokemon)
     setSelectedPokemonTypeForPokeball(type)
-    setSelectedPokeball(pokemon.pokeball || '')
+    setSelectedPokeballForPC(pokemon.pokeball || '')
     setPokeballSearch('')
     setShowPokeballModal(true)
   }
@@ -2583,7 +3535,7 @@ function App() {
   const handleOpenPokeballPC = (pokemon, type) => {
     setSelectedPokemonForPokeball(pokemon)
     setSelectedPokemonTypeForPokeball(type)
-    setSelectedPokeball(pokemon.pokeball || '')
+    setSelectedPokeballForPC(pokemon.pokeball || '')
     setPokeballSearch('')
     setShowPokeballPCModal(true)
   }
@@ -2593,7 +3545,7 @@ function App() {
     if (pokeball === 'Custom Pokeball') {
       setShowCustomPokeballOptions(true)
     } else {
-      setSelectedPokeball(pokeball)
+      setSelectedPokeballForPC(pokeball)
     }
   }
 
@@ -2606,7 +3558,7 @@ function App() {
       alert('Por favor, selecione um arquivo de imagem!')
       return
     }
-    setSelectedPokeball('Custom Pokeball')
+    setSelectedPokeballForPC('Custom Pokeball')
     setShowCustomPokeballOptions(false)
   }
 
@@ -2622,7 +3574,7 @@ function App() {
     if (pokeball === 'Custom Pokeball 2') {
       setShowCustomPokeball2Options(true)
     } else {
-      setSelectedPokeball(pokeball)
+      setSelectedPokeballForPC(pokeball)
     }
   }
 
@@ -2635,7 +3587,7 @@ function App() {
       alert('Por favor, selecione um arquivo de imagem!')
       return
     }
-    setSelectedPokeball('Custom Pokeball 2')
+    setSelectedPokeballForPC('Custom Pokeball 2')
     setShowCustomPokeball2Options(false)
   }
 
@@ -2648,12 +3600,12 @@ function App() {
 
   // Handler de salvamento único
   const handleSavePokeball = () => {
-    if (!selectedPokeball) return
+    if (!selectedPokeballForPC) return
 
-    const updatedPokemon = { ...selectedPokemonForPokeball, pokeball: selectedPokeball }
+    const updatedPokemon = { ...selectedPokemonForPokeball, pokeball: selectedPokeballForPC }
 
     // Custom Pokeball (Time Principal)
-    if (selectedPokeball === 'Custom Pokeball') {
+    if (selectedPokeballForPC === 'Custom Pokeball') {
       if (customPokeballUploadType === 'link') {
         updatedPokemon.customPokeballImage = customPokeballLink
       } else if (customPokeballFile) {
@@ -2665,7 +3617,7 @@ function App() {
         reader.readAsDataURL(customPokeballFile)
         setShowPokeballModal(false)
         setSelectedPokemonForPokeball(null)
-        setSelectedPokeball('')
+        setSelectedPokeballForPC('')
         setPokeballSearch('')
         setCustomPokeballLink('')
         setCustomPokeballFile(null)
@@ -2675,7 +3627,7 @@ function App() {
     }
 
     // Custom Pokeball 2 (PC)
-    if (selectedPokeball === 'Custom Pokeball 2') {
+    if (selectedPokeballForPC === 'Custom Pokeball 2') {
       if (customPokeball2UploadType === 'link') {
         updatedPokemon.customPokeballImage = customPokeball2Link
       } else if (customPokeball2File) {
@@ -2687,7 +3639,7 @@ function App() {
         reader.readAsDataURL(customPokeball2File)
         setShowPokeballPCModal(false)
         setSelectedPokemonForPokeball(null)
-        setSelectedPokeball('')
+        setSelectedPokeballForPC('')
         setPokeballSearch('')
         setCustomPokeball2Link('')
         setCustomPokeball2File(null)
@@ -2706,7 +3658,7 @@ function App() {
     setShowPokeballModal(false)
     setShowPokeballPCModal(false)
     setSelectedPokemonForPokeball(null)
-    setSelectedPokeball('')
+    setSelectedPokeballForPC('')
     setPokeballSearch('')
     setCustomPokeballLink('')
     setCustomPokeballFile(null)
@@ -3769,6 +4721,7 @@ function App() {
 
     // Preencher formulário com dados existentes ou buscar do pokemonData
     setPokemonEditForm({
+      shiny: pokemon.shiny || false,
       nature: pokemon.nature || '',
       baseAttributes: pokemon.baseAttributes || baseAttributesFromData,
       levelPoints: pokemon.levelPoints || {
@@ -3847,6 +4800,7 @@ function App() {
 
     // Preencher formulário com dados existentes ou buscar do pokemonData
     setPokemonEditForm({
+      shiny: pokemon.shiny || false,
       nature: pokemon.nature || '',
       baseAttributes: pokemon.baseAttributes || baseAttributesFromData,
       levelPoints: pokemon.levelPoints || {
@@ -4344,11 +5298,20 @@ function App() {
     const totalVel = calculateTotalAttribute(pokemon, 'velocidade', 'Velocidade')
     const totalDef = calculateTotalAttribute(pokemon, 'defesa', 'Defesa')
     const totalDefEsp = calculateTotalAttribute(pokemon, 'defesaEspecial', 'Defesa Especial')
+    const totalAtk = calculateTotalAttribute(pokemon, 'ataque', 'Ataque')
+    const totalAtkEsp = calculateTotalAttribute(pokemon, 'ataqueEspecial', 'Ataque Especial')
     const tipos = getPokemonTypes(pokemon) || []
 
+    // Gerar nome falso aleatório
+    const fakeNames = ['Vulto', 'Sua Mãe', 'Carinha da esquina', 'Agumon', 'Gabumon', 'Mochi', 'Mewtwoo', 'Sua Vó', 'Claúdio', 'Biroliro', 'Flamengo', 'Chrmader', 'Seu Pai', 'Dois Reias']
+    const fakeName = fakeNames[Math.floor(Math.random() * fakeNames.length)]
+
+    const originalId = pokemon.id || `team-${pokemon.species}`
     const battleData = {
       id: `pokemon-${Date.now()}-${Math.random()}`,
+      originalId: originalId,
       nome: pokemon.nickname || pokemon.species,
+      nomeFalso: fakeName,
       especie: pokemon.species,
       tipos: tipos,
       hp: pokemon.currentHP !== undefined ? pokemon.currentHP : maxHP,
@@ -4356,7 +5319,19 @@ function App() {
       velocidade: totalVel,
       evasaoFisica: Math.floor(totalDef / 5),
       evasaoEspecial: Math.floor(totalDefEsp / 5),
-      evasaoVeloz: Math.floor(totalVel / 10)
+      evasaoVeloz: Math.floor(totalVel / 10),
+      golpes: pokemon.moves || [],
+      habilidades: pokemon.abilities || [],
+      isExotic: pokemon.isExotic || false,
+      owner: currentUser?.username,
+      // Armazenar atributos totais base para cálculo de fases
+      totalAttributes: {
+        ataque: totalAtk,
+        ataqueEspecial: totalAtkEsp,
+        defesa: totalDef,
+        defesaEspecial: totalDefEsp,
+        velocidade: totalVel
+      }
     }
     setBattlePokemon(prev => [...prev, battleData])
     alert(`${battleData.nome} enviado para a Batalha!`)
@@ -4366,9 +5341,14 @@ function App() {
     const maxHP = getMaxHP()
     const evasion = getEvasion()
 
+    // Gerar nome falso aleatório para treinador
+    const fakeTrainerNames = ['Treinador A', 'Treinador B', 'Treinador C', 'Treinador D', 'Treinador E', 'Pessoa Misteriosa', 'Fulano', 'Ciclano', 'Beltrano', 'Aspirante', 'Novato', 'Veterano']
+    const fakeTrainerName = fakeTrainerNames[Math.floor(Math.random() * fakeTrainerNames.length)]
+
     const battleData = {
       id: `trainer-${Date.now()}-${Math.random()}`,
       nome: currentUser.username,
+      nomeFalso: fakeTrainerName,
       hp: currentHP,
       maxHP: maxHP,
       velocidade: attributes.velocidade,
@@ -4381,9 +5361,19 @@ function App() {
   }
 
   const sendNpcPokemonToBattle = (pokemon) => {
+    // Criar array de habilidades a partir de habilidade1 e habilidade2
+    const habilidades = []
+    if (pokemon.habilidade1) habilidades.push(pokemon.habilidade1)
+    if (pokemon.habilidade2) habilidades.push(pokemon.habilidade2)
+
+    // Gerar nome falso aleatório
+    const fakeNames = ['Vulto', 'Sua Mãe', 'Carinha da esquina', 'Agumon', 'Gabumon', 'Mochi', 'Mewtwoo', 'Sua Vó', 'Claúdio', 'Biroliro', 'Flamengo', 'Chrmader', 'Seu Pai', 'Dois Reias']
+    const fakeName = fakeNames[Math.floor(Math.random() * fakeNames.length)]
+
     const battleData = {
       id: `npc-pokemon-${Date.now()}-${Math.random()}`,
       nome: pokemon.species || pokemon.name,
+      nomeFalso: fakeName,
       especie: pokemon.species || pokemon.name,
       tipos: pokemon.types || [],
       hp: pokemon.currentHP !== undefined ? pokemon.currentHP : ((3 * pokemon.attributes.saude) + pokemon.level),
@@ -4391,7 +5381,18 @@ function App() {
       velocidade: pokemon.attributes.velocidade,
       evasaoFisica: Math.floor(pokemon.attributes.defesa / 5),
       evasaoEspecial: Math.floor(pokemon.attributes.defesaEspecial / 5),
-      evasaoVeloz: Math.floor(pokemon.attributes.velocidade / 10)
+      evasaoVeloz: Math.floor(pokemon.attributes.velocidade / 10),
+      golpes: pokemon.golpesAprendidos || pokemon.moves || [],
+      habilidades: habilidades,
+      isExotic: pokemon.isExotic || false,
+      // Armazenar atributos totais base para cálculo de fases
+      totalAttributes: {
+        ataque: pokemon.attributes.ataque,
+        ataqueEspecial: pokemon.attributes.ataqueEspecial,
+        defesa: pokemon.attributes.defesa,
+        defesaEspecial: pokemon.attributes.defesaEspecial,
+        velocidade: pokemon.attributes.velocidade
+      }
     }
     setBattlePokemon(prev => [...prev, battleData])
     alert(`${battleData.nome} enviado para a Batalha!`)
@@ -4440,6 +5441,85 @@ function App() {
     setBattlePokemon([])
     setCurrentPokemonTurn(0)
     setPokemonRound(1)
+  }
+
+  const removeTrainerFromBattle = (trainerId) => {
+    // Remover o treinador da lista de batalha e ajustar o turno
+    setBattleTrainersList(prev => {
+      const newList = prev.filter(t => t.id !== trainerId)
+
+      // Ajustar o turno atual se necessário
+      if (currentTrainerTurn >= newList.length && newList.length > 0) {
+        setCurrentTrainerTurn(newList.length - 1)
+      } else if (newList.length === 0) {
+        setCurrentTrainerTurn(0)
+      }
+
+      return newList
+    })
+
+    // Limpar condições desse treinador
+    setBattleTrainerConditions(prev => {
+      const newConditions = { ...prev }
+      delete newConditions[trainerId]
+      return newConditions
+    })
+
+    // Limpar estágios desse treinador
+    setTrainerStages(prev => {
+      const newStages = { ...prev }
+      delete newStages[trainerId]
+      return newStages
+    })
+
+    // Limpar estado revelado
+    setRevealedTrainers(prev => {
+      const newRevealed = { ...prev }
+      delete newRevealed[trainerId]
+      return newRevealed
+    })
+  }
+
+  const removePokemonFromBattle = (pokemonId) => {
+    // Remover o pokémon da lista de batalha e ajustar o turno
+    setBattlePokemonList(prev => {
+      const newList = prev.filter(p => p.id !== pokemonId)
+
+      // Ajustar o turno atual se necessário
+      if (currentPokemonTurn >= newList.length && newList.length > 0) {
+        setCurrentPokemonTurn(newList.length - 1)
+      } else if (newList.length === 0) {
+        setCurrentPokemonTurn(0)
+      }
+
+      return newList
+    })
+
+    // Limpar condições desse pokémon
+    setBattlePokemonConditions(prev => {
+      const newConditions = { ...prev }
+      delete newConditions[pokemonId]
+      return newConditions
+    })
+
+    // Limpar estágios desse pokémon
+    setPokemonStages(prev => {
+      const newStages = { ...prev }
+      delete newStages[pokemonId]
+      return newStages
+    })
+
+    // Limpar estado revelado se for NPC
+    setRevealedNpcPokemon(prev => {
+      const newRevealed = { ...prev }
+      delete newRevealed[pokemonId]
+      return newRevealed
+    })
+
+    // Se era o pokémon selecionado, limpar seleção
+    if (selectedMasterNpcPokemon?.id === pokemonId) {
+      setSelectedMasterNpcPokemon(null)
+    }
   }
 
   // Função para alternar estado de uma insígnia
@@ -4572,10 +5652,17 @@ function App() {
 
         console.log('Golpes gerados:', generatedMoves)
 
-        // Adicionar golpes ao pokemonData
+        // Buscar dados da espécie na Pokédex para obter peso e altura
+        const speciesData = pokedexData.find(p =>
+          p.nome.toLowerCase() === speciesName.toLowerCase()
+        )
+
+        // Adicionar golpes, peso e altura ao pokemonData
         const pokemonWithMoves = {
           ...pokemonData,
           golpesAprendidos: generatedMoves,
+          weight: pokemonData.weight || (speciesData ? speciesData.peso : 0),
+          height: pokemonData.height || (speciesData ? speciesData.altura : 0),
           addedToNpc: false
         }
 
@@ -4614,8 +5701,22 @@ function App() {
           setPokemonedas(data.pokemonedas || 0)
           setKeyItems(data.keyItems || [])
           setCustomItems(data.customItems || [])
+          // Migração: converter talentos antigos (strings) para objetos
+          const migratedTalentos = (data.talentosSelected || []).map(tal => {
+            if (typeof tal === 'string') {
+              // Procurar o talento completo nos dados
+              let foundTalento = null
+              Object.values(TALENTOS_DATA).forEach(classeTalentos => {
+                const found = classeTalentos.find(t => t.nome === tal)
+                if (found) foundTalento = found
+              })
+              return foundTalento || { nome: tal, descricao: '', efeito: '', frequencia: '' }
+            }
+            return tal
+          })
+
           setCaracteristicasSelected(data.caracteristicasSelected || [])
-          setTalentosSelected(data.talentosSelected || [])
+          setTalentosSelected(migratedTalentos)
           setPokemonImages(data.pokemonImages || {})
           setBadges(data.badges || {
             Kanto: [false, false, false, false, false, false, false, false, false],
@@ -4632,6 +5733,9 @@ function App() {
           setOtherCapacities(data.otherCapacities || [])
           setVivencias(data.vivencias || [])
           setConquistas(data.conquistas || [])
+          setUserBattleModifiers(data.userBattleModifiers || {})
+          setUserActiveModifiers(data.userActiveModifiers || {})
+          setTalentinhos(data.talentinhos || [])
         } catch (e) {
           console.error('Erro ao carregar:', e)
         }
@@ -4658,6 +5762,14 @@ function App() {
           setPokemonRound(data.pokemonRound || 1)
           setNpcConditions(data.npcConditions || {})
           setExpandedNpcCards(data.expandedNpcCards || [])
+          setRevealedNpcPokemon(data.revealedNpcPokemon || {})
+          setRevealedTrainers(data.revealedTrainers || {})
+          setPokemonStages(data.pokemonStages || {})
+          setTrainerStages(data.trainerStages || {})
+          setBattlePokemonConditions(data.battlePokemonConditions || {})
+          setBattleTrainerConditions(data.battleTrainerConditions || {})
+          setUserBattleModifiers(data.userBattleModifiers || {})
+          setUserActiveModifiers(data.userActiveModifiers || {})
         } catch (e) {
           console.error('Erro ao carregar configurações do mestre:', e)
         }
@@ -4677,7 +5789,9 @@ function App() {
         pokemonImages, badges,
         estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive,
         bolsaTalento, otherCapacities,
-        vivencias, conquistas
+        vivencias, conquistas,
+        userBattleModifiers, userActiveModifiers,
+        talentinhos
       }
       try {
         localStorage.setItem(key, JSON.stringify(data))
@@ -4702,7 +5816,15 @@ function App() {
         trainerRound,
         pokemonRound,
         npcConditions,
-        expandedNpcCards
+        expandedNpcCards,
+        revealedNpcPokemon,
+        revealedTrainers,
+        pokemonStages,
+        trainerStages,
+        battlePokemonConditions,
+        battleTrainerConditions,
+        userBattleModifiers,
+        userActiveModifiers
       }
       try {
         localStorage.setItem(key, JSON.stringify(data))
@@ -4710,7 +5832,66 @@ function App() {
         console.error('Erro ao salvar configurações do mestre:', error)
       }
     }
-  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, pokemonImages, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, hiddenPokelojaItems, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, currentUser])
+  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, pokemonImages, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, userBattleModifiers, userActiveModifiers, talentinhos, hiddenPokelojaItems, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, pokemonStages, trainerStages, battlePokemonConditions, battleTrainerConditions, currentUser])
+
+  // Salvar dados de batalha no mestre_config mesmo quando for treinador
+  useEffect(() => {
+    if (currentUser?.type === 'treinador') {
+      const key = 'mestre_config'
+      const saved = localStorage.getItem(key)
+      let mestreData = {}
+
+      if (saved) {
+        try {
+          mestreData = JSON.parse(saved)
+        } catch (e) {
+          console.error('Erro ao carregar mestre_config:', e)
+        }
+      }
+
+      // Atualizar apenas os dados de batalha
+      const updatedData = {
+        ...mestreData,
+        battleTrainers,
+        battlePokemon,
+        battleTrainersList,
+        battlePokemonList,
+        battlePokemonConditions,
+        pokemonStages,
+        userBattleModifiers,
+        userActiveModifiers,
+        revealedNpcPokemon
+      }
+
+      try {
+        localStorage.setItem(key, JSON.stringify(updatedData))
+      } catch (error) {
+        console.error('Erro ao salvar dados de batalha:', error)
+      }
+    }
+  }, [battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, battlePokemonConditions, pokemonStages, userBattleModifiers, userActiveModifiers, revealedNpcPokemon, currentUser])
+
+  // Carregar dados de batalha do localStorage na inicialização
+  useEffect(() => {
+    if (currentUser) {
+      const key = currentUser.type === 'mestre' ? 'mestre_config' : `treinador_${currentUser.username}`
+      const saved = localStorage.getItem(key)
+
+      if (saved) {
+        try {
+          const data = JSON.parse(saved)
+
+          // Restaurar estados de batalha se existirem
+          if (data.pokemonStages) setPokemonStages(data.pokemonStages)
+          if (data.userBattleModifiers) setUserBattleModifiers(data.userBattleModifiers)
+          if (data.userActiveModifiers) setUserActiveModifiers(data.userActiveModifiers)
+          if (data.revealedNpcPokemon) setRevealedNpcPokemon(data.revealedNpcPokemon)
+        } catch (e) {
+          console.error('Erro ao carregar dados de batalha:', e)
+        }
+      }
+    }
+  }, [currentUser])
 
   // Fechar modais com ESC
   useEffect(() => {
@@ -4756,6 +5937,13 @@ function App() {
   useEffect(() => {
     localStorage.setItem('globalExoticSpecies', JSON.stringify(globalExoticSpecies))
   }, [globalExoticSpecies])
+
+  // Scroll automático para última mensagem do chat
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [chatMessages])
 
   // Variável do modal de Account Data (reutilizável em todos os returns)
   const accountDataModal = currentUser ? (
@@ -4908,6 +6096,9 @@ function App() {
                         </h4>
                         <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                           Nível {pokemon.level} • {pokemon.gender}
+                        </p>
+                        <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                          {pokemon.weight ? `${pokemon.weight} kg` : 'N/A'} • {pokemon.height ? `${pokemon.height} m` : 'N/A'}
                         </p>
                       </div>
                       <div className="flex gap-1 mr-6">
@@ -5998,6 +7189,14 @@ function App() {
                             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Gênero</p>
                             <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.gender}</p>
                           </div>
+                          <div>
+                            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Peso</p>
+                            <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.weight ? `${pokemon.weight} kg` : 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Altura</p>
+                            <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.height ? `${pokemon.height} m` : 'N/A'}</p>
+                          </div>
                         </div>
 
                         {/* Natureza */}
@@ -6511,6 +7710,9 @@ function App() {
                   <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     Nível: <strong>{pokemonToSend.level}</strong> • Gênero: <strong>{pokemonToSend.gender}</strong>
                   </p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Peso: <strong>{pokemonToSend.weight ? `${pokemonToSend.weight} kg` : 'N/A'}</strong> • Altura: <strong>{pokemonToSend.height ? `${pokemonToSend.height} m` : 'N/A'}</strong>
+                  </p>
                   {pokemonToSend.shiny && (
                     <p className={`text-sm ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
                       ✨ Shiny
@@ -6699,31 +7901,249 @@ function App() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {safeTrainersList.map((trainer, idx) => (
-                        <div
-                          key={trainer.id}
-                          className={`p-3 rounded-lg border-2 ${
-                            idx === currentTrainerTurn
-                              ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
-                              : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className={`font-semibold ${idx === currentTrainerTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              {idx === currentTrainerTurn && '▶ '}{trainer.nome}
+                      {safeTrainersList.map((trainer, idx) => {
+                        const trainerConditions = battleTrainerConditions[trainer.id] || [null, null, null]
+                        const stages = trainerStages[trainer.id] || { ataque: 0, defesa: 0, velocidade: 0 }
+
+                        return (
+                          <div
+                            key={trainer.id}
+                            className={`p-3 rounded-lg border-2 ${
+                              idx === currentTrainerTurn
+                                ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
+                                : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className={`font-semibold ${idx === currentTrainerTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                {idx === currentTrainerTurn && '▶ '}{trainer.nome}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                                  Vel: {trainer.velocidade}
+                                </span>
+                                <button
+                                  onClick={() => removeTrainerFromBattle(trainer.id)}
+                                  className="p-1 rounded hover:bg-red-600 transition-colors bg-red-500 text-white"
+                                  title="Remover da batalha"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </div>
-                            <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                              Vel: {trainer.velocidade}
-                            </span>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              HP: {trainer.hp}/{trainer.maxHP}
+                            </div>
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}
+                            </div>
+
+                            {/* Checkbox Revelar Nome */}
+                            <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                              <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                <input
+                                  type="checkbox"
+                                  checked={revealedTrainers[trainer.id] || false}
+                                  onChange={(e) => setRevealedTrainers({
+                                    ...revealedTrainers,
+                                    [trainer.id]: e.target.checked
+                                  })}
+                                  className="w-4 h-4 cursor-pointer"
+                                />
+                                <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  Revelar Nome
+                                </span>
+                              </label>
+                            </div>
+
+                            {/* Dropdown e Caixas de Condições */}
+                            <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                              <label className={`text-xs font-semibold mb-1 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                Condições:
+                              </label>
+                              <select
+                                className={`w-full text-xs px-2 py-1 rounded mb-2 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-800 border-gray-300'} border`}
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    const newConditions = [...trainerConditions]
+                                    const emptySlot = newConditions.findIndex(c => c === null)
+                                    if (emptySlot !== -1) {
+                                      newConditions[emptySlot] = { condition: e.target.value, rounds: 1 }
+                                      setBattleTrainerConditions({
+                                        ...battleTrainerConditions,
+                                        [trainer.id]: newConditions
+                                      })
+                                    }
+                                    e.target.value = ''
+                                  }
+                                }}
+                                value=""
+                              >
+                                <option value="">Selecione uma condição</option>
+                                <option value="confusao">😵 Confusão</option>
+                                <option value="critico">🍀 Crítico</option>
+                                <option value="paralisia">⚡ Paralisia</option>
+                                <option value="sono">💤 Sono</option>
+                                <option value="atordoamento">🌀 Atordoamento</option>
+                                <option value="congelamento">❄️ Congelamento</option>
+                                <option value="paixao">❤️ Paixão</option>
+                                <option value="queimadura">🔥 Queimadura</option>
+                                <option value="veneno">☠️ Veneno</option>
+                              </select>
+
+                              {/* Caixas de Condições */}
+                              <div className="grid grid-cols-3 gap-1">
+                                {trainerConditions.map((cond, slotIdx) => (
+                                  <div
+                                    key={slotIdx}
+                                    className={`relative text-center p-2 rounded border-2 ${
+                                      cond
+                                        ? darkMode ? 'bg-gray-700 border-blue-500' : 'bg-blue-50 border-blue-400'
+                                        : darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-100 border-gray-300'
+                                    }`}
+                                  >
+                                    {cond ? (
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            const newConditions = [...trainerConditions]
+                                            newConditions[slotIdx] = null
+                                            setBattleTrainerConditions({
+                                              ...battleTrainerConditions,
+                                              [trainer.id]: newConditions
+                                            })
+                                          }}
+                                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                                        >
+                                          ×
+                                        </button>
+                                        <div className="text-lg mb-1">
+                                          {cond.condition === 'confusao' && '😵'}
+                                          {cond.condition === 'critico' && '🍀'}
+                                          {cond.condition === 'paralisia' && '⚡'}
+                                          {cond.condition === 'sono' && '💤'}
+                                          {cond.condition === 'atordoamento' && '🌀'}
+                                          {cond.condition === 'congelamento' && '❄️'}
+                                          {cond.condition === 'paixao' && '❤️'}
+                                          {cond.condition === 'queimadura' && '🔥'}
+                                          {cond.condition === 'veneno' && '☠️'}
+                                        </div>
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button
+                                            onClick={() => {
+                                              const newConditions = [...trainerConditions]
+                                              newConditions[slotIdx].rounds = Math.max(0, newConditions[slotIdx].rounds - 1)
+                                              setBattleTrainerConditions({
+                                                ...battleTrainerConditions,
+                                                [trainer.id]: newConditions
+                                              })
+                                            }}
+                                            className={`w-5 h-5 rounded text-xs font-bold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                          >
+                                            -
+                                          </button>
+                                          <span className={`text-xs font-bold min-w-[20px] ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                            {cond.rounds}
+                                          </span>
+                                          <button
+                                            onClick={() => {
+                                              const newConditions = [...trainerConditions]
+                                              newConditions[slotIdx].rounds += 1
+                                              setBattleTrainerConditions({
+                                                ...battleTrainerConditions,
+                                                [trainer.id]: newConditions
+                                              })
+                                            }}
+                                            className={`w-5 h-5 rounded text-xs font-bold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                          >
+                                            +
+                                          </button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>-</div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Fases */}
+                            <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                              <label className={`text-xs font-semibold mb-2 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                Fases (-6 a +6):
+                              </label>
+                              <div className="grid grid-cols-3 gap-2 text-xs">
+                                {/* Ataque */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustTrainerStage(trainer.id, 'ataque', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.ataque > 0 ? 'text-green-500' : stages.ataque < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.ataque > 0 ? `+${stages.ataque}` : stages.ataque}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustTrainerStage(trainer.id, 'ataque', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Defesa */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustTrainerStage(trainer.id, 'defesa', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.defesa > 0 ? 'text-green-500' : stages.defesa < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.defesa > 0 ? `+${stages.defesa}` : stages.defesa}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustTrainerStage(trainer.id, 'defesa', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Velocidade */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>VEL</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustTrainerStage(trainer.id, 'velocidade', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.velocidade > 0 ? 'text-green-500' : stages.velocidade < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.velocidade > 0 ? `+${stages.velocidade}` : stages.velocidade}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustTrainerStage(trainer.id, 'velocidade', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            HP: {trainer.hp}/{trainer.maxHP}
-                          </div>
-                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -6813,6 +8233,32 @@ function App() {
                     <div className="space-y-2">
                       {safePokemonList.map((pokemon, idx) => {
                         const pokemonConditions = battlePokemonConditions[pokemon.id] || [null, null, null]
+                        const stages = pokemonStages[pokemon.id] || { ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0 }
+
+                        // Calcular evasões com multiplicador de fase aplicado aos atributos totais
+                        const defesaMultiplier = getStageMultiplier(stages.defesa)
+                        const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
+                        const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
+
+                        // Se temos totalAttributes, usar eles; senão, calcular a partir das evasões
+                        let evasaoFisicaAdjusted, evasaoEspecialAdjusted, evasaoVelozAdjusted
+
+                        if (pokemon.totalAttributes) {
+                          // Aplicar fases aos atributos totais e depois calcular evasões
+                          const defesaAdjusted = Math.floor(pokemon.totalAttributes.defesa * defesaMultiplier)
+                          const defesaEspecialAdjusted = Math.floor(pokemon.totalAttributes.defesaEspecial * defesaEspecialMultiplier)
+                          const velocidadeAdjusted = Math.floor(pokemon.totalAttributes.velocidade * velocidadeMultiplier)
+
+                          evasaoFisicaAdjusted = Math.floor(defesaAdjusted / 5)
+                          evasaoEspecialAdjusted = Math.floor(defesaEspecialAdjusted / 5)
+                          evasaoVelozAdjusted = Math.floor(velocidadeAdjusted / 10)
+                        } else {
+                          // Fallback: aplicar multiplicador diretamente às evasões (Pokémon antigos)
+                          evasaoFisicaAdjusted = Math.floor(pokemon.evasaoFisica * defesaMultiplier)
+                          evasaoEspecialAdjusted = Math.floor(pokemon.evasaoEspecial * defesaEspecialMultiplier)
+                          evasaoVelozAdjusted = Math.floor(pokemon.evasaoVeloz * velocidadeMultiplier)
+                        }
+
                         return (
                           <div
                             key={pokemon.id}
@@ -6827,9 +8273,18 @@ function App() {
                               <div className={`font-semibold ${idx === currentPokemonTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
                                 {idx === currentPokemonTurn && '▶ '}{pokemon.nome}
                               </div>
-                              <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                                Vel: {pokemon.velocidade}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                                  Vel: {pokemon.velocidade}
+                                </span>
+                                <button
+                                  onClick={() => removePokemonFromBattle(pokemon.id)}
+                                  className="p-1 rounded hover:bg-red-600 transition-colors bg-red-500 text-white"
+                                  title="Remover da batalha"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </div>
                             <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                               {pokemon.especie} | HP: {pokemon.hp}/{pokemon.maxHP}
@@ -6842,8 +8297,28 @@ function App() {
                               ))}
                             </div>
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
+                              Evasões - F: {evasaoFisicaAdjusted} | E: {evasaoEspecialAdjusted} | V: {evasaoVelozAdjusted}
                             </div>
+
+                            {/* Checkbox Nome/Tipo - Apenas para NPCs */}
+                            {pokemon.id.startsWith('npc-pokemon-') && (
+                              <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={revealedNpcPokemon[pokemon.id] || false}
+                                    onChange={(e) => setRevealedNpcPokemon({
+                                      ...revealedNpcPokemon,
+                                      [pokemon.id]: e.target.checked
+                                    })}
+                                    className="w-4 h-4 cursor-pointer"
+                                  />
+                                  <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    Revelar Nome/Tipo
+                                  </span>
+                                </label>
+                              </div>
+                            )}
 
                             {/* Dropdown e Caixas de Condições */}
                             <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
@@ -6956,6 +8431,146 @@ function App() {
                                 ))}
                               </div>
                             </div>
+
+                            {/* Fases */}
+                            <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                              <label className={`text-xs font-semibold mb-2 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                Fases (-6 a +6):
+                              </label>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                {/* Ataque */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'ataque', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.ataque > 0 ? 'text-green-500' : stages.ataque < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.ataque > 0 ? `+${stages.ataque}` : stages.ataque}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'ataque', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Ataque Especial */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ ESP</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'ataqueEspecial', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.ataqueEspecial > 0 ? 'text-green-500' : stages.ataqueEspecial < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.ataqueEspecial > 0 ? `+${stages.ataqueEspecial}` : stages.ataqueEspecial}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'ataqueEspecial', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Defesa */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'defesa', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.defesa > 0 ? 'text-green-500' : stages.defesa < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.defesa > 0 ? `+${stages.defesa}` : stages.defesa}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'defesa', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Defesa Especial */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF ESP</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'defesaEspecial', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.defesaEspecial > 0 ? 'text-green-500' : stages.defesaEspecial < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.defesaEspecial > 0 ? `+${stages.defesaEspecial}` : stages.defesaEspecial}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'defesaEspecial', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Velocidade */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>VEL</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'velocidade', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.velocidade > 0 ? 'text-green-500' : stages.velocidade < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.velocidade > 0 ? `+${stages.velocidade}` : stages.velocidade}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'velocidade', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Precisão */}
+                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>PREC</span>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'precisao', -1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▼
+                                    </button>
+                                    <span className={`min-w-[24px] text-center font-bold ${stages.precisao > 0 ? 'text-green-500' : stages.precisao < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                      {stages.precisao > 0 ? `+${stages.precisao}` : stages.precisao}
+                                    </span>
+                                    <button
+                                      onClick={() => adjustPokemonStage(pokemon.id, 'precisao', 1)}
+                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                    >
+                                      ▲
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         )
                       })}
@@ -6966,8 +8581,391 @@ function App() {
             </div>
 
           </div>
+
+          {/* Nova Seção: Pokémon NPC e Chat */}
+          <div className="mt-6 space-y-6">
+
+            {/* Pokémon NPC em Batalha */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
+              <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Pokémon NPC em Batalha
+              </h3>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Coluna Esquerda: Lista de Pokémon NPC */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4`}>
+                  <h4 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Pokémon ({safePokemonList.length})
+                  </h4>
+                  {safePokemonList.length === 0 ? (
+                    <p className={`text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
+                      Nenhum Pokémon NPC em batalha
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                      {safePokemonList.filter(pkmn => pkmn.id.startsWith('npc-pokemon-')).map((pkmn, idx) => (
+                        <button
+                          key={pkmn.id || idx}
+                          onClick={() => setSelectedMasterNpcPokemon(pkmn)}
+                          className={`w-full text-left p-3 rounded-lg transition-colors ${
+                            selectedMasterNpcPokemon?.id === pkmn.id
+                              ? darkMode ? 'bg-blue-700 border-2 border-blue-500' : 'bg-blue-200 border-2 border-blue-500'
+                              : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                              {pkmn.nome}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                              Vel: {pkmn.velocidade}
+                            </span>
+                          </div>
+                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {pkmn.especie} | HP: {pkmn.hp}/{pkmn.maxHP}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {(pkmn.tipos || []).map((tipo, i) => (
+                              <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
+                                {tipo}
+                              </span>
+                            ))}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Coluna Direita: Detalhes do Pokémon NPC */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4`}>
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className={`text-sm font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Detalhes
+                    </h4>
+                    {selectedMasterNpcPokemon && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isCritical}
+                          onChange={(e) => setIsCritical(e.target.checked)}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-sm font-bold text-red-600">CRIT</span>
+                      </label>
+                    )}
+                  </div>
+                  {!selectedMasterNpcPokemon ? (
+                    <p className={`text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
+                      Selecione um Pokémon NPC para ver seus detalhes
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Habilidades */}
+                      <div>
+                        <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Habilidades:
+                        </h5>
+                        <div className="space-y-1">
+                          {selectedMasterNpcPokemon.habilidades && selectedMasterNpcPokemon.habilidades.length > 0 ? (
+                            selectedMasterNpcPokemon.habilidades.map((ability, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setSelectedBattleAbility(ability)
+                                  setShowBattleAbilityModal(true)
+                                }}
+                                className={`w-full text-left p-2 rounded transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'}`}
+                              >
+                                <span className={`text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'} cursor-pointer hover:underline`}>
+                                  {ability}
+                                </span>
+                              </button>
+                            ))
+                          ) : (
+                            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                              Nenhuma habilidade
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Golpes */}
+                      <div>
+                        <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Golpes:
+                        </h5>
+                        <div className="space-y-1 max-h-[250px] overflow-y-auto">
+                          {selectedMasterNpcPokemon.golpes && selectedMasterNpcPokemon.golpes.length > 0 ? (
+                            selectedMasterNpcPokemon.golpes.map((move, idx) => {
+                              if (!move) return null
+                              const moveName = typeof move === 'string' ? move : (move.nome || move.name || '')
+
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`flex items-center gap-2 p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      setSelectedBattleMove(moveName)
+                                      setShowBattleMoveModal(true)
+                                    }}
+                                    className={`flex-1 text-left text-sm font-semibold ${darkMode ? 'text-green-400 hover:text-green-300' : 'text-green-600 hover:text-green-700'}`}
+                                  >
+                                    {moveName}
+                                  </button>
+                                  <button
+                                    onClick={() => handleRollAccuracy(moveName)}
+                                    className={`p-1.5 rounded transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-blue-400' : 'bg-gray-200 hover:bg-gray-300 text-blue-600'}`}
+                                    title="Teste de Acurácia"
+                                  >
+                                    <Dices size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleRollMoveDamage(moveName)}
+                                    className={`p-1.5 rounded transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' : 'bg-gray-200 hover:bg-gray-300 text-yellow-600'}`}
+                                    title="Rolar dano"
+                                  >
+                                    <Hand size={14} />
+                                  </button>
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                              Nenhum golpe
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Chat de Batalha */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
+              <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Chat de Batalha
+              </h3>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-4 space-y-1`}>
+                <p>Use /r ou /roll para rolar dados. Exemplo: /r 1d20+5, /roll 2d6</p>
+                <p>Use comandos @ para referenciar seus atributos: <span className="font-mono">1d20+@MAE</span>, <span className="font-mono">2d6+@MA+@MV</span></p>
+                <p className="text-[10px]">Comandos: @MA @MD @MAE @MDE @MV @MS @At @Dt @AEt @DEt @Vt @St</p>
+              </div>
+
+              {/* Área de Mensagens */}
+              <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
+                {chatMessages.length === 0 ? (
+                  <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
+                    Nenhuma mensagem ainda. Seja o primeiro a falar!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            {msg.username}
+                          </span>
+                          <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {msg.timestamp}
+                          </span>
+                        </div>
+                        {msg.isDiceRoll ? (
+                          <div>
+                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {msg.text}
+                            </p>
+                            <div className={`mt-2 p-2 rounded ${darkMode ? 'bg-green-900' : 'bg-green-100'}`}>
+                              <p className={`font-bold text-lg ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                                Resultado: {msg.diceResult}
+                              </p>
+                              <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
+                                {msg.diceDetails}
+                              </p>
+                            </div>
+                          </div>
+                        ) : msg.isAction ? (
+                          <p className={`text-sm font-semibold text-yellow-500`}>
+                            {msg.text}
+                          </p>
+                        ) : (
+                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {msg.text}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
+              </div>
+
+              {/* Input de Mensagem */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder="Digite sua mensagem, 1d20+@MAE, ou /r 1d20..."
+                  className={`flex-1 px-4 py-3 rounded-lg border-2 ${
+                    darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400'
+                  } focus:outline-none focus:border-blue-500`}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                >
+                  Enviar
+                </button>
+              </div>
+            </div>
+
+          </div>
         </div>
         </div>
+
+        {/* Modal de Golpe - Área Batalha Mestre */}
+        {showBattleMoveModal && selectedBattleMove && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowBattleMoveModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedBattleMove}
+                </h3>
+                <button
+                  onClick={() => setShowBattleMoveModal(false)}
+                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {(() => {
+                const moveData = GOLPES_DATA[selectedBattleMove]
+                if (!moveData) {
+                  return <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Golpe não encontrado</p>
+                }
+
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.tipo}</p>
+                      </div>
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Categoria:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.categoria}</p>
+                      </div>
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.danoBasal}</p>
+                      </div>
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.acuracia}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descrição:</span>
+                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
+                        {moveData.descricao}
+                      </p>
+                    </div>
+
+                    {moveData.efeito && (
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito:</span>
+                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
+                          {moveData.efeito}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Habilidade - Área Batalha Mestre */}
+        {showBattleAbilityModal && selectedBattleAbility && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowBattleAbilityModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedBattleAbility}
+                </h3>
+                <button
+                  onClick={() => setShowBattleAbilityModal(false)}
+                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {(() => {
+                const abilityData = HABILIDADES_DATA[selectedBattleAbility]
+                if (!abilityData) {
+                  return <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Habilidade não encontrada</p>
+                }
+
+                // Extrair descrição corretamente (pode ser string ou objeto com ativacao/efeito)
+                let description = ''
+                if (typeof abilityData === 'string') {
+                  description = abilityData
+                } else if (abilityData.descricao) {
+                  description = abilityData.descricao
+                } else if (abilityData.efeito) {
+                  description = `Ativação: ${abilityData.ativacao || 'N/A'}\n\nEfeito: ${abilityData.efeito}`
+                }
+
+                return (
+                  <div className="space-y-3">
+                    <div>
+                      <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descrição:</span>
+                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
+                        {description}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleSendAbilityToChat(selectedBattleAbility)}
+                      className="w-full mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold"
+                    >
+                      Enviar no Chat
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+
         {accountDataModal}
       </>
     )
@@ -9932,16 +11930,22 @@ function App() {
                 {[...Array(6)].map((_, idx) => {
                   const pokemon = mainTeam[idx]
                   return (
-                    <div key={idx} className={`p-4 rounded-lg border-2 ${pokemon ? darkMode ? 'bg-gray-700 border-blue-500' : 'bg-blue-50 border-blue-300' : darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'}`}>
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-lg border-2 ${pokemon ? pokemon.shiny ? 'border-yellow-500' : darkMode ? 'bg-gray-700 border-blue-500' : 'bg-blue-50 border-blue-300' : darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'}`}
+                      style={pokemon?.shiny ? {
+                        backgroundImage: 'url("/efeito shiny.gif")',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                      } : {}}
+                    >
                       {pokemon ? (
                         <div>
                           {/* Botões no canto direito superior */}
                           <div className="flex justify-end gap-2 mb-4">
                             <button onClick={() => openImageModal(pokemon)} className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600" title="Adicionar Imagem">
                               <Camera size={18} />
-                            </button>
-                            <button onClick={() => sendPokemonToBattle(pokemon)} className="bg-cyan-500 text-white p-2 rounded hover:bg-cyan-600" title="Enviar para Batalha">
-                              <ArrowRightCircle size={18} />
                             </button>
                             <button onClick={() => openTempHPModal(pokemon, idx)} className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600" title="HP Temporário Pkm">
                               <ShieldPlus size={18} />
@@ -10017,13 +12021,13 @@ function App() {
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                <h5
-                                  className={`font-bold text-lg cursor-pointer hover:underline ${darkMode ? 'text-white hover:text-blue-400' : 'text-gray-800 hover:text-blue-600'}`}
+                                <span
+                                  className={`px-3 py-1 rounded-lg font-bold text-lg cursor-pointer hover:underline ${pokemon.shiny ? 'bg-yellow-500 text-gray-900 hover:text-blue-900 border-2 border-yellow-700' : darkMode ? 'bg-gray-600 text-white hover:text-blue-400 border-2 border-gray-500' : 'bg-blue-100 text-gray-800 hover:text-blue-600 border-2 border-blue-300'}`}
                                   onClick={() => openPokemonInfoModal(pokemon)}
                                 >
                                   {pokemon.nickname}
-                                </h5>
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${darkMode ? 'bg-blue-600 text-white' : 'bg-blue-200 text-blue-800'}`}>Lv.{pokemon.level}</span>
+                                </span>
+                                <span className={`px-2 py-1 rounded text-xs font-bold ${pokemon.shiny ? 'bg-blue-700 text-white' : darkMode ? 'bg-blue-600 text-white' : 'bg-blue-200 text-blue-800'}`}>Lv.{pokemon.level}</span>
                                 {getPokemonTypes(pokemon).map((tipo, idx) => (
                                   <span
                                     key={idx}
@@ -10936,6 +12940,25 @@ function App() {
                   </button>
                 </div>
 
+                {/* CHECKBOX SHINY */}
+                <div className="mb-6 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="shiny-checkbox"
+                    checked={pokemonEditForm.shiny}
+                    onChange={(e) => setPokemonEditForm({...pokemonEditForm, shiny: e.target.checked})}
+                    className="w-5 h-5 cursor-pointer"
+                  />
+                  <label htmlFor="shiny-checkbox" className="text-2xl font-bold cursor-pointer select-none" style={{
+                    background: 'linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}>
+                    SHINY
+                  </label>
+                </div>
+
                 {/* 1. NATUREZA */}
                 <div className="mb-6">
                   <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>1. Natureza</label>
@@ -11826,7 +13849,7 @@ function App() {
                           key={idx}
                           onClick={() => handleSelectPokeball(ball)}
                           className={`p-3 rounded-lg flex flex-col items-center gap-2 transition-all border-2 ${
-                            selectedPokeball === ball
+                            selectedPokeballForPC === ball
                               ? darkMode ? 'bg-purple-600 border-purple-400' : 'bg-purple-200 border-purple-500'
                               : darkMode ? 'bg-gray-600 hover:bg-gray-500 border-transparent' : 'bg-white hover:bg-gray-50 border-transparent'
                           }`}
@@ -11854,7 +13877,7 @@ function App() {
                   <button
                     onClick={handleSavePokeball}
                     className="flex-1 bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 font-semibold"
-                    disabled={!selectedPokeball}
+                    disabled={!selectedPokeballForPC}
                   >
                     Salvar Pokébola
                   </button>
@@ -12154,7 +14177,16 @@ function App() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pcPokemon.map((pokemon, idx) => (
-                  <div key={pokemon.id || idx} className={`p-4 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-purple-500' : 'bg-purple-50 border-purple-300'}`}>
+                  <div
+                    key={pokemon.id || idx}
+                    className={`p-4 rounded-lg border-2 ${pokemon.shiny ? 'border-yellow-500' : darkMode ? 'bg-gray-700 border-purple-500' : 'bg-purple-50 border-purple-300'}`}
+                    style={pokemon?.shiny ? {
+                      backgroundImage: 'url("/efeito shiny.gif")',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat'
+                    } : {}}
+                  >
                     <div className="flex items-center justify-between gap-4">
                       {pokemonImages[pokemon.id] && (
                         <div className="flex flex-col items-center gap-2">
@@ -12171,13 +14203,13 @@ function App() {
                       )}
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <h5
-                            className={`font-bold text-lg cursor-pointer hover:underline ${darkMode ? 'text-white hover:text-purple-400' : 'text-gray-800 hover:text-purple-600'}`}
+                          <span
+                            className={`px-3 py-1 rounded-lg font-bold text-lg cursor-pointer hover:underline ${pokemon.shiny ? 'bg-yellow-500 text-gray-900 hover:text-purple-900 border-2 border-yellow-700' : darkMode ? 'bg-gray-600 text-white hover:text-purple-400 border-2 border-gray-500' : 'bg-purple-100 text-gray-800 hover:text-purple-600 border-2 border-purple-300'}`}
                             onClick={() => openPokemonInfoModal(pokemon)}
                           >
                             {pokemon.nickname}
-                          </h5>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${darkMode ? 'bg-purple-600 text-white' : 'bg-purple-200 text-purple-800'}`}>Lv.{pokemon.level}</span>
+                          </span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${pokemon.shiny ? 'bg-purple-700 text-white' : darkMode ? 'bg-purple-600 text-white' : 'bg-purple-200 text-purple-800'}`}>Lv.{pokemon.level}</span>
                           {getPokemonTypes(pokemon).map((tipo, idx) => (
                             <span
                               key={idx}
@@ -12249,7 +14281,7 @@ function App() {
                             )}
                           </div>
                         </div>
-                        <p className={`text-sm mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{pokemon.species}</p>
+                        <p className={`text-sm mb-3 ${pokemon.shiny ? 'text-gray-900 font-semibold' : darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{pokemon.species}</p>
 
                         <div className="flex gap-2 flex-wrap">
                           <button
@@ -12666,6 +14698,25 @@ function App() {
                   <button onClick={() => setShowEditPokemonPCModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
                     <X size={24} />
                   </button>
+                </div>
+
+                {/* CHECKBOX SHINY */}
+                <div className="mb-6 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="shiny-checkbox"
+                    checked={pokemonEditForm.shiny}
+                    onChange={(e) => setPokemonEditForm({...pokemonEditForm, shiny: e.target.checked})}
+                    className="w-5 h-5 cursor-pointer"
+                  />
+                  <label htmlFor="shiny-checkbox" className="text-2xl font-bold cursor-pointer select-none" style={{
+                    background: 'linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}>
+                    SHINY
+                  </label>
                 </div>
 
                 {/* 1. NATUREZA */}
@@ -13202,7 +15253,7 @@ function App() {
                           key={idx}
                           onClick={() => handleSelectPokeballPC(ball)}
                           className={`p-3 rounded-lg flex flex-col items-center gap-2 transition-all border-2 ${
-                            selectedPokeball === ball || (selectedPokeball === 'Custom Pokeball 2' && ball === 'Custom Pokeball 2')
+                            selectedPokeballForPC === ball || (selectedPokeballForPC === 'Custom Pokeball 2' && ball === 'Custom Pokeball 2')
                               ? darkMode ? 'bg-purple-600 border-purple-400' : 'bg-purple-200 border-purple-500'
                               : darkMode ? 'bg-gray-600 hover:bg-gray-500 border-transparent' : 'bg-white hover:bg-gray-50 border-transparent'
                           }`}
@@ -13230,7 +15281,7 @@ function App() {
                   <button
                     onClick={handleSavePokeball}
                     className="flex-1 bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 font-semibold"
-                    disabled={!selectedPokeball}
+                    disabled={!selectedPokeballForPC}
                   >
                     Salvar Pokébola
                   </button>
@@ -15337,6 +17388,29 @@ function App() {
             {/* CARACTERÍSTICAS */}
             <div className="mb-8">
               <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Características de Classe</h3>
+
+              {/* Características Selecionadas */}
+              {caracteristicasSelected.length > 0 && (
+                <div className="mb-4">
+                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Características Selecionadas ({caracteristicasSelected.length})
+                  </label>
+                  <div className={`p-4 rounded-lg flex flex-wrap gap-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    {caracteristicasSelected.map((carac, idx) => (
+                      <div key={idx} className={`flex items-center gap-2 px-3 py-2 rounded ${darkMode ? 'bg-purple-600 text-white' : 'bg-purple-500 text-white'}`}>
+                        <span className="font-semibold">{typeof carac === 'string' ? carac : (carac.nome || 'Sem nome')}</span>
+                        <button
+                          onClick={() => setCaracteristicasSelected(caracteristicasSelected.filter((_, i) => i !== idx))}
+                          className="hover:bg-red-500 rounded p-1"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(() => {
                   // Obter características das classes/subclasses do usuário
@@ -15359,32 +17433,58 @@ function App() {
 
                   return userCaracteristicas.map((carac, idx) => {
                     const isExpanded = expandedCaracteristicas.includes(idx)
+                    const isSelected = caracteristicasSelected.some(c => c.nome === carac.name)
                     return (
                       <div key={idx} className={`rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'}`}>
-                        <button
-                          onClick={() => {
-                            if (isExpanded) {
-                              setExpandedCaracteristicas(expandedCaracteristicas.filter(i => i !== idx))
-                            } else {
-                              // Calcular qual linha este item está (2 colunas)
-                              const row = Math.floor(idx / 2)
-                              // Remover outros itens expandidos da mesma linha
-                              const newExpanded = expandedCaracteristicas.filter(i => {
-                                const itemRow = Math.floor(i / 2)
-                                return itemRow !== row
-                              })
-                              setExpandedCaracteristicas([...newExpanded, idx])
-                            }
-                          }}
-                          className={`w-full p-4 flex items-center justify-between hover:opacity-80 transition-opacity`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {isExpanded ? <ChevronDown size={20} className={darkMode ? 'text-blue-400' : 'text-blue-600'} /> : <ChevronRight size={20} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />}
-                            <span className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>{carac.name}</span>
-                            <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{carac.className}</span>
-                          </div>
-                          <span className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{carac.frequencia}</span>
-                        </button>
+                        <div className="flex items-center">
+                          <button
+                            onClick={() => {
+                              if (isExpanded) {
+                                setExpandedCaracteristicas(expandedCaracteristicas.filter(i => i !== idx))
+                              } else {
+                                // Calcular qual linha este item está (2 colunas)
+                                const row = Math.floor(idx / 2)
+                                // Remover outros itens expandidos da mesma linha
+                                const newExpanded = expandedCaracteristicas.filter(i => {
+                                  const itemRow = Math.floor(i / 2)
+                                  return itemRow !== row
+                                })
+                                setExpandedCaracteristicas([...newExpanded, idx])
+                              }
+                            }}
+                            className={`flex-1 p-4 flex items-center justify-between hover:opacity-80 transition-opacity`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {isExpanded ? <ChevronDown size={20} className={darkMode ? 'text-blue-400' : 'text-blue-600'} /> : <ChevronRight size={20} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />}
+                              <span className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>{carac.name}</span>
+                              <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{carac.className}</span>
+                            </div>
+                            <span className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{carac.frequencia}</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (isSelected) {
+                                setCaracteristicasSelected(caracteristicasSelected.filter(c => c.nome !== carac.name))
+                              } else {
+                                const caracData = {
+                                  nome: carac.name,
+                                  descricao: carac.efeito,
+                                  frequencia: carac.frequencia,
+                                  referencia: carac.referencia,
+                                  alvo: carac.alvo,
+                                  gatilho: carac.gatilho,
+                                  efeito: carac.efeito,
+                                  classe: carac.className
+                                }
+                                setCaracteristicasSelected([...caracteristicasSelected, caracData])
+                              }
+                            }}
+                            className={`p-4 ${isSelected ? (darkMode ? 'bg-green-600 hover:bg-red-600' : 'bg-green-500 hover:bg-red-500') : (darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600')} text-white transition-colors`}
+                            title={isSelected ? 'Remover seleção' : 'Selecionar característica'}
+                          >
+                            {isSelected ? <Check size={20} /> : <Plus size={20} />}
+                          </button>
+                        </div>
                         {isExpanded && (
                           <div className={`px-4 pb-4 border-t ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                             <div className="mt-3 space-y-2">
@@ -15458,8 +17558,11 @@ function App() {
               <div className="mb-6">
                 <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Talentos Selecionados</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {talentosSelected.map((talentoNome, idx) => {
+                  {talentosSelected.map((talentoItem, idx) => {
                     const isExpanded = expandedTalentos.includes(idx)
+
+                    // Extrair o nome do talento (pode ser string ou objeto)
+                    const talentoNome = typeof talentoItem === 'string' ? talentoItem : talentoItem.nome
 
                     // Encontrar os dados completos do talento
                     let talentoData = null
@@ -15601,7 +17704,7 @@ function App() {
                     <div className={`p-4 rounded-lg flex flex-wrap gap-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                       {talentosSelected.map((talento, idx) => (
                         <div key={idx} className={`flex items-center gap-2 px-3 py-2 rounded ${darkMode ? 'bg-green-600 text-white' : 'bg-green-500 text-white'}`}>
-                          <span className="font-semibold">{talento}</span>
+                          <span className="font-semibold">{typeof talento === 'string' ? talento : talento.nome}</span>
                           <button
                             onClick={() => setTalentosSelected(talentosSelected.filter((_, i) => i !== idx))}
                             className="hover:bg-red-500 rounded p-1"
@@ -15660,7 +17763,7 @@ function App() {
                       // Filtrar pela busca e remover os já selecionados
                       const filtered = availableTalentos
                         .filter(talento => talento.nome.toLowerCase().includes(talentosSearch.toLowerCase()))
-                        .filter(talento => !talentosSelected.includes(talento.nome))
+                        .filter(talento => !talentosSelected.some(t => t.nome === talento.nome))
 
                       if (filtered.length === 0) {
                         return (
@@ -15714,7 +17817,7 @@ function App() {
                               </div>
                             </div>
                             <button
-                              onClick={() => setTalentosSelected([...talentosSelected, talento.nome])}
+                              onClick={() => setTalentosSelected([...talentosSelected, talento])}
                               className={`flex-shrink-0 p-2 rounded text-white ${darkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'}`}
                             >
                               <Plus size={20} />
@@ -17364,10 +19467,10 @@ function App() {
           </div>
 
           <div className="max-w-7xl mx-auto px-4 py-8">
-            {/* Layout de Duas Colunas */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Layout Superior: Duas Colunas */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 
-              {/* PARTE 1: Em Batalha - Treinadores */}
+              {/* PARTE 1: Em Batalha (Esquerda) */}
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
                 <h3 className={`text-2xl font-bold mb-6 text-center ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
                   Treinadores em Batalha
@@ -17432,49 +19535,182 @@ function App() {
                           >
                             <div className="flex items-center justify-between">
                               <div className={`font-semibold ${idx === currentPokemonTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                {idx === currentPokemonTurn && '▶ '}{pokemon.nome}
+                                {idx === currentPokemonTurn && '▶ '}
+                                {/* Mostrar nome real se for o dono ou se revelar estiver ativo */}
+                                {(pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? pokemon.nome : (pokemon.nomeFalso || pokemon.nome)}
                               </div>
                               <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
                                 Vel: {pokemon.velocidade}
                               </span>
                             </div>
                             <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              {pokemon.especie} | HP: {pokemon.hp}/{pokemon.maxHP}
+                              {/* Mostrar espécie real se for o dono ou se revelar estiver ativo */}
+                              {(pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? pokemon.especie : '???'}
+                              {/* Mostrar HP apenas para o dono */}
+                              {pokemon.owner === currentUser?.username && (
+                                <span> | HP: {pokemon.hp}/{pokemon.maxHP}</span>
+                              )}
                             </div>
                             <div className={`text-xs flex gap-1 mt-1`}>
-                              {(pokemon.tipos || []).map((tipo, i) => (
-                                <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
-                                  {tipo}
+                              {/* Mostrar tipos reais se for o dono ou se revelar estiver ativo */}
+                              {(pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? (
+                                (pokemon.tipos || []).map((tipo, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
+                                    {tipo}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-white text-xs bg-gray-500">
+                                  ???
                                 </span>
-                              ))}
+                              )}
                             </div>
+                            {/* Evasões - apenas para o dono */}
+                            {pokemon.owner === currentUser?.username && (
+                              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
+                              </div>
+                            )}
 
-                            {/* Condições */}
-                            {pokemonConditions.some(c => c !== null) && (
+                            {/* Condições - Editable se for o dono, read-only se não for */}
+                            {pokemon.owner === currentUser?.username ? (
                               <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
-                                <div className="flex gap-2 items-center flex-wrap">
+                                <label className={`text-xs font-semibold mb-1 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  Condições:
+                                </label>
+                                <select
+                                  className={`w-full text-xs px-2 py-1 rounded mb-2 ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-800 border-gray-300'} border`}
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      const newConditions = [...pokemonConditions]
+                                      const emptySlot = newConditions.findIndex(c => c === null)
+                                      if (emptySlot !== -1) {
+                                        newConditions[emptySlot] = { condition: e.target.value, rounds: 1 }
+                                        setBattlePokemonConditions({
+                                          ...battlePokemonConditions,
+                                          [pokemon.id]: newConditions
+                                        })
+                                      }
+                                      e.target.value = ''
+                                    }
+                                  }}
+                                  value=""
+                                >
+                                  <option value="">Selecione uma condição</option>
+                                  <option value="confusao">😵 Confusão</option>
+                                  <option value="critico">🍀 Crítico</option>
+                                  <option value="paralisia">⚡ Paralisia</option>
+                                  <option value="sono">💤 Sono</option>
+                                  <option value="atordoamento">🌀 Atordoamento</option>
+                                  <option value="congelamento">❄️ Congelamento</option>
+                                  <option value="paixao">❤️ Paixão</option>
+                                  <option value="queimadura">🔥 Queimadura</option>
+                                  <option value="veneno">☠️ Veneno</option>
+                                </select>
+
+                                <div className="grid grid-cols-3 gap-1">
                                   {pokemonConditions.map((cond, slotIdx) => (
-                                    cond && (
-                                      <div key={slotIdx} className={`text-center px-2 py-1 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                                        <span className="text-sm">
-                                          {cond.condition === 'confusao' && '😵'}
-                                          {cond.condition === 'critico' && '🍀'}
-                                          {cond.condition === 'paralisia' && '⚡'}
-                                          {cond.condition === 'sono' && '💤'}
-                                          {cond.condition === 'atordoamento' && '🌀'}
-                                          {cond.condition === 'congelamento' && '❄️'}
-                                          {cond.condition === 'paixao' && '❤️'}
-                                          {cond.condition === 'queimadura' && '🔥'}
-                                          {cond.condition === 'veneno' && '☠️'}
-                                        </span>
-                                        <span className={`text-xs ml-1 font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                          {cond.rounds}
-                                        </span>
-                                      </div>
-                                    )
+                                    <div
+                                      key={slotIdx}
+                                      className={`relative text-center p-2 rounded border-2 ${
+                                        cond
+                                          ? darkMode ? 'bg-gray-700 border-blue-500' : 'bg-blue-50 border-blue-400'
+                                          : darkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-100 border-gray-300'
+                                      }`}
+                                    >
+                                      {cond ? (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              const newConditions = [...pokemonConditions]
+                                              newConditions[slotIdx] = null
+                                              setBattlePokemonConditions({
+                                                ...battlePokemonConditions,
+                                                [pokemon.id]: newConditions
+                                              })
+                                            }}
+                                            className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600"
+                                          >
+                                            ×
+                                          </button>
+                                          <div className="text-lg mb-1">
+                                            {cond.condition === 'confusao' && '😵'}
+                                            {cond.condition === 'critico' && '🍀'}
+                                            {cond.condition === 'paralisia' && '⚡'}
+                                            {cond.condition === 'sono' && '💤'}
+                                            {cond.condition === 'atordoamento' && '🌀'}
+                                            {cond.condition === 'congelamento' && '❄️'}
+                                            {cond.condition === 'paixao' && '❤️'}
+                                            {cond.condition === 'queimadura' && '🔥'}
+                                            {cond.condition === 'veneno' && '☠️'}
+                                          </div>
+                                          <div className="flex items-center justify-center gap-1">
+                                            <button
+                                              onClick={() => {
+                                                const newConditions = [...pokemonConditions]
+                                                newConditions[slotIdx].rounds = Math.max(0, newConditions[slotIdx].rounds - 1)
+                                                setBattlePokemonConditions({
+                                                  ...battlePokemonConditions,
+                                                  [pokemon.id]: newConditions
+                                                })
+                                              }}
+                                              className={`w-5 h-5 rounded text-xs font-bold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                            >
+                                              -
+                                            </button>
+                                            <span className={`text-xs font-bold min-w-[20px] ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                              {cond.rounds}
+                                            </span>
+                                            <button
+                                              onClick={() => {
+                                                const newConditions = [...pokemonConditions]
+                                                newConditions[slotIdx].rounds += 1
+                                                setBattlePokemonConditions({
+                                                  ...battlePokemonConditions,
+                                                  [pokemon.id]: newConditions
+                                                })
+                                              }}
+                                              className={`w-5 h-5 rounded text-xs font-bold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>-</div>
+                                      )}
+                                    </div>
                                   ))}
                                 </div>
                               </div>
+                            ) : (
+                              /* Read-only condições para pokémon de outros */
+                              pokemonConditions.some(c => c !== null) && (
+                                <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                                  <div className="flex gap-2 items-center flex-wrap">
+                                    {pokemonConditions.map((cond, slotIdx) => (
+                                      cond && (
+                                        <div key={slotIdx} className={`text-center px-2 py-1 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                                          <span className="text-sm">
+                                            {cond.condition === 'confusao' && '😵'}
+                                            {cond.condition === 'critico' && '🍀'}
+                                            {cond.condition === 'paralisia' && '⚡'}
+                                            {cond.condition === 'sono' && '💤'}
+                                            {cond.condition === 'atordoamento' && '🌀'}
+                                            {cond.condition === 'congelamento' && '❄️'}
+                                            {cond.condition === 'paixao' && '❤️'}
+                                            {cond.condition === 'queimadura' && '🔥'}
+                                            {cond.condition === 'veneno' && '☠️'}
+                                          </span>
+                                          <span className={`text-xs ml-1 font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                            {cond.rounds}
+                                          </span>
+                                        </div>
+                                      )
+                                    ))}
+                                  </div>
+                                </div>
+                              )
                             )}
                           </div>
                         )
@@ -17484,92 +19720,1631 @@ function App() {
                 </div>
               </div>
 
-              {/* PARTE 2: Chat */}
+              {/* PARTE 2: Time Principal e Detalhes (Direita) */}
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
-                <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  Chat de Batalha
-                </h3>
-                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-4`}>
-                  Use /r ou /roll para rolar dados. Exemplo: /r 1d20+5, /roll 2d6
-                </p>
+                {/* Seção do Treinador */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 mb-4`}>
+                  <button
+                    onClick={() => setSelectedTeamPokemon(null)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors font-bold ${
+                      !selectedTeamPokemon
+                        ? darkMode ? 'bg-blue-700 border-2 border-blue-500' : 'bg-blue-200 border-2 border-blue-500'
+                        : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'
+                    }`}
+                  >
+                    {currentUser?.username || 'Treinador'}
+                  </button>
 
-                {/* Área de Mensagens */}
-                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-[600px] overflow-y-auto mb-4`}>
-                  {chatMessages.length === 0 ? (
-                    <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
-                      Nenhuma mensagem ainda. Seja o primeiro a falar!
+                  {!selectedTeamPokemon && (
+                    <div className="mt-4 space-y-3">
+                      {/* Perícias */}
+                      <div>
+                        <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Perícias:
+                        </h5>
+                        <div className="grid grid-cols-2 gap-1">
+                          {Object.entries(skills).map(([attr, skillList]) => {
+                            const attrNames = {
+                              saude: 'Saúde',
+                              ataque: 'Ataque',
+                              defesa: 'Defesa',
+                              ataqueEspecial: 'Ataque Especial',
+                              defesaEspecial: 'Defesa Especial',
+                              velocidade: 'Velocidade'
+                            }
+
+                            return skillList.map((skill, idx) => {
+                              const count = skillList.filter(s => s === skill).length
+                              const isFirst = skillList.indexOf(skill) === idx
+
+                              if (!isFirst) return null
+
+                              const modifier = getModifier(attributes[attr])
+
+                              return (
+                                <button
+                                  key={`${attr}-${skill}-${idx}`}
+                                  onClick={() => {
+                                    // Rolar 1d20
+                                    const d20Roll = Math.floor(Math.random() * 20) + 1
+
+                                    // Calcular bônus baseado em quantas vezes a perícia foi selecionada
+                                    let baseBonus, modifierMultiplier
+                                    if (count === 1) {
+                                      baseBonus = 2
+                                      modifierMultiplier = 1
+                                    } else {
+                                      baseBonus = 4
+                                      modifierMultiplier = 2
+                                    }
+
+                                    const modifierBonus = modifierMultiplier * modifier
+                                    const total = d20Roll + baseBonus + modifierBonus
+
+                                    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                                    const message = `🎲 ${skill} (${attrNames[attr]})\n1d20 = ${d20Roll} | ${baseBonus} + ${modifierMultiplier > 1 ? `${modifierMultiplier}x` : ''}Modificador(${modifier}) = ${modifierBonus}\nTotal: ${total}`
+
+                                    setChatMessages(prevMessages => [...prevMessages, {
+                                      username: currentUser.username,
+                                      text: message,
+                                      timestamp,
+                                      isDiceRoll: true,
+                                      diceResult: message
+                                    }])
+                                  }}
+                                  className={`text-xs p-2 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-white hover:bg-gray-100 text-gray-800 border'}`}
+                                >
+                                  {skill} {count > 1 && `(x${count})`}
+                                </button>
+                              )
+                            })
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Botões de Ataque e Dano do Treinador */}
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => {
+                            const d20Roll = Math.floor(Math.random() * 20) + 1
+                            const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                            const message = `🎲 Ataque Treinador\n1d20 = ${d20Roll}`
+
+                            setChatMessages(prevMessages => [...prevMessages, {
+                              username: currentUser.username,
+                              text: message,
+                              timestamp,
+                              isDiceRoll: true,
+                              diceResult: message
+                            }])
+                          }}
+                          className={`flex-1 p-3 rounded-lg flex items-center justify-center ${darkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600'} text-white`}
+                          title="Ataque Treinador"
+                        >
+                          <Dices size={20} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const ataqueTrainador = attributes?.ataque || 0
+                            let damageRoll, damageBonus, diceType
+
+                            // Determinar dano baseado no nível
+                            if (level >= 1 && level <= 6) {
+                              diceType = '1d10+4'
+                              damageRoll = Math.floor(Math.random() * 10) + 1
+                              damageBonus = 4
+                            } else if (level >= 7 && level <= 14) {
+                              diceType = '1d12+6'
+                              damageRoll = Math.floor(Math.random() * 12) + 1
+                              damageBonus = 6
+                            } else {
+                              diceType = '2d8+6'
+                              const dice1 = Math.floor(Math.random() * 8) + 1
+                              const dice2 = Math.floor(Math.random() * 8) + 1
+                              damageRoll = dice1 + dice2
+                              damageBonus = 6
+                            }
+
+                            const baseDamage = damageRoll + damageBonus
+                            const totalDamage = baseDamage + ataqueTrainador
+
+                            // Mensagens personalizadas por usuário
+                            const username = currentUser?.username || 'Treinador'
+                            let attackMessage = ''
+
+                            switch(username.toLowerCase()) {
+                              case 'alocin':
+                                attackMessage = `${username} atirou uma flecha e atingiu seu alvo, causou ${totalDamage} de dano`
+                                break
+                              case 'lila':
+                                attackMessage = `${username} deu um nome horrível para seu alvo, causou ${totalDamage} de dano`
+                                break
+                              case 'ludovic':
+                                attackMessage = `${username} atirou uma pedra envolta em papel e atingiu seu alvo, causou ${totalDamage} de dano`
+                                break
+                              case 'noryat':
+                                attackMessage = `${username} correu e deu uma voadora e atingiu seu alvo, causou ${totalDamage} de dano`
+                                break
+                              case 'pedro':
+                                attackMessage = `Treinador ${username} incendiou seu alvo, causou ${totalDamage} de dano`
+                                break
+                              default:
+                                attackMessage = `${username} atacou seu alvo, causou ${totalDamage} de dano`
+                            }
+
+                            const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                            const message = `⚔️ ${attackMessage}\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTrainador} (Ataque) = ${totalDamage}`
+
+                            setChatMessages(prevMessages => [...prevMessages, {
+                              username: currentUser.username,
+                              text: message,
+                              timestamp,
+                              isDiceRoll: true,
+                              diceResult: message
+                            }])
+                          }}
+                          className={`flex-1 p-3 rounded-lg flex items-center justify-center ${darkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600'} text-white`}
+                          title="Dano Treinador"
+                        >
+                          <Sword size={20} className="text-purple-300" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Seu Time
+                </h3>
+
+                {/* Caixa 1: Lista de Pokémons do Time Principal */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 mb-4`}>
+                  <h4 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Time Principal ({mainTeam.length})
+                  </h4>
+                  {mainTeam.length === 0 ? (
+                    <p className={`text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-4`}>
+                      Nenhum Pokémon no time principal
                     </p>
                   ) : (
-                    <div className="space-y-3">
-                      {chatMessages.map((msg, idx) => (
-                        <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
-                          <div className="flex justify-between items-start mb-1">
-                            <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                              {msg.username}
+                    <div className="space-y-2">
+                      {mainTeam.map((pkmn, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedTeamPokemon(pkmn)}
+                          className={`w-full text-left p-3 rounded-lg transition-colors cursor-pointer ${
+                            selectedTeamPokemon === pkmn
+                              ? darkMode ? 'bg-blue-700 border-2 border-blue-500' : 'bg-blue-200 border-2 border-blue-500'
+                              : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                              {pkmn.nickname || pkmn.species}
                             </span>
-                            <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                              {msg.timestamp}
-                            </span>
-                          </div>
-                          {msg.isDiceRoll ? (
-                            <div>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                {msg.text}
-                              </p>
-                              <div className={`mt-2 p-2 rounded ${darkMode ? 'bg-green-900' : 'bg-green-100'}`}>
-                                <p className={`font-bold text-lg ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
-                                  Resultado: {msg.diceResult}
-                                </p>
-                                <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
-                                  {msg.diceDetails}
-                                </p>
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                Nv. {pkmn.level}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedBattlePokemon(pkmn);
+                                  setBattleHpValue('');
+                                  setShowBattleHPModal(true);
+                                }}
+                                className="flex items-center gap-0.5 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                              >
+                                <Sword size={12} /><Heart size={12} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  sendPokemonToBattle(pkmn);
+                                }}
+                                className="flex items-center gap-1 px-2 py-1 bg-cyan-500 text-white rounded hover:bg-cyan-600 text-xs"
+                              >
+                                <ArrowRightCircle size={12} />
+                              </button>
                             </div>
-                          ) : msg.isAction ? (
-                            <p className={`text-sm font-semibold text-yellow-500`}>
-                              {msg.text}
-                            </p>
-                          ) : (
-                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                              {msg.text}
-                            </p>
-                          )}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {(pkmn.types || []).map((tipo, i) => (
+                              <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
+                                {tipo}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Input de Mensagem */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSendMessage()
-                      }
-                    }}
-                    placeholder="Digite sua mensagem ou /r 1d20..."
-                    className={`flex-1 px-4 py-3 rounded-lg border-2 ${
-                      darkMode
-                        ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
-                        : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400'
-                    } focus:outline-none focus:border-blue-500`}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                  >
-                    Enviar
-                  </button>
+                {/* Caixa 2: Detalhes do Pokémon Selecionado */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4`}>
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className={`text-sm font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Detalhes
+                    </h4>
+                    {selectedTeamPokemon && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isCritical}
+                          onChange={(e) => setIsCritical(e.target.checked)}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-sm font-bold text-red-600">CRIT</span>
+                      </label>
+                    )}
+                  </div>
+                  {!selectedTeamPokemon ? (
+                    <p className={`text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
+                      Selecione um Pokémon para ver seus detalhes
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Habilidades */}
+                      <div>
+                        <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Habilidades:
+                        </h5>
+                        <div className="space-y-1">
+                          {selectedTeamPokemon.habilidades && selectedTeamPokemon.habilidades.length > 0 ? (
+                            selectedTeamPokemon.habilidades.map((ability, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  setSelectedBattleAbility(ability)
+                                  setShowBattleAbilityModal(true)
+                                }}
+                                className={`w-full text-left p-2 rounded transition-colors ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'}`}
+                              >
+                                <span className={`text-sm font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'} cursor-pointer hover:underline`}>
+                                  {ability}
+                                </span>
+                              </button>
+                            ))
+                          ) : (
+                            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                              Nenhuma habilidade
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Golpes */}
+                      <div>
+                        <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Golpes:
+                        </h5>
+                        <div className="space-y-1">
+                          {selectedTeamPokemon.golpes && selectedTeamPokemon.golpes.length > 0 ? (
+                            selectedTeamPokemon.golpes.map((move, idx) => {
+                              if (!move) return null
+                              const moveName = typeof move === 'string' ? move : (move.nome || move.name || '')
+                              if (!moveName) return null
+
+                              return (
+                                <div key={idx} className={`p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                  <div className="flex items-center justify-between">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedBattleMove(moveName)
+                                        setShowBattleMoveModal(true)
+                                      }}
+                                      className={`text-sm font-semibold ${darkMode ? 'text-white hover:text-blue-400' : 'text-gray-800 hover:text-blue-600'} cursor-pointer hover:underline transition-colors`}
+                                    >
+                                      {moveName}
+                                    </button>
+                                    <div className="flex items-center gap-2">
+                                      {typeof move === 'object' && move.usos !== null && move.usos !== undefined && (
+                                        <span className={`text-xs px-2 py-0.5 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                                          {move.usos} usos
+                                        </span>
+                                      )}
+                                      <button
+                                        onClick={() => handleRollAccuracy(moveName)}
+                                        className={`p-1 rounded transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-blue-400' : 'bg-gray-200 hover:bg-gray-300 text-blue-600'}`}
+                                        title="Teste de Acurácia"
+                                      >
+                                        <Dices size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleRollMoveDamage(moveName)}
+                                        className={`p-1 rounded transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' : 'bg-gray-200 hover:bg-gray-300 text-yellow-600'}`}
+                                        title="Rolar Dano"
+                                      >
+                                        <Hand size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                              Nenhum golpe
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Fases */}
+                      <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
+                        <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Fases (-6 a +6):
+                        </h5>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {/* Ataque */}
+                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataque', -1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▼
+                              </button>
+                              <span className={`min-w-[24px] text-center font-bold ${
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0) > 0 ? 'text-green-500' :
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0) < 0 ? 'text-red-500' :
+                                darkMode ? 'text-white' : 'text-gray-800'
+                              }`}>
+                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0) > 0 ?
+                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0}` :
+                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0)
+                                }
+                              </span>
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataque', 1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▲
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Ataque Especial */}
+                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ ESP</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataqueEspecial', -1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▼
+                              </button>
+                              <span className={`min-w-[24px] text-center font-bold ${
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0) > 0 ? 'text-green-500' :
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0) < 0 ? 'text-red-500' :
+                                darkMode ? 'text-white' : 'text-gray-800'
+                              }`}>
+                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0) > 0 ?
+                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0}` :
+                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0)
+                                }
+                              </span>
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataqueEspecial', 1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▲
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Defesa */}
+                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesa', -1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▼
+                              </button>
+                              <span className={`min-w-[24px] text-center font-bold ${
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0) > 0 ? 'text-green-500' :
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0) < 0 ? 'text-red-500' :
+                                darkMode ? 'text-white' : 'text-gray-800'
+                              }`}>
+                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0) > 0 ?
+                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0}` :
+                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0)
+                                }
+                              </span>
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesa', 1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▲
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Defesa Especial */}
+                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF ESP</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesaEspecial', -1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▼
+                              </button>
+                              <span className={`min-w-[24px] text-center font-bold ${
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0) > 0 ? 'text-green-500' :
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0) < 0 ? 'text-red-500' :
+                                darkMode ? 'text-white' : 'text-gray-800'
+                              }`}>
+                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0) > 0 ?
+                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0}` :
+                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0)
+                                }
+                              </span>
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesaEspecial', 1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▲
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Velocidade */}
+                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>VEL</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'velocidade', -1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▼
+                              </button>
+                              <span className={`min-w-[24px] text-center font-bold ${
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0) > 0 ? 'text-green-500' :
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0) < 0 ? 'text-red-500' :
+                                darkMode ? 'text-white' : 'text-gray-800'
+                              }`}>
+                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0) > 0 ?
+                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0}` :
+                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0)
+                                }
+                              </span>
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'velocidade', 1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▲
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Precisão */}
+                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>PREC</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'precisao', -1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▼
+                              </button>
+                              <span className={`min-w-[24px] text-center font-bold ${
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0) > 0 ? 'text-green-500' :
+                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0) < 0 ? 'text-red-500' :
+                                darkMode ? 'text-white' : 'text-gray-800'
+                              }`}>
+                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0) > 0 ?
+                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0}` :
+                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0)
+                                }
+                              </span>
+                              <button
+                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'precisao', 1)}
+                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                              >
+                                ▲
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
             </div>
+
+            {/* SEÇÃO: Imagens do Treinador e Pokémon */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6 mb-6`}>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Imagem do Treinador */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 flex flex-col items-center justify-center`}>
+                  <h4 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Treinador
+                  </h4>
+                  {image ? (
+                    <img
+                      src={image}
+                      alt={currentUser?.username || 'Treinador'}
+                      className="w-32 h-32 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.nextSibling.style.display = 'flex'
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-32 h-32 ${image ? 'hidden' : 'flex'} items-center justify-center rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                    <User size={48} className={darkMode ? 'text-gray-600' : 'text-gray-400'} />
+                  </div>
+                  <p className={`text-sm font-semibold mt-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {currentUser?.username || 'Treinador'}
+                  </p>
+                </div>
+
+                {/* Imagem do Pokémon Selecionado */}
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 flex flex-col items-center justify-center`}>
+                  <h4 className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Pokémon em Ação
+                  </h4>
+                  {selectedTeamPokemon ? (
+                    <>
+                      {(pokemonImages[selectedTeamPokemon.id] || selectedTeamPokemon.imageUrl) && (
+                        <img
+                          src={pokemonImages[selectedTeamPokemon.id] || selectedTeamPokemon.imageUrl}
+                          alt={selectedTeamPokemon.nickname || selectedTeamPokemon.species}
+                          className="w-32 h-32 object-contain"
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                            e.target.nextSibling.style.display = 'flex'
+                          }}
+                        />
+                      )}
+                      <div className={`w-32 h-32 ${(pokemonImages[selectedTeamPokemon.id] || selectedTeamPokemon.imageUrl) ? 'hidden' : 'flex'} items-center justify-center text-6xl`}>
+                        ❓
+                      </div>
+                      <p className={`text-sm font-semibold mt-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                        {selectedTeamPokemon.nickname || selectedTeamPokemon.species}
+                      </p>
+                      <div className="flex gap-1 mt-1">
+                        {(selectedTeamPokemon.types || []).map((tipo, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
+                            {tipo}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <div className={`w-32 h-32 flex items-center justify-center rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                      <p className={`text-xs text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} px-4`}>
+                        Selecione um Pokémon
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* PARTE NOVA: Modificadores */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6 mb-6`}>
+              <div
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => setShowModifiersSection(!showModifiersSection)}
+              >
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Modificadores
+                </h3>
+                <div className="flex items-center gap-2">
+                  {showModifiersSection && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAddModifier()
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${darkMode ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+                      title="Adicionar Modificador"
+                    >
+                      <Sigma size={20} />
+                    </button>
+                  )}
+                  {showModifiersSection ? <ChevronUp size={24} className={darkMode ? 'text-gray-400' : 'text-gray-600'} /> : <ChevronDown size={24} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />}
+                </div>
+              </div>
+
+              {showModifiersSection && (
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 mt-4`}>
+                {getUserModifiers().length === 0 ? (
+                  <p className={`text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-4`}>
+                    Nenhum modificador adicionado
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {getUserModifiers().map((modifier, idx) => (
+                      <div
+                        key={idx}
+                        className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'} border-2 rounded-lg p-3`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <label className="flex items-center gap-2 cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={getUserActiveModifiers().includes(idx)}
+                              onChange={() => handleToggleModifier(idx)}
+                              className="w-4 h-4 cursor-pointer"
+                            />
+                            <button
+                              onClick={() => handleShowModifierDetails(modifier)}
+                              className={`text-sm font-semibold ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} text-left`}
+                            >
+                              {modifier.nome}
+                            </button>
+                          </label>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleEditModifier(idx)}
+                              className={`p-1 rounded ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                              title="Editar"
+                            >
+                              <Edit size={14} className={darkMode ? 'text-yellow-400' : 'text-yellow-600'} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteModifier(idx)}
+                              className={`p-1 rounded ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                              title="Excluir"
+                            >
+                              <Trash2 size={14} className={darkMode ? 'text-red-400' : 'text-red-600'} />
+                            </button>
+                          </div>
+                        </div>
+                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          Mod: {modifier.mod}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                </div>
+              )}
+            </div>
+
+            {/* SEÇÃO TALENTOS EM JOGO */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6 mb-6`}>
+              <div
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => setShowTalentosSection(!showTalentosSection)}
+              >
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Talentos em Jogo
+                </h3>
+                <div className="flex items-center gap-2">
+                  {showTalentosSection && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleAddTalentinho()
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${darkMode ? 'bg-purple-700 hover:bg-purple-600' : 'bg-purple-600 hover:bg-purple-700'} text-white`}
+                      title="Adicionar Talentinho"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  )}
+                  {showTalentosSection ? <ChevronUp size={24} className={darkMode ? 'text-gray-400' : 'text-gray-600'} /> : <ChevronDown size={24} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />}
+                </div>
+              </div>
+
+              {showTalentosSection && (
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 mt-4`}>
+                  {talentinhos.length === 0 ? (
+                    <p className={`text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-4`}>
+                      Nenhum talentinho adicionado
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {talentinhos.map((talentinho, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <button
+                              onClick={() => {
+                                setSelectedTalentinhoDetail(talentinho)
+                                setShowTalentinhoDetailModal(true)
+                              }}
+                              className={`flex-1 text-left font-semibold ${darkMode ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700'} transition-colors`}
+                            >
+                              {talentinho.nome}
+                            </button>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleRollTalentinho(talentinho)}
+                                className={`p-1 rounded ${darkMode ? 'bg-green-700 hover:bg-green-600' : 'bg-green-500 hover:bg-green-600'} text-white`}
+                                title="Enviar no Chat"
+                              >
+                                <Send size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleEditTalentinho(idx)}
+                                className={`p-1 rounded ${darkMode ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+                                title="Editar"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTalentinho(idx)}
+                                className={`p-1 rounded ${darkMode ? 'bg-red-700 hover:bg-red-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                                title="Excluir"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} font-mono`}>
+                            {talentinho.expressao}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* SEÇÃO DE CAPTURA */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6 mb-6`}>
+              <div
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => setShowCaptureSection(!showCaptureSection)}
+              >
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Lançar Pokébola
+                </h3>
+                {showCaptureSection ? <ChevronUp size={24} className={darkMode ? 'text-gray-400' : 'text-gray-600'} /> : <ChevronDown size={24} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />}
+              </div>
+
+              {showCaptureSection && (
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 mt-4`}>
+                {keyItems.filter(item => POKEBALL_MODIFIERS[item.name]).length === 0 ? (
+                  <p className={`text-center text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-4`}>
+                    Nenhuma pokébola disponível
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                    {/* Customball sempre aparece primeiro */}
+                    <button
+                      onClick={() => handleOpenCaptureModal('Customball')}
+                      className={`relative flex flex-col items-center p-2 rounded-lg transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'} border-2 border-dashed ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
+                      title="Customball"
+                    >
+                      <img
+                        src="/pokeballs/custompokeball.png"
+                        alt="Customball"
+                        className="w-12 h-12 object-contain"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                          e.target.nextSibling.style.display = 'flex'
+                        }}
+                      />
+                      <div className="w-12 h-12 hidden items-center justify-center text-2xl">
+                        ❓
+                      </div>
+                      <span className={`text-[10px] font-semibold text-center mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Customball
+                      </span>
+                    </button>
+
+                    {/* Pokébolas dos keyItems */}
+                    {keyItems
+                      .filter(item => POKEBALL_MODIFIERS[item.name] && item.name !== 'Customball')
+                      .map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleOpenCaptureModal(item.name)}
+                          className={`relative flex flex-col items-center p-2 rounded-lg transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'} ${item.quantity > 0 ? '' : 'opacity-50 cursor-not-allowed'}`}
+                          disabled={item.quantity === 0}
+                          title={item.name}
+                        >
+                          <img
+                            src={`/pokeballs/${item.name.toLowerCase().replace(' ', '')}.png`}
+                            alt={item.name}
+                            className="w-12 h-12 object-contain"
+                            onError={(e) => {
+                              e.target.style.display = 'none'
+                              e.target.nextSibling.style.display = 'flex'
+                            }}
+                          />
+                          <div className="w-12 h-12 hidden items-center justify-center text-2xl">
+                            ⚪
+                          </div>
+                          <span className={`text-[10px] font-semibold text-center mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {item.name}
+                          </span>
+                          <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${item.quantity > 0 ? (darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white') : (darkMode ? 'bg-gray-600 text-gray-400' : 'bg-gray-400 text-gray-600')}`}>
+                            {item.quantity}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                )}
+                </div>
+              )}
+            </div>
+
+            {/* PARTE 3: Chat (Embaixo) */}
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
+              <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                Chat de Batalha
+              </h3>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'} mb-4 space-y-1`}>
+                <p>Use /r ou /roll para rolar dados. Exemplo: /r 1d20+5, /roll 2d6</p>
+                <p>Use comandos @ para referenciar seus atributos: <span className="font-mono">1d20+@MAE</span>, <span className="font-mono">2d6+@MA+@MV</span></p>
+                <p className="text-[10px]">Comandos: @MA @MD @MAE @MDE @MV @MS @At @Dt @AEt @DEt @Vt @St</p>
+              </div>
+
+              {/* Área de Mensagens */}
+              <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
+                {chatMessages.length === 0 ? (
+                  <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8`}>
+                    Nenhuma mensagem ainda. Seja o primeiro a falar!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                            {msg.username}
+                          </span>
+                          <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {msg.timestamp}
+                          </span>
+                        </div>
+                        {msg.isDiceRoll ? (
+                          <div>
+                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {msg.text}
+                            </p>
+                            <div className={`mt-2 p-2 rounded ${darkMode ? 'bg-green-900' : 'bg-green-100'}`}>
+                              <p className={`font-bold text-lg ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                                Resultado: {msg.diceResult}
+                              </p>
+                              <p className={`text-xs ${darkMode ? 'text-green-300' : 'text-green-600'}`}>
+                                {msg.diceDetails}
+                              </p>
+                            </div>
+                          </div>
+                        ) : msg.isAction ? (
+                          <p className={`text-sm font-semibold text-yellow-500`}>
+                            {msg.text}
+                          </p>
+                        ) : (
+                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {msg.text}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
+              </div>
+
+              {/* Input de Mensagem */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder="Digite sua mensagem, 1d20+@MAE, ou /r 1d20..."
+                  className={`flex-1 px-4 py-3 rounded-lg border-2 ${
+                    darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'
+                      : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400'
+                  } focus:outline-none focus:border-blue-500`}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                >
+                  Enviar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Modal de Golpe */}
+        {showBattleMoveModal && selectedBattleMove && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowBattleMoveModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedBattleMove}
+                </h3>
+                <button
+                  onClick={() => setShowBattleMoveModal(false)}
+                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {(() => {
+                const moveData = GOLPES_DATA[selectedBattleMove]
+                if (!moveData) {
+                  return <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Golpe não encontrado</p>
+                }
+
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.tipo}</p>
+                      </div>
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Categoria:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.categoria}</p>
+                      </div>
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.danoBasal}</p>
+                      </div>
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia:</span>
+                        <p className={`${darkMode ? 'text-white' : 'text-gray-800'}`}>{moveData.acuracia}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descrição:</span>
+                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
+                        {moveData.descricao}
+                      </p>
+                    </div>
+
+                    {moveData.efeito && (
+                      <div>
+                        <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito:</span>
+                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
+                          {moveData.efeito}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Habilidade */}
+        {showBattleAbilityModal && selectedBattleAbility && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowBattleAbilityModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedBattleAbility}
+                </h3>
+                <button
+                  onClick={() => setShowBattleAbilityModal(false)}
+                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {(() => {
+                const abilityData = HABILIDADES_DATA[selectedBattleAbility]
+                if (!abilityData) {
+                  return <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Habilidade não encontrada</p>
+                }
+
+                // Extrair descrição corretamente (pode ser string ou objeto com ativacao/efeito)
+                let description = ''
+                if (typeof abilityData === 'string') {
+                  description = abilityData
+                } else if (abilityData.descricao) {
+                  description = abilityData.descricao
+                } else if (abilityData.efeito) {
+                  description = `Ativação: ${abilityData.ativacao || 'N/A'}\n\nEfeito: ${abilityData.efeito}`
+                }
+
+                return (
+                  <div className="space-y-3">
+                    <div>
+                      <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descrição:</span>
+                      <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
+                        {description}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleSendAbilityToChat(selectedBattleAbility)}
+                      className="w-full mt-4 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold"
+                    >
+                      Enviar no Chat
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Adicionar/Editar Modificador */}
+        {showModifierModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowModifierModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {editingModifierIndex !== null ? 'Editar Modificador' : 'Adicionar Modificador'}
+                </h3>
+                <button
+                  onClick={() => setShowModifierModal(false)}
+                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Nome *
+                  </label>
+                  <input
+                    type="text"
+                    value={modifierForm.nome}
+                    onChange={(e) => setModifierForm({ ...modifierForm, nome: e.target.value })}
+                    className={`w-full px-4 py-2 rounded-lg border-2 ${
+                      darkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-800'
+                    } focus:outline-none focus:border-blue-500`}
+                    placeholder="Ex: Buff de Ataque"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Mod *
+                  </label>
+                  <input
+                    type="text"
+                    value={modifierForm.mod}
+                    onChange={(e) => setModifierForm({ ...modifierForm, mod: e.target.value })}
+                    className={`w-full px-4 py-2 rounded-lg border-2 ${
+                      darkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-800'
+                    } focus:outline-none focus:border-blue-500`}
+                    placeholder="Ex: 1d6+@MA, @MAd6, +5, -3"
+                  />
+                  <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Use expressões de dado (1d6+@MA), comandos @ (@MAd6), ou números (+5, -3)
+                  </p>
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Descrição
+                  </label>
+                  <textarea
+                    value={modifierForm.descricao}
+                    onChange={(e) => setModifierForm({ ...modifierForm, descricao: e.target.value })}
+                    className={`w-full px-4 py-2 rounded-lg border-2 ${
+                      darkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-800'
+                    } focus:outline-none focus:border-blue-500 resize-none`}
+                    placeholder="Descrição opcional do modificador"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Checkboxes de Aplicação */}
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Aplicar em:
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={modifierForm.aplicarAcuracia}
+                        onChange={(e) => setModifierForm({ ...modifierForm, aplicarAcuracia: e.target.checked })}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Acurácia
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={modifierForm.aplicarDano}
+                        onChange={(e) => setModifierForm({ ...modifierForm, aplicarDano: e.target.checked })}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Dano
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={modifierForm.aplicarCaptura}
+                        onChange={(e) => setModifierForm({ ...modifierForm, aplicarCaptura: e.target.checked })}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Captura
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveModifier}
+                    className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold"
+                    disabled={!modifierForm.nome || !modifierForm.mod}
+                  >
+                    {editingModifierIndex !== null ? 'Salvar' : 'Adicionar'}
+                  </button>
+                  <button
+                    onClick={() => setShowModifierModal(false)}
+                    className={`px-6 py-3 rounded-lg font-semibold ${
+                      darkMode
+                        ? 'bg-gray-700 text-white hover:bg-gray-600'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Adicionar/Editar Talentinho */}
+        {showTalentinhoModal && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowTalentinhoModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full p-6`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {editingTalentinhoIndex !== null ? 'Editar Talentinho' : 'Adicionar Talentinho'}
+                </h3>
+                <button
+                  onClick={() => setShowTalentinhoModal(false)}
+                  className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Nome */}
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Nome do Talentinho
+                  </label>
+                  <input
+                    type="text"
+                    value={talentinhoForm.nome}
+                    onChange={(e) => setTalentinhoForm({ ...talentinhoForm, nome: e.target.value })}
+                    className={`w-full px-4 py-3 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                    placeholder="Ex: Ataque Rápido"
+                  />
+                </div>
+
+                {/* Expressão */}
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Expressão do Talento
+                  </label>
+                  <input
+                    type="text"
+                    value={talentinhoForm.expressao}
+                    onChange={(e) => setTalentinhoForm({ ...talentinhoForm, expressao: e.target.value })}
+                    className={`w-full px-4 py-3 border-2 rounded-lg font-mono ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                    placeholder="Ex: 1d20 + @MA + 2"
+                  />
+                  <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Use @ para referenciar atributos: @MA, @MD, @MAE, @MDE, @MV, @MS, @At, @Dt, @AEt, @DEt, @Vt, @St
+                  </p>
+                </div>
+
+                {/* Alvos */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className={`block text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Alvos (Opcional)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newAlvos = [...(talentinhoForm.alvos || []), '']
+                        setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
+                      }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${darkMode ? 'bg-green-700 hover:bg-green-600' : 'bg-green-500 hover:bg-green-600'} text-white`}
+                    >
+                      <Plus size={14} />
+                      Adicionar Alvo
+                    </button>
+                  </div>
+                  {talentinhoForm.alvos && talentinhoForm.alvos.length > 0 && (
+                    <div className="space-y-2">
+                      {talentinhoForm.alvos.map((alvo, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={alvo}
+                            onChange={(e) => {
+                              const newAlvos = [...talentinhoForm.alvos]
+                              newAlvos[idx] = e.target.value
+                              setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
+                            }}
+                            className={`flex-1 px-3 py-2 border-2 rounded-lg font-mono text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                            placeholder={`Ex: 15 ou 1d10+@MD`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newAlvos = talentinhoForm.alvos.filter((_, i) => i !== idx)
+                              setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
+                            }}
+                            className={`p-2 rounded ${darkMode ? 'bg-red-700 hover:bg-red-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                            title="Remover Alvo"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Defina valores ou expressões para comparar com o resultado. Suporta expressões e comandos @.
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveTalentinho}
+                    className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 font-semibold"
+                    disabled={!talentinhoForm.nome || !talentinhoForm.expressao}
+                  >
+                    {editingTalentinhoIndex !== null ? 'Salvar' : 'Adicionar'}
+                  </button>
+                  <button
+                    onClick={() => setShowTalentinhoModal(false)}
+                    className={`px-6 py-3 rounded-lg font-semibold ${
+                      darkMode
+                        ? 'bg-gray-700 text-white hover:bg-gray-600'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalhes do Talentinho */}
+        {showTalentinhoDetailModal && selectedTalentinhoDetail && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowTalentinhoDetailModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-md w-full p-6`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedTalentinhoDetail.nome}
+                </h3>
+                <button
+                  onClick={() => setShowTalentinhoDetailModal(false)}
+                  className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Expressão
+                  </label>
+                  <div className={`px-4 py-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <code className={`text-sm font-mono ${darkMode ? 'text-purple-300' : 'text-purple-700'}`}>
+                      {selectedTalentinhoDetail.expressao}
+                    </code>
+                  </div>
+                </div>
+
+                {selectedTalentinhoDetail.alvos && selectedTalentinhoDetail.alvos.length > 0 && (
+                  <div>
+                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Alvos
+                    </label>
+                    <div className="space-y-2">
+                      {selectedTalentinhoDetail.alvos.map((alvo, idx) => (
+                        <div key={idx} className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alvo {idx + 1}:</span>
+                          <code className={`text-sm font-mono block ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
+                            {alvo}
+                          </code>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    handleRollTalentinho(selectedTalentinhoDetail)
+                    setShowTalentinhoDetailModal(false)
+                  }}
+                  className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Send size={20} />
+                  Enviar no Chat
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalhes do Modificador */}
+        {showModifierDetailsModal && selectedModifier && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowModifierDetailsModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedModifier.nome}
+                </h3>
+                <button
+                  onClick={() => setShowModifierDetailsModal(false)}
+                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Modificador:</span>
+                  <p className={`${darkMode ? 'text-white' : 'text-gray-800'} font-mono text-lg`}>
+                    {selectedModifier.mod}
+                  </p>
+                </div>
+
+                {selectedModifier.descricao && (
+                  <div>
+                    <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descrição:</span>
+                    <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
+                      {selectedModifier.descricao}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Captura */}
+        {showCaptureModal && selectedPokeball && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowCaptureModal(false)}
+          >
+            <div
+              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {selectedPokeball}
+                </h3>
+                <button
+                  onClick={() => setShowCaptureModal(false)}
+                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {selectedPokeball === 'Customball' ? (
+                  <div>
+                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Modificador de Captura
+                    </label>
+                    <input
+                      type="text"
+                      value={customPokeballModifier}
+                      onChange={(e) => setCustomPokeballModifier(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${
+                        darkMode
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-800'
+                      } focus:outline-none focus:border-blue-500`}
+                      placeholder="Ex: +15, -5, @MA, 1d6+@MAE"
+                    />
+                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Suporta comandos @ e expressões
+                    </p>
+                  </div>
+                ) : POKEBALL_MODIFIERS[selectedPokeball]?.length > 1 ? (
+                  <div>
+                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Modificador de Captura
+                    </label>
+                    <select
+                      value={selectedPokeballModifier}
+                      onChange={(e) => setSelectedPokeballModifier(e.target.value)}
+                      className={`w-full px-4 py-2 rounded-lg border-2 ${
+                        darkMode
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-800'
+                      } focus:outline-none focus:border-blue-500`}
+                    >
+                      {POKEBALL_MODIFIERS[selectedPokeball].map((mod, idx) => (
+                        <option key={idx} value={mod}>
+                          {mod === 'auto' ? 'Captura Automática' : mod}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Modificador: <span className="font-bold">{POKEBALL_MODIFIERS[selectedPokeball]?.[0]}</span>
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleThrowPokeball}
+                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={selectedPokeball === 'Customball' && !customPokeballModifier}
+                >
+                  Pokébolaaa, vaaai!
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DANO/CURA BATALHA PKM */}
+        {showBattleHPModal && selectedBattlePokemon && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowBattleHPModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-md w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Dano/Cura - {selectedBattlePokemon.nickname || selectedBattlePokemon.species}
+                </h3>
+                <button onClick={() => setShowBattleHPModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                  <X size={24} />
+                </button>
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="1000"
+                value={battleHpValue}
+                onChange={e => setBattleHpValue(e.target.value)}
+                placeholder="Valor (1-1000)"
+                className={`w-full px-4 py-3 border-2 rounded-lg mb-4 text-center text-xl ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => {
+                    const v = parseInt(battleHpValue) || 0;
+                    const idx = mainTeam.findIndex(p => p === selectedBattlePokemon);
+                    if (idx !== -1) {
+                      const updatedTeam = [...mainTeam];
+                      const maxHP = calculateMaxHP(updatedTeam[idx]);
+                      const currentHp = updatedTeam[idx].currentHP !== undefined ? updatedTeam[idx].currentHP : maxHP;
+                      const newHP = Math.min(currentHp + v, maxHP);
+                      updatedTeam[idx] = { ...updatedTeam[idx], currentHP: newHP };
+                      setMainTeam(updatedTeam);
+
+                      // Atualizar também no battlePokemonList se o pokémon estiver em batalha
+                      setBattlePokemonList(prev => prev.map(battlePkmn => {
+                        if (battlePkmn.especie === selectedBattlePokemon.species &&
+                            battlePkmn.nome === (selectedBattlePokemon.nickname || selectedBattlePokemon.species)) {
+                          return { ...battlePkmn, hp: newHP };
+                        }
+                        return battlePkmn;
+                      }));
+                    }
+                    setBattleHpValue('');
+                    setShowBattleHPModal(false);
+                  }}
+                  className="bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Heart size={20} />Curar
+                </button>
+                <button
+                  onClick={() => {
+                    const v = parseInt(battleHpValue) || 0;
+                    const idx = mainTeam.findIndex(p => p === selectedBattlePokemon);
+                    if (idx !== -1) {
+                      const updatedTeam = [...mainTeam];
+                      const maxHP = calculateMaxHP(updatedTeam[idx]);
+                      const currentHp = updatedTeam[idx].currentHP !== undefined ? updatedTeam[idx].currentHP : maxHP;
+                      const newHP = currentHp - v;
+                      updatedTeam[idx] = { ...updatedTeam[idx], currentHP: newHP };
+                      setMainTeam(updatedTeam);
+
+                      // Atualizar também no battlePokemonList se o pokémon estiver em batalha
+                      setBattlePokemonList(prev => prev.map(battlePkmn => {
+                        if (battlePkmn.especie === selectedBattlePokemon.species &&
+                            battlePkmn.nome === (selectedBattlePokemon.nickname || selectedBattlePokemon.species)) {
+                          return { ...battlePkmn, hp: newHP };
+                        }
+                        return battlePkmn;
+                      }));
+                    }
+                    setBattleHpValue('');
+                    setShowBattleHPModal(false);
+                  }}
+                  className="bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Sword size={20} />Dano
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {accountDataModal}
       </>
     )
@@ -17786,6 +21561,7 @@ function App() {
                         )}
                       </div>
                     ))}
+                    <div ref={chatEndRef} />
                   </div>
                 )}
               </div>
@@ -17801,7 +21577,7 @@ function App() {
                       handleSendMessage()
                     }
                   }}
-                  placeholder="Digite sua mensagem ou /r 1d20..."
+                  placeholder="Digite sua mensagem, 1d20+@MAE, ou /r 1d20..."
                   className={`flex-1 px-4 py-3 rounded-lg border-2 ${
                     darkMode
                       ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500'

@@ -1,4 +1,5 @@
 import pokemonMovesData from './pokemonMovesData.json'
+import pokedexData from './pokemonData'
 
 // Mapeamentos para variantes regionais e formas especiais
 // Mapeia nomes de variantes para a espécie base quando não há dados específicos
@@ -83,6 +84,125 @@ function getSpeciesForMoves(species, gender = null) {
 }
 
 /**
+ * Encontra todas as pré-evoluções de um Pokémon
+ * Retorna array com os nomes das espécies da cadeia evolutiva, do mais básico ao atual
+ * Exemplo: Para "Venusaur" retorna ["Bulbasaur", "Ivysaur", "Venusaur"]
+ */
+function getEvolutionChain(species) {
+  const chain = []
+
+  // Encontrar o pokémon atual na Pokédex
+  const currentPokemon = pokedexData.find(p =>
+    p.nome.toLowerCase() === species.toLowerCase()
+  )
+
+  if (!currentPokemon) {
+    // Se não encontrar, retorna apenas a espécie atual
+    return [species]
+  }
+
+  // Adicionar o pokémon atual
+  chain.push(currentPokemon.nome)
+
+  // Buscar pré-evoluções recursivamente
+  function findPreEvolutions(dexNumber) {
+    // Procurar pokémon que evolui para este dexNumber
+    const preEvolution = pokedexData.find(p => p.evolucao === dexNumber)
+
+    if (preEvolution) {
+      // Adicionar no início do array
+      chain.unshift(preEvolution.nome)
+      // Continuar buscando pré-evoluções
+      findPreEvolutions(preEvolution.dexNumber)
+    }
+  }
+
+  findPreEvolutions(currentPokemon.dexNumber)
+
+  return chain
+}
+
+/**
+ * Coleta todos os golpes naturais de toda a cadeia evolutiva
+ * Considerando o nível atual do pokémon
+ */
+function collectEvolutionChainMoves(species, level, gender = null) {
+  const chain = getEvolutionChain(species)
+  const allMoves = []
+  const seenMoves = new Set()
+
+  // Para cada forma na cadeia evolutiva
+  for (const formSpecies of chain) {
+    const speciesKey = getSpeciesForMoves(formSpecies, gender)
+    const movesData = pokemonMovesData[speciesKey]
+
+    if (!movesData || !movesData.naturais) continue
+
+    // Encontrar o pokémon na Pokédex para saber em que nível ele evolui
+    const pokemonInfo = pokedexData.find(p =>
+      p.nome.toLowerCase() === formSpecies.toLowerCase()
+    )
+
+    // Determinar até que nível podemos pegar golpes desta forma
+    let maxLevelForThisForm = level
+
+    // Se este não é o último da cadeia, limitar ao nível de evolução
+    if (formSpecies !== species && pokemonInfo && pokemonInfo.evolucao) {
+      if (pokemonInfo.evolucaoNivel) {
+        maxLevelForThisForm = pokemonInfo.evolucaoNivel
+      }
+    }
+
+    // Coletar golpes naturais desta forma
+    const levels = Object.keys(movesData.naturais)
+      .filter(l => l !== 'Evolução')
+      .map(l => parseInt(l))
+      .sort((a, b) => a - b)
+
+    for (const moveLevel of levels) {
+      if (moveLevel > maxLevelForThisForm) break
+
+      const moves = movesData.naturais[moveLevel]
+      const movesArray = Array.isArray(moves) ? moves : [moves]
+
+      for (const move of movesArray) {
+        if (!seenMoves.has(move)) {
+          allMoves.push({
+            nome: move,
+            nivel: moveLevel,
+            forma: formSpecies
+          })
+          seenMoves.add(move)
+        }
+      }
+    }
+
+    // Se esta é a forma atual, adicionar golpe de evolução se existir
+    if (formSpecies === species && movesData.naturais['Evolução']) {
+      const evolutionMove = movesData.naturais['Evolução']
+      const move = Array.isArray(evolutionMove) ? evolutionMove[0] : evolutionMove
+      if (!seenMoves.has(move)) {
+        allMoves.push({
+          nome: move,
+          nivel: 'Evolução',
+          forma: formSpecies
+        })
+        seenMoves.add(move)
+      }
+    }
+  }
+
+  // Ordenar por nível (golpes mais recentes primeiro)
+  allMoves.sort((a, b) => {
+    if (a.nivel === 'Evolução') return 1
+    if (b.nivel === 'Evolução') return -1
+    return b.nivel - a.nivel
+  })
+
+  return allMoves
+}
+
+/**
  * Seleciona golpes herdados aleatoriamente
  * - 20% de chance para cada golpe herdado
  * - Máximo de 4 golpes herdados
@@ -161,13 +281,15 @@ function getEvolutionMove(species, gender = null) {
 /**
  * Gera lista completa de golpes para um Pokémon NPC
  *
- * Regras:
+ * Regras (ATUALIZADO COM CADEIA EVOLUTIVA):
  * 1. Seleciona golpes herdados (20% chance cada, max 4)
  * 2. Adiciona golpe de evolução se existir
- * 3. Preenche com golpes naturais baseados no nível
+ * 3. Preenche com golpes de TODA A CADEIA EVOLUTIVA baseados no nível
+ *    - Inclui golpes de pré-evoluções que o pokémon teria aprendido
+ *    - Respeita níveis de evolução (golpes até o nível de cada forma)
  * 4. Quando atingir 8 golpes e houver mais golpes naturais:
  *    - 50% de chance de substituir um golpe existente
- * 5. Mantém os golpes mais recentes por nível
+ * 5. Prioriza golpes mais recentes por nível
  *
  * @param {string} species - Nome da espécie do Pokémon
  * @param {number} level - Nível do Pokémon
@@ -189,10 +311,17 @@ export function generatePokemonMoves(species, level, includeEvolutionMove = fals
     }
   }
 
-  // 3. Adiciona golpes naturais
-  const naturalMoves = selectNaturalMoves(species, level, gender)
+  // 3. NOVO: Coleta golpes de toda a cadeia evolutiva
+  const evolutionChain = getEvolutionChain(species)
+  console.log(`[EVOLUTION CHAIN] ${species}: ${evolutionChain.join(' → ')}`)
 
-  for (const move of naturalMoves) {
+  const evolutionChainMoves = collectEvolutionChainMoves(species, level, gender)
+  console.log(`[MOVES FROM CHAIN] Total de golpes disponíveis: ${evolutionChainMoves.length}`)
+
+  // Adicionar golpes da cadeia evolutiva (priorizando mais recentes)
+  for (const moveData of evolutionChainMoves) {
+    const move = moveData.nome
+
     // Se já tem o golpe, pula
     if (moves.includes(move)) continue
 
@@ -245,8 +374,16 @@ export function getMovesInfo(species) {
   }
 }
 
+/**
+ * Função auxiliar para debug/teste - retorna a cadeia evolutiva de um pokémon
+ */
+export function getEvolutionChainForSpecies(species) {
+  return getEvolutionChain(species)
+}
+
 export default {
   generatePokemonMoves,
   hasMovesData,
-  getMovesInfo
+  getMovesInfo,
+  getEvolutionChainForSpecies
 }

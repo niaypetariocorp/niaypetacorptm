@@ -10,6 +10,17 @@
     "tagConcurso": "Clímax",
     "efeito": "Role 1d6 e então confira o efeito: 1-Eleva duas Fases de Ataque do alvo. 2-Eleva duas Fases de Defesa do alvo. 3-Eleva duas Fases de Ataque Especial do alvo. 4-Eleva duas Fases de Defesa Especial do alvo. 5-Eleva duas Fases de Velocidade do alvo. 6-Reduz em 2 as Dificuldades de Acurácia do alvo até o fim do encontro."
   },
+  "Choque do Trovão": {
+    "tipo": "Elétrico",
+    "aptidao": "Segurança",
+    "descritores": "",
+    "acuracia": "2",
+    "danoBasal": "1d12+6 Especial",
+    "alcance": "À Distância 10",
+    "frequencia": "À Vontade",
+    "tagConcurso": "Segurança (2d4)",
+    "efeito": "Se o resultado do Teste de Acurácia for 17 ou mais, Paralisa o alvo."
+  },
   "Ataque Triplo": {
     "tipo": "Normal",
     "aptidao": "Beleza",

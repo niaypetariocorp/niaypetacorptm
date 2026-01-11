@@ -1640,6 +1640,17 @@ const GOLPES_DATA = {
     "tagConcurso": "Incentivo",
     "efeito": "O alvo perde uma Fase de Ataque."
   },
+  "Choque do Trovão": {
+    "tipo": "Elétrico",
+    "aptidao": "Segurança",
+    "descritores": "",
+    "acuracia": "2",
+    "danoBasal": "1d12+6 Especial",
+    "alcance": "À Distância 10",
+    "frequencia": "À Vontade",
+    "tagConcurso": "Segurança (2d4)",
+    "efeito": "Se o resultado do Teste de Acurácia for 17 ou mais, Paralisa o alvo."
+  },
   "Ciclone": {
     "tipo": "Dragão",
     "aptidao": "Estilo",
