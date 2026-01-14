@@ -1975,7 +1975,7 @@ export const TALENTOS_DATA = {
     },
     {
       nome: 'Karma do Ash',
-      requisitos: 'ter libertado três pokémons leais totalmente evoluídos.,
+      requisitos: 'ter libertado três pokémons leais totalmente evoluídos.',
       referencia: 'L, V',
       frequencia: 'Diária.',
       alvo: 'uma rolagem.'
