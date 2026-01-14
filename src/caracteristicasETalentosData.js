@@ -1978,7 +1978,7 @@ export const TALENTOS_DATA = {
       requisitos: 'ter libertado três pokémons leais totalmente evoluídos.',
       referencia: 'L, V',
       frequencia: 'Diária.',
-      alvo: 'uma rolagem.'
+      alvo: 'uma rolagem.',
       efeito: 'você rola novamente um dado da rolagem.'
     },
     {
