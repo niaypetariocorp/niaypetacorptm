@@ -1908,11 +1908,10 @@ export const TALENTOS_DATA = {
     {
       nome: 'Ainda Não!',
       requisitos: 'N/A',
-      referencia: 'X',
-      frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional',
-      alvo: 'um aliado com 0 Pontos de Vida',
-      gatilho: 'quando o alvo receber dano',
-      efeito: 'o alvo não fica debilitado.'
+      referencia: 'C, V',
+      frequencia: 'Constante.',
+      gatilho: 'um ovo está chocando.',
+      efeito: 'se um ovo que você (ou um humano aliado) possui está chocando, você pode atrasar o nascimento por 48 horas. Se você não é o dono do ovo, você precisará de permissão deste para usar este Talento.'
     },
     {
       nome: 'Arma de Escolha',
@@ -1924,11 +1923,10 @@ export const TALENTOS_DATA = {
     {
       nome: 'Cuidado!',
       requisitos: 'Velocidade 14.',
-      referencia: 'V',
-      frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional',
-      alvo: 'um aliado',
-      gatilho: 'quando o alvo for atacado',
-      efeito: 'role 1d20 + DES ou SAB. O alvo poderá escolher usar seu resultado no lugar dele.'
+      referencia: 'P, V',
+      frequencia: 'Diária. A cada 10 Níveis, receba um uso diário adicional.',
+      alvo: 'um pokémon seu.',
+      efeito: 'Durante esta rodada, se seu pokémon alvo for atacado, jogue uma moeda várias vezes, até sair cara, e não coroa. Quando o inimigo for fazer o Teste de Acurácia, ele deve obter um resultado maior que o número de vezes que a moeda foi jogada ou ele errará.'
     },
     {
       nome: 'Dê Tudo de Si!',
@@ -1956,10 +1954,10 @@ export const TALENTOS_DATA = {
     {
       nome: 'Dê-Me Espaço!',
       requisitos: 'N/A',
-      referencia: 'X',
-      frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional',
-      alvo: 'você',
-      efeito: 'todos os inimigos adjacentes a você são empurrados até 3m para trás.'
+      referencia: 'L, V',
+      frequencia: 'Uso Único. A cada 10 Níveis, receba um uso adicional.',
+      alvogatilho: 'um pokémon seu foi alvo de um ataque.',
+      efeito: 'seu pokémon imediatamente se desloca. Se ele se mover para fora da área do ataque original, ele não sofre os efeitos daquele ataque.'
     },
     {
       nome: 'Filiação à Liga Oficial',
@@ -1977,10 +1975,11 @@ export const TALENTOS_DATA = {
     },
     {
       nome: 'Karma do Ash',
-      requisitos: 'ter libertado três pokémons leais totalmente evoluídos.',
-      referencia: 'X',
-      frequencia: 'Semanal. A cada 10 Níveis, receba um uso semanal adicional',
-      efeito: 'se você lançar um Golpe de Frequência Diária e errar, você pode relançá-lo.'
+      requisitos: 'ter libertado três pokémons leais totalmente evoluídos.,
+      referencia: 'L, V',
+      frequencia: 'Diária.',
+      alvo: 'uma rolagem.'
+      efeito: 'você rola novamente um dado da rolagem.'
     },
     {
       nome: 'Meditação',
@@ -1992,10 +1991,10 @@ export const TALENTOS_DATA = {
     {
       nome: 'Mega!',
       requisitos: 'todos os Atributos 10, uma Pedra Chave.',
-      referencia: 'X',
-      frequencia: 'Diária. Após Nível 10, a cada 5 Níveis, receba um uso diário adicional',
-      alvo: 'você ou um pokémon aliado a até 6m que possa mega evoluir',
-      efeito: 'se o alvo puder mega evoluir, ele imediatamente mega evolui. Ele continua assim até sair da batalha.'
+      referencia: 'P, V',
+      frequencia: 'Diária.',
+      alvo: 'um pokémon com uma Megapedra.',
+      efeito: 'o pokémon alvo megaevolui por 10 minutos ou até atingir 0 Pontos de Vida.'
     },
     {
       nome: 'Mire no Chifre!',
@@ -2016,10 +2015,10 @@ export const TALENTOS_DATA = {
     {
       nome: 'Não se Meta Comigo!',
       requisitos: 'Defesa Especial 13.',
-      referencia: 'X',
-      frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional',
-      gatilho: 'quando você sofrer dano de um adversário',
-      efeito: 'o adversário sofre o mesmo dano de volta. Esse dano não pode ser reduzido por Resistências ou Aguento Outra! ou similares.'
+      referencia: 'P, X',
+      frequencia: 'Diária. A cada 10 Níveis, receba um uso diário adicional',
+      gatilho: 'um humano desafia você para uma batalha não oficial.',
+      efeito: 'role 1d20 + MDE. Se o resultado for maior que 10, o humano é intimidado e recua de seu desafio'
     },
     {
       nome: 'O Escolhido',
@@ -2045,25 +2044,26 @@ export const TALENTOS_DATA = {
     {
       nome: 'Socorrista',
       requisitos: 'um entre Ataque Especial 13 ou Defesa Especial 13.',
-      referencia: 'X',
-      frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional',
-      alvo: 'um pokémon debilitado adjacente a você',
-      efeito: 'role 1d20 + SAB. Se o resultado for 16 ou mais, o alvo não estará mais debilitado, mas seus Pontos de Vida continuarão sendo 0. Se o resultado for 21 ou mais, o alvo também recupera 1d8 + SAB Pontos de Vida.'
+      referencia: 'P, X',
+      frequencia: 'Diária. A cada 10 Níveis, receba um uso diário adicional.',
+      alvo: 'uum humano.',
+      efeito: 'role 1d20 + MAE ou MDE. Cure um número de Pontos de Vida do alvo igual ao resultado da rolagem.'
     },
     {
       nome: 'Sorte do Ash',
       requisitos: 'ter libertado um pokémon leal totalmente evoluído.',
-      referencia: 'X',
-      frequencia: 'Semanal. A cada 10 Níveis, receba um uso semanal adicional',
-      efeito: 'role 1d20 novamente. Você pode escolher qual resultado usar.'
+      referencia: 'L, V',
+      frequencia: 'Diária.',
+      alvo: 'uma rolagem.',
+      efeito: 'ao custo de 15 Pontos de Vida (este sacrifício não pode ser ignorado de forma alguma), você pode rolar novamente um dado da rolagem.'
     },
     {
       nome: 'Vai Abrir!',
       requisitos: 'Ataque Especial 15.',
-      referencia: 'X',
-      frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional',
-      alvo: 'você ou um pokémon',
-      efeito: 'role 1d20 + FOR + DES do alvo. Se o resultado for 16 ou mais, e o alvo for destinado à captura de pokémons selvagens, ele abre.'
+      referencia: 'P, X',
+      frequencia: 'Diária. A cada 5 Níveis, receba um uso diário adicional.',
+      alvo: 'uma fechadura ou trava não computadorizada.',
+      efeito: 'role 1d20 + MAE. Se o resultado for maior que 15, a fechadura ou a trava são arrombadas, e não haverá sinais de arrombamento.'
     },
     {
       nome: 'Você Isso e Você Aquilo!',
@@ -2438,7 +2438,7 @@ export const TALENTOS_DATA = {
     {
       nome: 'Reagrupamento',
       requisitos: '',
-      referencia: '',
+      referencia: 'P, X',
       frequencia: 'Diária',
       efeito: 'se houver pelo menos um Ranger além de você no seu campo de visão, todos os humanos aliados que possam ver e ouvir você recebem +3 a todos os seus Modificadores por um número de rodadas igual a seu MA. Os bônus deste Talento não são acumulativos, mesmo que um segundo Oficial o ative.'
     },
