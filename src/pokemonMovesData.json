@@ -746,18 +746,35 @@
     ]
   },
   "Sandshrew": {
-    "naturais": {},
+    "naturais": {
+      "1": ["Arranhão", "Defesa Fechada"],
+      "3": "Ataque de Areia",
+      "5": "Picada",
+      "7": "Rolagem",
+      "9": "Giro Rápido",
+      "11": "Corte Furioso",
+      "14": "Magnitude",
+      "17": "Estrela Cadente",
+      "20": "Garras Furiosas",
+      "23": "Tumba de Areia",
+      "26": "Retalhar",
+      "30": "Cavar",
+      "34": "Girobola",
+      "38": "Dança das Espadas",
+      "42": "Tempestade de Areia",
+      "46": "Terremoto"
+    },
     "herdados": [
       "Emboscada",
       "Garra Esmagadora",
       "Lapidação",
       "Resistência",
       "Mangual",
-      "Metalizar Garra. Os Sandshrew Arenosos adicionam os seguintes Golpes à lista: Contra-Ataque",
+      "Metalizar Garras",
       "Escalada",
       "Fertilizante",
       "Giro Rápido",
-      "Tiro de Lama. Os Sandshrew Árticos adicionam os seguintes Golpes à lista: Amnésia",
+      "Tiro de Lama",
       "Contra-Ataque",
       "Estaca de Gelo",
       "Lanças de Gelo",
@@ -765,8 +782,41 @@
     ]
   },
   "Sandslash": {
-    "naturais": {},
-    "herdados": []
+    "naturais": {
+      "3": "Ataque de Areia",
+      "5": "Picada Venenosa",
+      "7": "Rolagem",
+      "9": "Giro Rápido",
+      "11": "Corte Furioso",
+      "14": "Magnitude",
+      "17": "Estrela Cadente",
+      "20": "Garras Furiosas",
+      "24": "Tumba de Areia",
+      "28": "Retalhar",
+      "33": "Cavar",
+      "38": "Girobola",
+      "43": "Dança das Espadas",
+      "48": "Tempestade de Areia",
+      "53": "Terremoto"
+    },
+    "herdados": [
+      "Emboscada", 
+      "Garra Esmagadora", 
+      "Lapidação", 
+      "Resistência", 
+      "Mangual", 
+      "Metalizar Garra",
+      "Contra-Ataque", 
+      "Escalada", 
+      "Fertilizante",
+      "Giro Rápido",
+      "Tiro de Lama",  
+      "Amnésia", 
+      "Contra-Ataque", 
+      "Estaca de Gelo", 
+      "Lanças de Gelo", 
+      "Maldição"
+    ]
   },
   "Nidoran": {
     "naturais": {
@@ -4404,9 +4454,7 @@
       "93": "Primeiro Eu",
       "100": "Impacto Psíquico"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": [ ]
   },
   "Mew": {
     "naturais": {
@@ -4426,9 +4474,7 @@
       "90": "Conspiração",
       "100": "Esfera da Aura"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": [ ]
   },
   "Chikorita": {
     "naturais": {
@@ -7677,7 +7723,7 @@
       "91": "Réquiem"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Treecko": {
@@ -14638,7 +14684,7 @@
       "64": "Descarga"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Uxie": {
@@ -14659,7 +14705,7 @@
       "76": "Lembrança"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Mesprit": {
@@ -14680,7 +14726,7 @@
       "76": "Desejo de Cura"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Azelf": {
@@ -14701,7 +14747,7 @@
       "76": "Explosão"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Dialga": {
@@ -14724,7 +14770,7 @@
       "55": "Bloquear Cura"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Palkia": {
@@ -14746,7 +14792,7 @@
       "55": "Bloquear Cura"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Heatran": {
@@ -14771,7 +14817,7 @@
       "96": "Tempestade de Magma"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Regigigas": {
@@ -14791,7 +14837,7 @@
       "100": "Gigaimpacto"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Giratina": {
@@ -14814,7 +14860,7 @@
       "55": "Bloquear Cura"
     },
     "herdados": [
-      "-"
+     
     ]
   },
   "Cresselia": {
@@ -14837,7 +14883,7 @@
       "99": "Força Lunar"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Phione": {
@@ -14857,7 +14903,7 @@
       "69": "Dança da Chuva"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Manaphy": {
@@ -14879,7 +14925,7 @@
       "76": "Troca de Corações"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Darkrai": {
@@ -14907,7 +14953,7 @@
       "93": "Pulso Sombrio"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Shaymin": {
@@ -14938,7 +14984,7 @@
       "100": "Semente Ofuscante"
     },
     "herdados": [
-      "-"
+      
     ]
   },
   "Arceus": {
@@ -14961,7 +15007,7 @@
       "100": "Julgamento"
     },
     "herdados": [
-      "-"
+    
     ]
   },
   "Victini": {
