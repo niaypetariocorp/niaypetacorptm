@@ -6070,7 +6070,6 @@ function App() {
       id: `pokemon-${Date.now()}-${Math.random()}`,
       originalId: originalId,
       nome: pokemon.nickname || pokemon.species,
-      nomeFalso: fakeName,
       especie: pokemon.species,
       tipos: tipos,
       hp: pokemon.currentHP !== undefined ? pokemon.currentHP : maxHP,
@@ -6082,6 +6081,7 @@ function App() {
       golpes: pokemon.moves || [],
       habilidades: pokemon.abilities || [],
       isExotic: pokemon.isExotic || false,
+      isNpc: false,
       owner: currentUser?.username,
       // Armazenar atributos totais base para cálculo de fases
       totalAttributes: {
@@ -9243,10 +9243,30 @@ function App() {
                                   <input
                                     type="checkbox"
                                     checked={revealedTrainers[trainer.id] || false}
-                                    onChange={(e) => setRevealedTrainers({
-                                      ...revealedTrainers,
-                                      [trainer.id]: e.target.checked
-                                    })}
+                                    onChange={async (e) => {
+                                      const newRevealedTrainers = {
+                                        ...revealedTrainers,
+                                        [trainer.id]: e.target.checked
+                                      }
+                                      setRevealedTrainers(newRevealedTrainers)
+                                      if (useFirebase) {
+                                        await saveBattleData({
+                                          battleTrainers,
+                                          battlePokemon,
+                                          battleTrainersList,
+                                          battlePokemonList,
+                                          currentTrainerTurn,
+                                          currentPokemonTurn,
+                                          trainerRound,
+                                          pokemonRound,
+                                          pokemonStages,
+                                          trainerStages,
+                                          battlePokemonConditions,
+                                          revealedNpcPokemon,
+                                          revealedTrainers: newRevealedTrainers
+                                        })
+                                      }
+                                    }}
                                     className="w-4 h-4 cursor-pointer"
                                   />
                                   <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -9690,10 +9710,30 @@ function App() {
                                   <input
                                     type="checkbox"
                                     checked={revealedNpcPokemon[pokemon.id] || false}
-                                    onChange={(e) => setRevealedNpcPokemon({
-                                      ...revealedNpcPokemon,
-                                      [pokemon.id]: e.target.checked
-                                    })}
+                                    onChange={async (e) => {
+                                      const newRevealedNpcPokemon = {
+                                        ...revealedNpcPokemon,
+                                        [pokemon.id]: e.target.checked
+                                      }
+                                      setRevealedNpcPokemon(newRevealedNpcPokemon)
+                                      if (useFirebase) {
+                                        await saveBattleData({
+                                          battleTrainers,
+                                          battlePokemon,
+                                          battleTrainersList,
+                                          battlePokemonList,
+                                          currentTrainerTurn,
+                                          currentPokemonTurn,
+                                          trainerRound,
+                                          pokemonRound,
+                                          pokemonStages,
+                                          trainerStages,
+                                          battlePokemonConditions,
+                                          revealedNpcPokemon: newRevealedNpcPokemon,
+                                          revealedTrainers
+                                        })
+                                      }
+                                    }}
                                     className="w-4 h-4 cursor-pointer"
                                   />
                                   <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -21440,12 +21480,8 @@ function App() {
                             )}
                           </div>
                           <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {/* Evasões visíveis apenas para o próprio treinador */}
-                            {trainer.nome === currentUser?.username ? (
-                              <span>Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}</span>
-                            ) : (
-                              <span>Evasões - F: ??? | E: ??? | V: ???</span>
-                            )}
+                            {/* Evasões visíveis para todos */}
+                            <span>Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}</span>
                           </div>
                         </div>
                       ))}
@@ -21478,24 +21514,24 @@ function App() {
                             <div className="flex items-center justify-between">
                               <div className={`font-semibold ${idx === currentPokemonTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
                                 {idx === currentPokemonTurn && '▶ '}
-                                {/* Mostrar nome real se for o dono ou se revelar estiver ativo */}
-                                {(pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? pokemon.nome : (pokemon.nomeFalso || pokemon.nome)}
+                                {/* Mostrar nome real se não for NPC, se for o dono, ou se revelar estiver ativo */}
+                                {(!pokemon.isNpc || pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? pokemon.nome : (pokemon.nomeFalso || pokemon.nome)}
                               </div>
                               <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
                                 Vel: {pokemon.velocidade}
                               </span>
                             </div>
                             <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              {/* Mostrar espécie real se for o dono ou se revelar estiver ativo */}
-                              {(pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? pokemon.especie : '???'}
+                              {/* Mostrar espécie real se não for NPC, se for o dono, ou se revelar estiver ativo */}
+                              {(!pokemon.isNpc || pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? pokemon.especie : '???'}
                               {/* Mostrar HP apenas para o dono */}
                               {pokemon.owner === currentUser?.username && (
                                 <span> | HP: {pokemon.hp}/{pokemon.maxHP}</span>
                               )}
                             </div>
                             <div className={`text-xs flex gap-1 mt-1`}>
-                              {/* Mostrar tipos reais se for o dono ou se revelar estiver ativo */}
-                              {(pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? (
+                              {/* Mostrar tipos reais se não for NPC, se for o dono, ou se revelar estiver ativo */}
+                              {(!pokemon.isNpc || pokemon.owner === currentUser?.username || revealedNpcPokemon[pokemon.id]) ? (
                                 (pokemon.tipos || []).map((tipo, i) => (
                                   <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
                                     {tipo}
@@ -21507,12 +21543,10 @@ function App() {
                                 </span>
                               )}
                             </div>
-                            {/* Evasões - apenas para o dono */}
-                            {pokemon.owner === currentUser?.username && (
-                              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
-                              </div>
-                            )}
+                            {/* Evasões - visíveis para todos */}
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
+                            </div>
 
                             {/* Condições - Editable se for o dono, read-only se não for */}
                             {pokemon.owner === currentUser?.username ? (
