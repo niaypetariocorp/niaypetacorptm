@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, Settings2, Hand, Sigma, Dices, Check, Send } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, RotateCw, Settings2, Hand, Sigma, Dices, Check, Send } from 'lucide-react'
 import AccountDataModal from './AccountDataModal'
 import pokedexData from './pokemonData'
 import GOLPES_DATA_IMPORTED from './golpesData'
@@ -7,6 +7,16 @@ import HABILIDADES_DATA_IMPORTED, { HABILIDADES_NAMES as HABILIDADES_NAMES_IMPOR
 import CARACTERISTICAS_DATA_IMPORTED, { TALENTOS_DATA as TALENTOS_DATA_IMPORTED, TALENTOS_NAMES as TALENTOS_NAMES_IMPORTED } from './caracteristicasETalentosData'
 import POKEMON_ABILITIES from './pokemonAbilities'
 import { generatePokemonMoves } from './pokemonMoveGenerator'
+// Firebase imports
+import {
+  saveTrainerData, loadTrainerData, subscribeToTrainer,
+  saveMestreConfig, loadMestreConfig,
+  saveNpcTrainers, loadNpcTrainers,
+  saveGlobalExoticSpecies, loadGlobalExoticSpecies, subscribeToGlobalExoticSpecies,
+  saveBattleData, loadBattleData, subscribeToBattle,
+  saveChatMessages, loadChatMessages, subscribeToChatMessages,
+  saveInterludioData, loadInterludioData, subscribeToInterludio
+} from './firebaseService'
 
 // Cores dos tipos de Pokémon
 const TYPE_COLORS = {
@@ -1644,10 +1654,7 @@ function App() {
   const [captureForm, setCaptureForm] = useState({ nickname: '', level: 5 })
   const [pokemonToCapture, setPokemonToCapture] = useState(null)
   const [fullPokedexData, setFullPokedexData] = useState([])
-  const [globalExoticSpecies, setGlobalExoticSpecies] = useState(() => {
-    const saved = localStorage.getItem('globalExoticSpecies')
-    return saved ? JSON.parse(saved) : []
-  })
+  const [globalExoticSpecies, setGlobalExoticSpecies] = useState([])
   const [showExoticDataModal, setShowExoticDataModal] = useState(false)
   const [exoticDataForm, setExoticDataForm] = useState({
     dexNumber: '',
@@ -1778,6 +1785,11 @@ function App() {
   const [selectedConquista, setSelectedConquista] = useState(null) // Conquista selecionada para ver detalhes
   const [conquistaEditando, setConquistaEditando] = useState(null) // Conquista sendo editada (ID)
   const [selectedDiarioTrainer, setSelectedDiarioTrainer] = useState('') // Treinador selecionado para ver o diário
+  const [selectedDiarioData, setSelectedDiarioData] = useState(null) // Dados do treinador selecionado para ver diário
+  const [ciclos, setCiclos] = useState([]) // Lista de ciclos concluídos (cada um com verdade e conquistas)
+  const [showFimCicloModal, setShowFimCicloModal] = useState(false) // Modal para encerrar ciclo
+  const [fimCicloVerdade, setFimCicloVerdade] = useState('') // Verdade do ciclo
+  const [selectedCiclo, setSelectedCiclo] = useState(null) // Ciclo selecionado para visualizar
 
   // Estados para Interlúdio
   const [interludioPlayers, setInterludioPlayers] = useState([
@@ -1825,6 +1837,7 @@ function App() {
   // Estados para Visão do Mestre
   const [visaoMestreSection, setVisaoMestreSection] = useState('Perfis') // 'Perfis', 'Pokéloja Config'
   const [selectedTrainer, setSelectedTrainer] = useState(null) // Username do treinador selecionado ou null
+  const [selectedTrainerData, setSelectedTrainerData] = useState(null) // Dados do treinador selecionado carregados do Firebase
   const [expandedTeamPokemon, setExpandedTeamPokemon] = useState(null) // Index do pokémon do time expandido ou null
   const [showCaracTaleModal, setShowCaracTaleModal] = useState(false) // Modal de Características & Talentos
   const [showMochilaModal, setShowMochilaModal] = useState(false) // Modal da Mochila
@@ -2517,56 +2530,31 @@ function App() {
     return matches.map(expression => rollDiceExpression(expression))
   }
 
-  // ==================== FUNÇÕES DE PERSISTÊNCIA ====================
-  // Estas funções facilitam a futura migração para Firebase
-  // Storage Layer - pode ser substituído por Firebase facilmente
+  // ==================== FUNÇÕES DE PERSISTÊNCIA (FIREBASE) ====================
+  // As funções de Firebase são importadas de firebaseService.js
+  // Funções locais mantidas para compatibilidade durante transição
 
-  const saveToStorage = (key, value) => {
-    // TODO: Migração Firebase - substituir por firebase.database().ref(key).set(value)
-    try {
-      localStorage.setItem(key, JSON.stringify(value))
-      return true
-    } catch (error) {
-      console.error('Erro ao salvar no storage:', error)
-      return false
+  // Flag para controlar se estamos usando Firebase ou localStorage
+  const useFirebase = true // Mude para false para voltar ao localStorage
+
+  // Função auxiliar para salvar dados do treinador atual
+  const saveCurrentTrainerData = useCallback(async (data) => {
+    if (!currentUser || currentUser.type !== 'treinador') return
+    if (useFirebase) {
+      await saveTrainerData(currentUser.username, data)
+    } else {
+      localStorage.setItem(`trainer_${currentUser.username}`, JSON.stringify(data))
     }
-  }
+  }, [currentUser])
 
-  const loadFromStorage = (key, defaultValue = null) => {
-    // TODO: Migração Firebase - substituir por firebase.database().ref(key).once('value')
-    try {
-      const item = localStorage.getItem(key)
-      return item ? JSON.parse(item) : defaultValue
-    } catch (error) {
-      console.error('Erro ao carregar do storage:', error)
-      return defaultValue
+  // Função auxiliar para carregar dados de um treinador
+  const loadTrainerDataLocal = async (username) => {
+    if (useFirebase) {
+      return await loadTrainerData(username)
+    } else {
+      const saved = localStorage.getItem(`trainer_${username}`)
+      return saved ? JSON.parse(saved) : null
     }
-  }
-
-  // Função para salvar espécies exóticas globais
-  const saveGlobalExoticSpecies = (species) => {
-    // TODO: Migração Firebase - salvar em firebase.database().ref('globalExoticSpecies')
-    return saveToStorage('globalExoticSpecies', species)
-  }
-
-  // Função para carregar espécies exóticas globais
-  const loadGlobalExoticSpecies = () => {
-    // TODO: Migração Firebase - carregar de firebase.database().ref('globalExoticSpecies')
-    return loadFromStorage('globalExoticSpecies', [])
-  }
-
-  // Função para salvar dados do usuário
-  const saveUserData = (username, userType, data) => {
-    // TODO: Migração Firebase - salvar em firebase.database().ref(`users/${username}`)
-    const key = userType === 'treinador' ? `trainer_${username}` : `npcTrainers_${username}`
-    return saveToStorage(key, data)
-  }
-
-  // Função para carregar dados do usuário
-  const loadUserData = (username, userType) => {
-    // TODO: Migração Firebase - carregar de firebase.database().ref(`users/${username}`)
-    const key = userType === 'treinador' ? `trainer_${username}` : `npcTrainers_${username}`
-    return loadFromStorage(key, null)
   }
 
   // ==================== FIM DAS FUNÇÕES DE PERSISTÊNCIA ====================
@@ -3718,57 +3706,71 @@ function App() {
   }
 
   // Handlers para Account Data
-  const handleDownloadAccountData = () => {
+  const handleDownloadAccountData = async () => {
     if (!currentUser) return
 
     let accountData = null
-    const globalExoticData = localStorage.getItem('globalExoticSpecies')
 
-    if (currentUser.type === 'treinador') {
-      const key = `trainer_${currentUser.username}`
-      const trainerData = localStorage.getItem(key)
+    try {
+      if (currentUser.type === 'treinador') {
+        const trainerData = useFirebase
+          ? await loadTrainerData(currentUser.username)
+          : JSON.parse(localStorage.getItem(`trainer_${currentUser.username}`) || 'null')
 
-      if (trainerData) {
-        const parsedData = JSON.parse(trainerData)
-        // Adicionar globalExoticSpecies aos dados do treinador
-        // parsedData já inclui: userBattleModifiers, userActiveModifiers, mainTeam, pcPokemon, etc
-        const combinedData = {
-          ...parsedData,
-          globalExoticSpecies: globalExoticData ? JSON.parse(globalExoticData) : []
+        if (trainerData) {
+          const exotics = useFirebase
+            ? await loadGlobalExoticSpecies()
+            : JSON.parse(localStorage.getItem('globalExoticSpecies') || '[]')
+
+          const combinedData = {
+            ...trainerData,
+            globalExoticSpecies: exotics || []
+          }
+          accountData = JSON.stringify(combinedData)
         }
-        accountData = JSON.stringify(combinedData)
-      }
-    } else if (currentUser.type === 'mestre') {
-      // Para mestre, combinar dados de mestre_config, npcTrainers e globalExoticSpecies
-      const mestreConfig = localStorage.getItem('mestre_config')
-      const npcTrainersData = localStorage.getItem(`npcTrainers_${currentUser.username}`)
+      } else if (currentUser.type === 'mestre') {
+        const mestreConfig = useFirebase
+          ? await loadMestreConfig()
+          : JSON.parse(localStorage.getItem('mestre_config') || 'null')
 
-      if (mestreConfig || npcTrainersData || globalExoticData) {
-        const combinedData = {
-          mestreConfig: mestreConfig ? JSON.parse(mestreConfig) : {},
-          npcTrainers: npcTrainersData ? JSON.parse(npcTrainersData) : [],
-          globalExoticSpecies: globalExoticData ? JSON.parse(globalExoticData) : []
+        const npcTrainersData = useFirebase
+          ? await loadNpcTrainers(currentUser.username)
+          : JSON.parse(localStorage.getItem(`npcTrainers_${currentUser.username}`) || '[]')
+
+        const exotics = useFirebase
+          ? await loadGlobalExoticSpecies()
+          : JSON.parse(localStorage.getItem('globalExoticSpecies') || '[]')
+
+        if (mestreConfig || npcTrainersData.length > 0 || exotics.length > 0) {
+          const combinedData = {
+            mestreConfig: mestreConfig || {},
+            npcTrainers: npcTrainersData || [],
+            globalExoticSpecies: exotics || []
+          }
+          accountData = JSON.stringify(combinedData)
         }
-        accountData = JSON.stringify(combinedData)
       }
+
+      if (!accountData) {
+        alert('Nenhum dado encontrado para download.')
+        return
+      }
+
+      const blob = new Blob([accountData], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${currentUser.username}_backup.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setShowAccountDataModal(false)
+    } catch (error) {
+      console.error('Erro ao baixar dados:', error)
+      alert('Erro ao baixar dados da conta.')
     }
-
-    if (!accountData) {
-      alert('Nenhum dado encontrado para download.')
-      return
-    }
-
-    const blob = new Blob([accountData], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${currentUser.username}_backup.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    setShowAccountDataModal(false)
   }
 
   const handleUploadAccountData = (e) => {
@@ -3776,19 +3778,22 @@ function App() {
     if (!file || !currentUser) return
 
     const reader = new FileReader()
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target.result)
 
         // Restaurar globalExoticSpecies se existir nos dados
         if (data.globalExoticSpecies) {
-          localStorage.setItem('globalExoticSpecies', JSON.stringify(data.globalExoticSpecies))
+          if (useFirebase) {
+            await saveGlobalExoticSpecies(data.globalExoticSpecies)
+          } else {
+            localStorage.setItem('globalExoticSpecies', JSON.stringify(data.globalExoticSpecies))
+          }
         }
 
         if (currentUser.type === 'treinador') {
-          const key = `trainer_${currentUser.username}`
           // Remover globalExoticSpecies antes de salvar dados do treinador
-          const { globalExoticSpecies, ...trainerData } = data
+          const { globalExoticSpecies: exotics, ...trainerData } = data
 
           // Migrar XP dos Pokémon no time principal
           if (trainerData.mainTeam) {
@@ -3800,11 +3805,19 @@ function App() {
             trainerData.pcPokemon = trainerData.pcPokemon.map(migratePokemonXP)
           }
 
-          localStorage.setItem(key, JSON.stringify(trainerData))
+          if (useFirebase) {
+            await saveTrainerData(currentUser.username, trainerData)
+          } else {
+            localStorage.setItem(`trainer_${currentUser.username}`, JSON.stringify(trainerData))
+          }
         } else if (currentUser.type === 'mestre') {
           // Para mestre, restaurar dados separados
           if (data.mestreConfig) {
-            localStorage.setItem('mestre_config', JSON.stringify(data.mestreConfig))
+            if (useFirebase) {
+              await saveMestreConfig(data.mestreConfig)
+            } else {
+              localStorage.setItem('mestre_config', JSON.stringify(data.mestreConfig))
+            }
           }
           if (data.npcTrainers) {
             // Migrar XP dos Pokémon dos NPCs
@@ -3814,7 +3827,11 @@ function App() {
               }
               return npc
             })
-            localStorage.setItem(`npcTrainers_${currentUser.username}`, JSON.stringify(migratedNPCs))
+            if (useFirebase) {
+              await saveNpcTrainers(currentUser.username, migratedNPCs)
+            } else {
+              localStorage.setItem(`npcTrainers_${currentUser.username}`, JSON.stringify(migratedNPCs))
+            }
           }
         }
 
@@ -5868,18 +5885,18 @@ function App() {
   }
 
   // Função para enviar pokémon NPC para treinador
-  const sendPokemonToTrainer = (trainerUsername) => {
+  const sendPokemonToTrainer = async (trainerUsername) => {
     if (!pokemonToSend || !sendPokemonSpecies || !sendPokemonNature) {
       alert('Por favor, selecione a espécie e a natureza antes de enviar.')
       return
     }
 
-    const key = `trainer_${trainerUsername}`
-    const saved = localStorage.getItem(key)
+    try {
+      const trainerData = useFirebase
+        ? await loadTrainerData(trainerUsername)
+        : JSON.parse(localStorage.getItem(`trainer_${trainerUsername}`) || 'null')
 
-    if (saved) {
-      try {
-        const trainerData = JSON.parse(saved)
+      if (trainerData) {
 
         // Usar espécie e natureza editáveis
         const finalNature = sendPokemonNature
@@ -5973,19 +5990,23 @@ function App() {
         }
 
         // Salvar dados atualizados do treinador
-        localStorage.setItem(key, JSON.stringify(trainerData))
+        if (useFirebase) {
+          await saveTrainerData(trainerUsername, trainerData)
+        } else {
+          localStorage.setItem(`trainer_${trainerUsername}`, JSON.stringify(trainerData))
+        }
 
         // Fechar modal e limpar estado
         setShowSendToTrainerModal(false)
         setPokemonToSend(null)
 
         alert(`Pokémon ${pokemonToSend.species} enviado para ${trainerUsername}!`)
-      } catch (e) {
-        console.error('Erro ao enviar pokémon:', e)
-        alert('Erro ao enviar pokémon para o treinador.')
+      } else {
+        alert('Dados do treinador não encontrados.')
       }
-    } else {
-      alert('Dados do treinador não encontrados.')
+    } catch (e) {
+      console.error('Erro ao enviar pokémon:', e)
+      alert('Erro ao enviar pokémon para o treinador.')
     }
   }
 
@@ -6406,216 +6427,257 @@ function App() {
   }, [])
 
 
-  // Carregar dados do LocalStorage
+  // Carregar dados do Firebase/LocalStorage
   useEffect(() => {
-    if (currentUser?.type === 'treinador') {
-      const key = `trainer_${currentUser.username}`
-      const saved = localStorage.getItem(key)
-      if (saved) {
+    const loadData = async () => {
+      if (currentUser?.type === 'treinador') {
         try {
-          const data = JSON.parse(saved)
-          setLevel(data.level || 1)
-          setImage(data.image || '')
-          setClasses(data.classes || ['', '', '', ''])
-          setAttributes(data.attributes || { saude: 10, ataque: 10, defesa: 10, ataqueEspecial: 10, defesaEspecial: 10, velocidade: 10 })
-          setSkills(data.skills || { saude: [], ataque: [], defesa: [], ataqueEspecial: [], defesaEspecial: [], velocidade: [] })
-          setCurrentHP(data.currentHP || 44)
-          setMainTeam(data.mainTeam || [])
-          setPcPokemon(data.pcPokemon || [])
-          setPokedex(data.pokedex || [])
-          setPokemonedas(data.pokemonedas || 0)
-          setKeyItems(data.keyItems || [])
-          setCustomItems(data.customItems || [])
-          // Migração: converter talentos antigos (strings) para objetos
-          const migratedTalentos = (data.talentosSelected || []).map(tal => {
-            if (typeof tal === 'string') {
-              // Procurar o talento completo nos dados
-              let foundTalento = null
-              Object.values(TALENTOS_DATA).forEach(classeTalentos => {
-                const found = classeTalentos.find(t => t.nome === tal)
-                if (found) foundTalento = found
-              })
-              return foundTalento || { nome: tal, descricao: '', efeito: '', frequencia: '' }
-            }
-            return tal
-          })
+          // Carregar do Firebase
+          const data = useFirebase
+            ? await loadTrainerData(currentUser.username)
+            : JSON.parse(localStorage.getItem(`trainer_${currentUser.username}`) || 'null')
 
-          setCaracteristicasSelected(data.caracteristicasSelected || [])
-          setTalentosSelected(migratedTalentos)
-          setPokemonImages(data.pokemonImages || {})
-          setBadges(data.badges || {
-            Kanto: [false, false, false, false, false, false, false, false, false],
-            Johto: [false, false, false, false, false, false, false, false, false],
-            Hoenn: [false, false, false, false, false, false, false, false, false],
-            Sinnoh: [false, false, false, false, false, false, false, false, false],
-            Unova: [false, false, false, false, false, false, false, false, false, false, false, false],
-            Kalos: [false, false, false, false, false, false, false, false, false]
-          })
-          setEstilizadorBattery(data.estilizadorBattery !== undefined ? data.estilizadorBattery : 10)
-          setEstilizadorPolicialBattery(data.estilizadorPolicialBattery !== undefined ? data.estilizadorPolicialBattery : 30)
-          setThunderStoneActive(data.thunderStoneActive || false)
-          setBolsaTalento(data.bolsaTalento || 0)
-          setOtherCapacities(data.otherCapacities || [])
-          setVivencias(data.vivencias || [])
-          setConquistas(data.conquistas || [])
-          setUserBattleModifiers(data.userBattleModifiers || {})
-          setUserActiveModifiers(data.userActiveModifiers || {})
-          setTalentinhos(data.talentinhos || [])
+          if (data) {
+            setLevel(data.level || 1)
+            setImage(data.image || '')
+            setClasses(data.classes || ['', '', '', ''])
+            setAttributes(data.attributes || { saude: 10, ataque: 10, defesa: 10, ataqueEspecial: 10, defesaEspecial: 10, velocidade: 10 })
+            setSkills(data.skills || { saude: [], ataque: [], defesa: [], ataqueEspecial: [], defesaEspecial: [], velocidade: [] })
+            setCurrentHP(data.currentHP || 44)
+            setMainTeam(data.mainTeam || [])
+            setPcPokemon(data.pcPokemon || [])
+            setPokedex(data.pokedex || [])
+            setPokemonedas(data.pokemonedas || 0)
+            setKeyItems(data.keyItems || [])
+            setCustomItems(data.customItems || [])
+            // Migração: converter talentos antigos (strings) para objetos
+            const migratedTalentos = (data.talentosSelected || []).map(tal => {
+              if (typeof tal === 'string') {
+                // Procurar o talento completo nos dados
+                let foundTalento = null
+                Object.values(TALENTOS_DATA).forEach(classeTalentos => {
+                  const found = classeTalentos.find(t => t.nome === tal)
+                  if (found) foundTalento = found
+                })
+                return foundTalento || { nome: tal, descricao: '', efeito: '', frequencia: '' }
+              }
+              return tal
+            })
+
+            setCaracteristicasSelected(data.caracteristicasSelected || [])
+            setTalentosSelected(migratedTalentos)
+            setPokemonImages(data.pokemonImages || {})
+            setBadges(data.badges || {
+              Kanto: [false, false, false, false, false, false, false, false, false],
+              Johto: [false, false, false, false, false, false, false, false, false],
+              Hoenn: [false, false, false, false, false, false, false, false, false],
+              Sinnoh: [false, false, false, false, false, false, false, false, false],
+              Unova: [false, false, false, false, false, false, false, false, false, false, false, false],
+              Kalos: [false, false, false, false, false, false, false, false, false]
+            })
+            setEstilizadorBattery(data.estilizadorBattery !== undefined ? data.estilizadorBattery : 10)
+            setEstilizadorPolicialBattery(data.estilizadorPolicialBattery !== undefined ? data.estilizadorPolicialBattery : 30)
+            setThunderStoneActive(data.thunderStoneActive || false)
+            setBolsaTalento(data.bolsaTalento || 0)
+            setOtherCapacities(data.otherCapacities || [])
+            setVivencias(data.vivencias || [])
+            setConquistas(data.conquistas || [])
+            setCiclos(data.ciclos || [])
+            setUserBattleModifiers(data.userBattleModifiers || {})
+            setUserActiveModifiers(data.userActiveModifiers || {})
+            setTalentinhos(data.talentinhos || [])
+          }
         } catch (e) {
-          console.error('Erro ao carregar:', e)
+          console.error('Erro ao carregar dados do treinador:', e)
         }
-      }
-      // Definir área inicial como Treinador
-      setCurrentArea('Treinador')
-    } else if (currentUser?.type === 'mestre') {
-      // Carregar configurações do mestre
-      const key = 'mestre_config'
-      const saved = localStorage.getItem(key)
-      if (saved) {
+        // Definir área inicial como Treinador
+        setCurrentArea('Treinador')
+      } else if (currentUser?.type === 'mestre') {
+        // Carregar configurações do mestre
         try {
-          const data = JSON.parse(saved)
-          setHiddenPokelojaItems(data.hiddenPokelojaItems || [])
-          setNpcPokemon(data.npcPokemon || [])
-          setNpcPokemonList(data.npcPokemonList || [])
-          setBattleTrainers(data.battleTrainers || [])
-          setBattlePokemon(data.battlePokemon || [])
-          setBattleTrainersList(data.battleTrainersList || [])
-          setBattlePokemonList(data.battlePokemonList || [])
-          setCurrentTrainerTurn(data.currentTrainerTurn || 0)
-          setCurrentPokemonTurn(data.currentPokemonTurn || 0)
-          setTrainerRound(data.trainerRound || 1)
-          setPokemonRound(data.pokemonRound || 1)
-          setNpcConditions(data.npcConditions || {})
-          setExpandedNpcCards(data.expandedNpcCards || [])
-          setRevealedNpcPokemon(data.revealedNpcPokemon || {})
-          setRevealedTrainers(data.revealedTrainers || {})
-          setPokemonStages(data.pokemonStages || {})
-          setTrainerStages(data.trainerStages || {})
-          setBattlePokemonConditions(data.battlePokemonConditions || {})
-          setBattleTrainerConditions(data.battleTrainerConditions || {})
-          setUserBattleModifiers(data.userBattleModifiers || {})
-          setUserActiveModifiers(data.userActiveModifiers || {})
+          const data = useFirebase
+            ? await loadMestreConfig()
+            : JSON.parse(localStorage.getItem('mestre_config') || 'null')
+
+          if (data) {
+            setHiddenPokelojaItems(data.hiddenPokelojaItems || [])
+            setNpcPokemon(data.npcPokemon || [])
+            setNpcPokemonList(data.npcPokemonList || [])
+            setBattleTrainers(data.battleTrainers || [])
+            setBattlePokemon(data.battlePokemon || [])
+            setBattleTrainersList(data.battleTrainersList || [])
+            setBattlePokemonList(data.battlePokemonList || [])
+            setCurrentTrainerTurn(data.currentTrainerTurn || 0)
+            setCurrentPokemonTurn(data.currentPokemonTurn || 0)
+            setTrainerRound(data.trainerRound || 1)
+            setPokemonRound(data.pokemonRound || 1)
+            setNpcConditions(data.npcConditions || {})
+            setExpandedNpcCards(data.expandedNpcCards || [])
+            setRevealedNpcPokemon(data.revealedNpcPokemon || {})
+            setRevealedTrainers(data.revealedTrainers || {})
+            setPokemonStages(data.pokemonStages || {})
+            setTrainerStages(data.trainerStages || {})
+            setBattlePokemonConditions(data.battlePokemonConditions || {})
+            setBattleTrainerConditions(data.battleTrainerConditions || {})
+            setUserBattleModifiers(data.userBattleModifiers || {})
+            setUserActiveModifiers(data.userActiveModifiers || {})
+          }
         } catch (e) {
           console.error('Erro ao carregar configurações do mestre:', e)
         }
       }
     }
+
+    loadData()
   }, [currentUser])
 
-  // Salvar no LocalStorage
+  // Salvar no Firebase/LocalStorage
   useEffect(() => {
-    if (currentUser?.type === 'treinador') {
-      const key = `trainer_${currentUser.username}`
-      const data = {
-        level, image, classes, attributes, skills, currentHP,
-        mainTeam, pcPokemon, pokedex,
-        pokemonedas, keyItems, customItems,
-        caracteristicasSelected, talentosSelected,
-        pokemonImages, badges,
-        estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive,
-        bolsaTalento, otherCapacities,
-        vivencias, conquistas,
-        userBattleModifiers, userActiveModifiers,
-        talentinhos
-      }
-      try {
-        localStorage.setItem(key, JSON.stringify(data))
-      } catch (error) {
-        console.error('Erro ao salvar no localStorage:', error)
-        if (error.name === 'QuotaExceededError') {
-          alert('Espaço de armazenamento cheio! Remova algumas imagens de pokémon ou use URLs ao invés de arquivos locais.')
+    const saveData = async () => {
+      if (currentUser?.type === 'treinador') {
+        const data = {
+          level, image, classes, attributes, skills, currentHP,
+          mainTeam, pcPokemon, pokedex,
+          pokemonedas, keyItems, customItems,
+          caracteristicasSelected, talentosSelected,
+          pokemonImages, badges,
+          estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive,
+          bolsaTalento, otherCapacities,
+          vivencias, conquistas, ciclos,
+          userBattleModifiers, userActiveModifiers,
+          talentinhos
+        }
+        try {
+          if (useFirebase) {
+            await saveTrainerData(currentUser.username, data)
+          } else {
+            localStorage.setItem(`trainer_${currentUser.username}`, JSON.stringify(data))
+          }
+        } catch (error) {
+          console.error('Erro ao salvar dados do treinador:', error)
+          if (error.name === 'QuotaExceededError') {
+            alert('Espaço de armazenamento cheio! Remova algumas imagens de pokémon ou use URLs ao invés de arquivos locais.')
+          }
+        }
+      } else if (currentUser?.type === 'mestre') {
+        const data = {
+          hiddenPokelojaItems,
+          npcPokemon,
+          npcPokemonList,
+          battleTrainers,
+          battlePokemon,
+          battleTrainersList,
+          battlePokemonList,
+          currentTrainerTurn,
+          currentPokemonTurn,
+          trainerRound,
+          pokemonRound,
+          npcConditions,
+          expandedNpcCards,
+          revealedNpcPokemon,
+          revealedTrainers,
+          pokemonStages,
+          trainerStages,
+          battlePokemonConditions,
+          battleTrainerConditions,
+          userBattleModifiers,
+          userActiveModifiers
+        }
+        try {
+          if (useFirebase) {
+            await saveMestreConfig(data)
+          } else {
+            localStorage.setItem('mestre_config', JSON.stringify(data))
+          }
+        } catch (error) {
+          console.error('Erro ao salvar configurações do mestre:', error)
         }
       }
-    } else if (currentUser?.type === 'mestre') {
-      const key = 'mestre_config'
-      const data = {
-        hiddenPokelojaItems,
-        npcPokemon,
-        npcPokemonList,
-        battleTrainers,
-        battlePokemon,
-        battleTrainersList,
-        battlePokemonList,
-        currentTrainerTurn,
-        currentPokemonTurn,
-        trainerRound,
-        pokemonRound,
-        npcConditions,
-        expandedNpcCards,
-        revealedNpcPokemon,
-        revealedTrainers,
-        pokemonStages,
-        trainerStages,
-        battlePokemonConditions,
-        battleTrainerConditions,
-        userBattleModifiers,
-        userActiveModifiers
-      }
-      try {
-        localStorage.setItem(key, JSON.stringify(data))
-      } catch (error) {
-        console.error('Erro ao salvar configurações do mestre:', error)
-      }
     }
-  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, pokemonImages, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, userBattleModifiers, userActiveModifiers, talentinhos, hiddenPokelojaItems, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, pokemonStages, trainerStages, battlePokemonConditions, battleTrainerConditions, currentUser])
+
+    // Debounce para evitar muitas escritas
+    const timeoutId = setTimeout(saveData, 500)
+    return () => clearTimeout(timeoutId)
+  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, pokemonImages, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, ciclos, userBattleModifiers, userActiveModifiers, talentinhos, hiddenPokelojaItems, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, pokemonStages, trainerStages, battlePokemonConditions, battleTrainerConditions, currentUser])
 
   // Salvar dados de batalha no mestre_config mesmo quando for treinador
   useEffect(() => {
-    if (currentUser?.type === 'treinador') {
-      const key = 'mestre_config'
-      const saved = localStorage.getItem(key)
-      let mestreData = {}
-
-      if (saved) {
+    const saveBattleDataFromTrainer = async () => {
+      if (currentUser?.type === 'treinador') {
         try {
-          mestreData = JSON.parse(saved)
-        } catch (e) {
-          console.error('Erro ao carregar mestre_config:', e)
+          let mestreData = {}
+
+          if (useFirebase) {
+            mestreData = await loadMestreConfig() || {}
+          } else {
+            const saved = localStorage.getItem('mestre_config')
+            if (saved) {
+              mestreData = JSON.parse(saved)
+            }
+          }
+
+          // Atualizar apenas os dados de batalha
+          const updatedData = {
+            ...mestreData,
+            battleTrainers,
+            battlePokemon,
+            battleTrainersList,
+            battlePokemonList,
+            battlePokemonConditions,
+            pokemonStages,
+            userBattleModifiers,
+            userActiveModifiers,
+            revealedNpcPokemon
+          }
+
+          if (useFirebase) {
+            await saveMestreConfig(updatedData)
+          } else {
+            localStorage.setItem('mestre_config', JSON.stringify(updatedData))
+          }
+        } catch (error) {
+          console.error('Erro ao salvar dados de batalha:', error)
         }
       }
-
-      // Atualizar apenas os dados de batalha
-      const updatedData = {
-        ...mestreData,
-        battleTrainers,
-        battlePokemon,
-        battleTrainersList,
-        battlePokemonList,
-        battlePokemonConditions,
-        pokemonStages,
-        userBattleModifiers,
-        userActiveModifiers,
-        revealedNpcPokemon
-      }
-
-      try {
-        localStorage.setItem(key, JSON.stringify(updatedData))
-      } catch (error) {
-        console.error('Erro ao salvar dados de batalha:', error)
-      }
     }
+
+    const timeoutId = setTimeout(saveBattleDataFromTrainer, 500)
+    return () => clearTimeout(timeoutId)
   }, [battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, battlePokemonConditions, pokemonStages, userBattleModifiers, userActiveModifiers, revealedNpcPokemon, currentUser])
 
-  // Carregar dados de batalha do localStorage na inicialização
+  // Carregar dados de batalha na inicialização
   useEffect(() => {
-    if (currentUser) {
-      const key = currentUser.type === 'mestre' ? 'mestre_config' : `treinador_${currentUser.username}`
-      const saved = localStorage.getItem(key)
-
-      if (saved) {
+    const loadBattleDataOnInit = async () => {
+      if (currentUser) {
         try {
-          const data = JSON.parse(saved)
+          let data = null
 
-          // Restaurar estados de batalha se existirem
-          if (data.pokemonStages) setPokemonStages(data.pokemonStages)
-          if (data.userBattleModifiers) setUserBattleModifiers(data.userBattleModifiers)
-          if (data.userActiveModifiers) setUserActiveModifiers(data.userActiveModifiers)
-          if (data.revealedNpcPokemon) setRevealedNpcPokemon(data.revealedNpcPokemon)
+          if (useFirebase) {
+            data = currentUser.type === 'mestre'
+              ? await loadMestreConfig()
+              : await loadTrainerData(currentUser.username)
+          } else {
+            const key = currentUser.type === 'mestre' ? 'mestre_config' : `treinador_${currentUser.username}`
+            const saved = localStorage.getItem(key)
+            if (saved) {
+              data = JSON.parse(saved)
+            }
+          }
+
+          if (data) {
+            // Restaurar estados de batalha se existirem
+            if (data.pokemonStages) setPokemonStages(data.pokemonStages)
+            if (data.userBattleModifiers) setUserBattleModifiers(data.userBattleModifiers)
+            if (data.userActiveModifiers) setUserActiveModifiers(data.userActiveModifiers)
+            if (data.revealedNpcPokemon) setRevealedNpcPokemon(data.revealedNpcPokemon)
+          }
         } catch (e) {
           console.error('Erro ao carregar dados de batalha:', e)
         }
       }
     }
+
+    loadBattleDataOnInit()
   }, [currentUser])
 
   // Fechar modais com ESC
@@ -6642,26 +6704,128 @@ function App() {
     }
   }, [level, attributes.saude, currentUser])
 
-  // Persistir NPCs no localStorage
+  // Persistir NPCs no Firebase/LocalStorage
   useEffect(() => {
-    if (currentUser) {
-      const saved = localStorage.getItem(`npcTrainers_${currentUser.username}`)
-      if (saved) {
-        setNpcTrainers(JSON.parse(saved))
+    const loadNpcs = async () => {
+      if (currentUser) {
+        try {
+          if (useFirebase) {
+            const npcs = await loadNpcTrainers(currentUser.username)
+            if (npcs && npcs.length > 0) {
+              setNpcTrainers(npcs)
+            }
+          } else {
+            const saved = localStorage.getItem(`npcTrainers_${currentUser.username}`)
+            if (saved) {
+              setNpcTrainers(JSON.parse(saved))
+            }
+          }
+        } catch (e) {
+          console.error('Erro ao carregar NPCs:', e)
+        }
       }
     }
+    loadNpcs()
   }, [currentUser])
 
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(`npcTrainers_${currentUser.username}`, JSON.stringify(npcTrainers))
+    const saveNpcs = async () => {
+      if (currentUser) {
+        try {
+          if (useFirebase) {
+            await saveNpcTrainers(currentUser.username, npcTrainers)
+          } else {
+            localStorage.setItem(`npcTrainers_${currentUser.username}`, JSON.stringify(npcTrainers))
+          }
+        } catch (e) {
+          console.error('Erro ao salvar NPCs:', e)
+        }
+      }
     }
+
+    const timeoutId = setTimeout(saveNpcs, 500)
+    return () => clearTimeout(timeoutId)
   }, [npcTrainers, currentUser])
 
-  // Salvar espécies exóticas globais no localStorage
+  // Salvar espécies exóticas globais no Firebase/LocalStorage
   useEffect(() => {
-    localStorage.setItem('globalExoticSpecies', JSON.stringify(globalExoticSpecies))
+    const saveExotics = async () => {
+      try {
+        if (useFirebase) {
+          await saveGlobalExoticSpecies(globalExoticSpecies)
+        } else {
+          localStorage.setItem('globalExoticSpecies', JSON.stringify(globalExoticSpecies))
+        }
+      } catch (e) {
+        console.error('Erro ao salvar espécies exóticas:', e)
+      }
+    }
+
+    const timeoutId = setTimeout(saveExotics, 500)
+    return () => clearTimeout(timeoutId)
   }, [globalExoticSpecies])
+
+  // Carregar espécies exóticas globais na inicialização
+  useEffect(() => {
+    const loadExotics = async () => {
+      try {
+        if (useFirebase) {
+          const exotics = await loadGlobalExoticSpecies()
+          if (exotics && exotics.length > 0) {
+            setGlobalExoticSpecies(exotics)
+          }
+        } else {
+          const saved = localStorage.getItem('globalExoticSpecies')
+          if (saved) {
+            setGlobalExoticSpecies(JSON.parse(saved))
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao carregar espécies exóticas:', e)
+      }
+    }
+    loadExotics()
+  }, [])
+
+  // Carregar dados do treinador selecionado para visualizar diário
+  useEffect(() => {
+    const loadDiarioTrainerData = async () => {
+      if (selectedDiarioTrainer) {
+        try {
+          const data = useFirebase
+            ? await loadTrainerData(selectedDiarioTrainer)
+            : JSON.parse(localStorage.getItem(`trainer_${selectedDiarioTrainer}`) || 'null')
+          setSelectedDiarioData(data)
+        } catch (e) {
+          console.error('Erro ao carregar dados do treinador para diário:', e)
+          setSelectedDiarioData(null)
+        }
+      } else {
+        setSelectedDiarioData(null)
+      }
+    }
+    loadDiarioTrainerData()
+  }, [selectedDiarioTrainer])
+
+  // Carregar dados do treinador selecionado para Visão do Mestre
+  useEffect(() => {
+    const fetchSelectedTrainerData = async () => {
+      if (selectedTrainer) {
+        try {
+          const data = useFirebase
+            ? await loadTrainerData(selectedTrainer)
+            : JSON.parse(localStorage.getItem(`trainer_${selectedTrainer}`) || 'null')
+          setSelectedTrainerData(data)
+        } catch (e) {
+          console.error('Erro ao carregar dados do treinador:', e)
+          setSelectedTrainerData(null)
+        }
+      } else {
+        setSelectedTrainerData(null)
+      }
+    }
+    fetchSelectedTrainerData()
+  }, [selectedTrainer])
 
   // Scroll automático para última mensagem do chat
   useEffect(() => {
@@ -10916,23 +11080,8 @@ function App() {
     // Filtrar apenas contas de treinadores
     const treinadores = users.filter(u => u.type === 'treinador')
 
-    // Função para carregar dados de um treinador do localStorage
-    const loadTrainerData = (username) => {
-      const key = `trainer_${username}`
-      const saved = localStorage.getItem(key)
-      if (saved) {
-        try {
-          return JSON.parse(saved)
-        } catch (e) {
-          console.error('Erro ao carregar dados do treinador:', e)
-          return null
-        }
-      }
-      return null
-    }
-
-    // Carregar dados do treinador selecionado
-    const trainerData = selectedTrainer ? loadTrainerData(selectedTrainer) : null
+    // Usar dados do treinador carregados pelo useEffect
+    const trainerData = selectedTrainerData
 
     // Função para calcular HP máximo do pokémon
     const calculatePokemonMaxHP = (pokemon) => {
@@ -11606,22 +11755,22 @@ function App() {
                           </div>
                           <div className="col-span-1 flex flex-col items-center justify-center gap-1">
                             <button
-                              onClick={() => {
-                                if (index > 0) {
-                                  const key = `trainer_${selectedTrainer}`
-                                  const saved = localStorage.getItem(key)
-                                  if (saved) {
-                                    const data = JSON.parse(saved)
-                                    const items = [...data.customItems]
-                                    // Trocar posição com o item anterior
-                                    const temp = items[index]
-                                    items[index] = items[index - 1]
-                                    items[index - 1] = temp
-                                    data.customItems = items
-                                    localStorage.setItem(key, JSON.stringify(data))
-                                    // Atualizar estado
-                                    setTrainerData(data)
+                              onClick={async () => {
+                                if (index > 0 && trainerData) {
+                                  const items = [...trainerData.customItems]
+                                  // Trocar posição com o item anterior
+                                  const temp = items[index]
+                                  items[index] = items[index - 1]
+                                  items[index - 1] = temp
+                                  const updatedData = { ...trainerData, customItems: items }
+                                  // Salvar no Firebase/localStorage
+                                  if (useFirebase) {
+                                    await saveTrainerData(selectedTrainer, updatedData)
+                                  } else {
+                                    localStorage.setItem(`trainer_${selectedTrainer}`, JSON.stringify(updatedData))
                                   }
+                                  // Atualizar estado
+                                  setSelectedTrainerData(updatedData)
                                 }
                               }}
                               disabled={index === 0}
@@ -11637,22 +11786,22 @@ function App() {
                               ▲
                             </button>
                             <button
-                              onClick={() => {
-                                if (index < trainerData.customItems.length - 1) {
-                                  const key = `trainer_${selectedTrainer}`
-                                  const saved = localStorage.getItem(key)
-                                  if (saved) {
-                                    const data = JSON.parse(saved)
-                                    const items = [...data.customItems]
-                                    // Trocar posição com o próximo item
-                                    const temp = items[index]
-                                    items[index] = items[index + 1]
-                                    items[index + 1] = temp
-                                    data.customItems = items
-                                    localStorage.setItem(key, JSON.stringify(data))
-                                    // Atualizar estado
-                                    setTrainerData(data)
+                              onClick={async () => {
+                                if (index < trainerData.customItems.length - 1 && trainerData) {
+                                  const items = [...trainerData.customItems]
+                                  // Trocar posição com o próximo item
+                                  const temp = items[index]
+                                  items[index] = items[index + 1]
+                                  items[index + 1] = temp
+                                  const updatedData = { ...trainerData, customItems: items }
+                                  // Salvar no Firebase/localStorage
+                                  if (useFirebase) {
+                                    await saveTrainerData(selectedTrainer, updatedData)
+                                  } else {
+                                    localStorage.setItem(`trainer_${selectedTrainer}`, JSON.stringify(updatedData))
                                   }
+                                  // Atualizar estado
+                                  setSelectedTrainerData(updatedData)
                                 }
                               }}
                               disabled={index === trainerData.customItems.length - 1}
@@ -17806,9 +17955,6 @@ function App() {
                                 newItems[idx] = newItems[idx - 1]
                                 newItems[idx - 1] = temp
                                 setCustomItems(newItems)
-                                const userData = JSON.parse(localStorage.getItem(`trainer_${currentUser.username}`))
-                                userData.customItems = newItems
-                                localStorage.setItem(`trainer_${currentUser.username}`, JSON.stringify(userData))
                               }}
                               disabled={idx === 0}
                               className={`text-sm font-bold ${idx === 0 ? 'text-gray-400 cursor-not-allowed' : (darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700')}`}
@@ -17824,9 +17970,6 @@ function App() {
                                 newItems[idx] = newItems[idx + 1]
                                 newItems[idx + 1] = temp
                                 setCustomItems(newItems)
-                                const userData = JSON.parse(localStorage.getItem(`trainer_${currentUser.username}`))
-                                userData.customItems = newItems
-                                localStorage.setItem(`trainer_${currentUser.username}`, JSON.stringify(userData))
                               }}
                               disabled={idx === customItems.length - 1}
                               className={`text-sm font-bold ${idx === customItems.length - 1 ? 'text-gray-400 cursor-not-allowed' : (darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700')}`}
@@ -18249,9 +18392,8 @@ function App() {
 
   // ÁREA DA POKÉLOJA
   if (currentUser.type === 'treinador' && currentArea === 'Pokéloja') {
-    // Carregar itens ocultos pelo mestre
-    const mestreConfig = localStorage.getItem('mestre_config')
-    const hiddenItems = mestreConfig ? JSON.parse(mestreConfig).hiddenPokelojaItems || [] : []
+    // Itens ocultos são carregados do estado hiddenPokelojaItems que é sincronizado com Firebase
+    const hiddenItems = hiddenPokelojaItems || []
 
     return (
       <>
@@ -20331,19 +20473,30 @@ function App() {
                   Diário da Jornada
                 </h3>
                 {!selectedDiarioTrainer && (
-                  <button
-                    onClick={() => {
-                      setConquistaEditando(null)
-                      setNovaConquistaNome('')
-                      setNovaConquistaLevelUp(false)
-                      setNovaConquistaDescricao('')
-                      setShowNovaConquistaModal(true)
-                    }}
-                    className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-6 py-3 rounded-lg hover:from-amber-700 hover:to-yellow-700 font-semibold flex items-center gap-2 shadow-lg"
-                  >
-                    <Plus size={20} />
-                    Conquistas
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setConquistaEditando(null)
+                        setNovaConquistaNome('')
+                        setNovaConquistaLevelUp(false)
+                        setNovaConquistaDescricao('')
+                        setShowNovaConquistaModal(true)
+                      }}
+                      className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white px-6 py-3 rounded-lg hover:from-amber-700 hover:to-yellow-700 font-semibold flex items-center gap-2 shadow-lg"
+                    >
+                      <Plus size={20} />
+                      Conquistas
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFimCicloVerdade('')
+                        setShowFimCicloModal(true)
+                      }}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 font-semibold flex items-center gap-2 shadow-lg"
+                    >
+                      Fim do Ciclo
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -20364,30 +20517,84 @@ function App() {
                 </select>
               </div>
 
-              {/* Linha do Tempo */}
-              <div className="relative py-12">
+              {/* Linha do Tempo com Ciclos */}
+              <div className="flex gap-6">
+                {/* Coluna de Ciclos - à esquerda */}
                 {(() => {
-                  // Determinar quais conquistas exibir
-                  let conquistasToDisplay = conquistas
-
-                  if (selectedDiarioTrainer) {
-                    // Carregar conquistas do treinador selecionado do localStorage
-                    const trainerData = JSON.parse(localStorage.getItem(`trainer_${selectedDiarioTrainer}`))
-                    conquistasToDisplay = trainerData?.conquistas || []
+                  // Determinar quais ciclos exibir
+                  let ciclosToDisplay = ciclos
+                  if (selectedDiarioTrainer && selectedDiarioData) {
+                    ciclosToDisplay = selectedDiarioData?.ciclos || []
                   }
 
+                  if (ciclosToDisplay.length === 0) return null
+
                   return (
-                    <>
-                      {/* Ponto Inicial */}
-                      <div className="relative mb-16">
-                        <div className="flex items-center justify-center">
-                          <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
-                            <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              Qual o nome do meu neto?
-                            </p>
+                    <div className="flex flex-col gap-3 pt-12 min-w-[120px]">
+                      <p className={`text-sm font-bold ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>Ciclos</p>
+                      {ciclosToDisplay.map((ciclo, index) => (
+                        <div key={ciclo.id} className="flex items-center gap-1">
+                          <button
+                            onClick={() => setSelectedCiclo(ciclo)}
+                            className={`px-3 py-2 rounded-l-lg text-sm font-semibold transition-all hover:scale-105 ${
+                              darkMode
+                                ? 'bg-purple-900 hover:bg-purple-800 text-purple-200 border border-purple-700 border-r-0'
+                                : 'bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-300 border-r-0'
+                            }`}
+                            title={ciclo.verdade}
+                          >
+                            {ciclo.verdade.length > 12 ? ciclo.verdade.substring(0, 12) + '...' : ciclo.verdade}
+                          </button>
+                          {!selectedDiarioTrainer && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (confirm(`Desfazer o ciclo "${ciclo.verdade}"? As conquistas voltarão para a linha do tempo principal.`)) {
+                                  // Restaurar conquistas do ciclo para a linha do tempo
+                                  setConquistas([...conquistas, ...ciclo.conquistas])
+                                  // Remover o ciclo da lista
+                                  setCiclos(ciclos.filter(c => c.id !== ciclo.id))
+                                }
+                              }}
+                              className={`px-2 py-2 rounded-r-lg text-sm transition-all hover:scale-105 ${
+                                darkMode
+                                  ? 'bg-purple-900 hover:bg-red-700 text-purple-200 border border-purple-700 border-l-0'
+                                  : 'bg-purple-100 hover:bg-red-200 text-purple-800 border border-purple-300 border-l-0'
+                              }`}
+                              title="Desfazer fim de ciclo"
+                            >
+                              <RotateCw size={14} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+
+                {/* Linha do Tempo */}
+                <div className="relative py-12 flex-1">
+                  {(() => {
+                    // Determinar quais conquistas exibir
+                    let conquistasToDisplay = conquistas
+
+                    if (selectedDiarioTrainer && selectedDiarioData) {
+                      // Carregar conquistas do treinador selecionado
+                      conquistasToDisplay = selectedDiarioData?.conquistas || []
+                    }
+
+                    return (
+                      <>
+                        {/* Ponto Inicial */}
+                        <div className="relative mb-16">
+                          <div className="flex items-center justify-center">
+                            <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
+                              <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                Qual o nome do meu neto?
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
                       {/* Linha vertical - só até antes do ponto final */}
                       {conquistasToDisplay.length > 0 && (
@@ -20465,19 +20672,20 @@ function App() {
                         </div>
                       ))}
 
-                      {/* Ponto Final */}
-                      <div className="relative mt-8">
-                        <div className="flex items-center justify-center">
-                          <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
-                            <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              Acordei do coma?
-                            </p>
+                        {/* Ponto Final */}
+                        <div className="relative mt-8">
+                          <div className="flex items-center justify-center">
+                            <div className={`${darkMode ? 'bg-gray-700 border-gray-500' : 'bg-white border-gray-400'} border-4 rounded-full px-6 py-3 shadow-lg z-10`}>
+                              <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                Acordei do coma?
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </>
-                  )
-                })()}
+                      </>
+                    )
+                  })()}
+                </div>
               </div>
             </div>
           )}
@@ -20740,6 +20948,140 @@ function App() {
                   <button
                     onClick={() => setSelectedConquista(null)}
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 font-semibold"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Fim do Ciclo */}
+        {showFimCicloModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowFimCicloModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-lg w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Fim do Ciclo
+                  </h3>
+                  <button onClick={() => setShowFimCicloModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Ao encerrar o ciclo, todas as conquistas atuais serão arquivadas e a linha do tempo será limpa para um novo começo.
+                </p>
+
+                <div className="mb-6">
+                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Verdade <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={fimCicloVerdade}
+                    onChange={(e) => setFimCicloVerdade(e.target.value)}
+                    className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                    placeholder="Escreva a verdade deste ciclo..."
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowFimCicloModal(false)}
+                    className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!fimCicloVerdade.trim()) {
+                        alert('A Verdade é obrigatória!')
+                        return
+                      }
+                      if (conquistas.length === 0) {
+                        alert('Não há conquistas para arquivar!')
+                        return
+                      }
+
+                      // Criar novo ciclo com as conquistas atuais
+                      const novoCiclo = {
+                        id: Date.now(),
+                        verdade: fimCicloVerdade.trim(),
+                        conquistas: [...conquistas],
+                        dataFim: new Date().toISOString()
+                      }
+
+                      // Adicionar ciclo à lista e limpar conquistas
+                      setCiclos([...ciclos, novoCiclo])
+                      setConquistas([])
+                      setShowFimCicloModal(false)
+                      setFimCicloVerdade('')
+                    }}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 font-semibold"
+                  >
+                    Encerrar Ciclo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Visualizar Ciclo */}
+        {selectedCiclo && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedCiclo(null)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {selectedCiclo.verdade}
+                  </h3>
+                  <button onClick={() => setSelectedCiclo(null)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <p className={`mb-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Encerrado em: {new Date(selectedCiclo.dataFim).toLocaleDateString('pt-BR')}
+                </p>
+
+                <div className="space-y-4">
+                  <h4 className={`font-bold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Conquistas ({selectedCiclo.conquistas.length})
+                  </h4>
+                  {selectedCiclo.conquistas.map((conquista) => (
+                    <div
+                      key={conquista.id}
+                      className={`p-4 rounded-lg ${
+                        conquista.levelUp
+                          ? 'bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900'
+                          : darkMode
+                            ? 'bg-gray-700 text-white'
+                            : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-bold">{conquista.nome}</span>
+                        {conquista.levelUp && (
+                          <span className="text-xs px-2 py-1 bg-yellow-600 text-white rounded">Level Up!</span>
+                        )}
+                      </div>
+                      {conquista.descricao && (
+                        <p className={`text-sm ${conquista.levelUp ? 'text-gray-800' : darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {conquista.descricao}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={() => setSelectedCiclo(null)}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 font-semibold"
                   >
                     Fechar
                   </button>
@@ -21046,16 +21388,25 @@ function App() {
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
                 {/* Seção do Treinador */}
                 <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 mb-4`}>
-                  <button
-                    onClick={() => setSelectedTeamPokemon(null)}
-                    className={`w-full text-left p-3 rounded-lg transition-colors font-bold ${
-                      !selectedTeamPokemon
-                        ? darkMode ? 'bg-blue-700 border-2 border-blue-500' : 'bg-blue-200 border-2 border-blue-500'
-                        : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'
-                    }`}
-                  >
-                    {currentUser?.username || 'Treinador'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedTeamPokemon(null)}
+                      className={`flex-1 text-left p-3 rounded-lg transition-colors font-bold ${
+                        !selectedTeamPokemon
+                          ? darkMode ? 'bg-blue-700 border-2 border-blue-500' : 'bg-blue-200 border-2 border-blue-500'
+                          : darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      {currentUser?.username || 'Treinador'}
+                    </button>
+                    <button
+                      onClick={() => sendTrainerToBattle()}
+                      className="p-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
+                      title="Enviar para Batalha Treinador Pkm"
+                    >
+                      <PlusCircle size={18} />
+                    </button>
+                  </div>
 
                   {!selectedTeamPokemon && (
                     <div className="mt-4 space-y-3">
