@@ -3610,97 +3610,135 @@ function App() {
   }
 
   const adjustTrainerStage = (trainerId, attribute, delta) => {
-    setTrainerStages(prev => {
-      const current = prev[trainerId] || {
-        ataque: 0,
-        ataqueEspecial: 0,
-        defesa: 0,
-        defesaEspecial: 0,
-        velocidade: 0,
-        precisao: 0
-      }
-      const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
+    const current = trainerStages[trainerId] || {
+      ataque: 0,
+      ataqueEspecial: 0,
+      defesa: 0,
+      defesaEspecial: 0,
+      velocidade: 0,
+      precisao: 0
+    }
+    const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
 
-      const newStages = {
-        ...prev,
-        [trainerId]: { ...current, [attribute]: newValue }
-      }
+    const newTrainerStages = {
+      ...trainerStages,
+      [trainerId]: { ...current, [attribute]: newValue }
+    }
 
-      // Atualizar evasões no battleTrainersList se for defesa, defesaEspecial ou velocidade
-      if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
-        setBattleTrainersList(prevList => prevList.map(trainer => {
-          if (trainer.id === trainerId && trainer.baseAttributes) {
-            const stages = newStages[trainerId]
-            const defesaMultiplier = getStageMultiplier(stages.defesa)
-            const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
-            const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
+    setTrainerStages(newTrainerStages)
 
-            const defesaAdjusted = Math.floor(trainer.baseAttributes.defesa * defesaMultiplier)
-            const defesaEspecialAdjusted = Math.floor(trainer.baseAttributes.defesaEspecial * defesaEspecialMultiplier)
-            const velocidadeAdjusted = Math.floor(trainer.baseAttributes.velocidade * velocidadeMultiplier)
+    // Atualizar evasões no battleTrainersList se for defesa, defesaEspecial ou velocidade
+    let newBattleTrainersList = battleTrainersList
+    if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
+      newBattleTrainersList = battleTrainersList.map(trainer => {
+        if (trainer.id === trainerId && trainer.baseAttributes) {
+          const stages = newTrainerStages[trainerId]
+          const defesaMultiplier = getStageMultiplier(stages.defesa)
+          const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
+          const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
 
-            return {
-              ...trainer,
-              evasaoFisica: Math.floor(defesaAdjusted / 5),
-              evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
-              evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
-            }
+          const defesaAdjusted = Math.floor(trainer.baseAttributes.defesa * defesaMultiplier)
+          const defesaEspecialAdjusted = Math.floor(trainer.baseAttributes.defesaEspecial * defesaEspecialMultiplier)
+          const velocidadeAdjusted = Math.floor(trainer.baseAttributes.velocidade * velocidadeMultiplier)
+
+          return {
+            ...trainer,
+            evasaoFisica: Math.floor(defesaAdjusted / 5),
+            evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
+            evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
           }
-          return trainer
-        }))
-      }
+        }
+        return trainer
+      })
+      setBattleTrainersList(newBattleTrainersList)
+    }
 
-      return newStages
-    })
+    // Salvar no Firebase imediatamente
+    if (useFirebase) {
+      saveBattleData({
+        battleTrainers,
+        battlePokemon,
+        battleTrainersList: newBattleTrainersList,
+        battlePokemonList,
+        currentTrainerTurn,
+        currentPokemonTurn,
+        trainerRound,
+        pokemonRound,
+        pokemonStages,
+        trainerStages: newTrainerStages,
+        battlePokemonConditions,
+        revealedNpcPokemon,
+        revealedTrainers
+      })
+    }
   }
 
   const adjustPokemonStage = (pokemonId, attribute, delta) => {
-    setPokemonStages(prev => {
-      const current = prev[pokemonId] || {
-        ataque: 0,
-        ataqueEspecial: 0,
-        defesa: 0,
-        defesaEspecial: 0,
-        velocidade: 0,
-        precisao: 0
+    const current = pokemonStages[pokemonId] || {
+      ataque: 0,
+      ataqueEspecial: 0,
+      defesa: 0,
+      defesaEspecial: 0,
+      velocidade: 0,
+      precisao: 0
+    }
+
+    const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
+
+    const newPokemonStages = {
+      ...pokemonStages,
+      [pokemonId]: {
+        ...current,
+        [attribute]: newValue
       }
+    }
 
-      const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
+    setPokemonStages(newPokemonStages)
 
-      const newStages = {
-        ...prev,
-        [pokemonId]: {
-          ...current,
-          [attribute]: newValue
-        }
-      }
+    // Atualizar evasões no battlePokemonList se for defesa, defesaEspecial ou velocidade
+    let newBattlePokemonList = battlePokemonList
+    if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
+      newBattlePokemonList = battlePokemonList.map(pokemon => {
+        if (pokemon.originalId === pokemonId && pokemon.totalAttributes) {
+          const stages = newPokemonStages[pokemonId]
+          const defesaMultiplier = getStageMultiplier(stages.defesa)
+          const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
+          const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
 
-      // Atualizar evasões no battlePokemonList se for defesa, defesaEspecial ou velocidade
-      if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
-        setBattlePokemonList(prevList => prevList.map(pokemon => {
-          if (pokemon.originalId === pokemonId && pokemon.totalAttributes) {
-            const stages = newStages[pokemonId]
-            const defesaMultiplier = getStageMultiplier(stages.defesa)
-            const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
-            const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
+          const defesaAdjusted = Math.floor(pokemon.totalAttributes.defesa * defesaMultiplier)
+          const defesaEspecialAdjusted = Math.floor(pokemon.totalAttributes.defesaEspecial * defesaEspecialMultiplier)
+          const velocidadeAdjusted = Math.floor(pokemon.totalAttributes.velocidade * velocidadeMultiplier)
 
-            const defesaAdjusted = Math.floor(pokemon.totalAttributes.defesa * defesaMultiplier)
-            const defesaEspecialAdjusted = Math.floor(pokemon.totalAttributes.defesaEspecial * defesaEspecialMultiplier)
-            const velocidadeAdjusted = Math.floor(pokemon.totalAttributes.velocidade * velocidadeMultiplier)
-
-            return {
-              ...pokemon,
-              evasaoFisica: Math.floor(defesaAdjusted / 5),
-              evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
-              evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
-            }
+          return {
+            ...pokemon,
+            evasaoFisica: Math.floor(defesaAdjusted / 5),
+            evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
+            evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
           }
-          return pokemon
-        }))
-      }
+        }
+        return pokemon
+      })
+      setBattlePokemonList(newBattlePokemonList)
+    }
 
-      return newStages
-    })
+    // Salvar no Firebase imediatamente
+    if (useFirebase) {
+      saveBattleData({
+        battleTrainers,
+        battlePokemon,
+        battleTrainersList,
+        battlePokemonList: newBattlePokemonList,
+        currentTrainerTurn,
+        currentPokemonTurn,
+        trainerRound,
+        pokemonRound,
+        pokemonStages: newPokemonStages,
+        trainerStages,
+        battlePokemonConditions,
+        revealedNpcPokemon,
+        revealedTrainers
+      })
+    }
   }
 
   const handleShowModifierDetails = (modifier) => {
@@ -6747,26 +6785,40 @@ function App() {
     const loadBattleDataOnInit = async () => {
       if (currentUser) {
         try {
-          let data = null
-
+          // Carregar dados de batalha global do Firebase
           if (useFirebase) {
-            data = currentUser.type === 'mestre'
-              ? await loadMestreConfig()
-              : await loadTrainerData(currentUser.username)
+            const battleData = await loadBattleData()
+            if (battleData) {
+              if (Array.isArray(battleData.battleTrainers)) setBattleTrainers(battleData.battleTrainers)
+              if (Array.isArray(battleData.battlePokemon)) setBattlePokemon(battleData.battlePokemon)
+              if (Array.isArray(battleData.battleTrainersList)) setBattleTrainersList(battleData.battleTrainersList)
+              if (Array.isArray(battleData.battlePokemonList)) setBattlePokemonList(battleData.battlePokemonList)
+              if (battleData.currentTrainerTurn !== undefined) setCurrentTrainerTurn(battleData.currentTrainerTurn)
+              if (battleData.currentPokemonTurn !== undefined) setCurrentPokemonTurn(battleData.currentPokemonTurn)
+              if (battleData.trainerRound !== undefined) setTrainerRound(battleData.trainerRound)
+              if (battleData.pokemonRound !== undefined) setPokemonRound(battleData.pokemonRound)
+              if (battleData.pokemonStages) setPokemonStages(battleData.pokemonStages)
+              if (battleData.trainerStages) setTrainerStages(battleData.trainerStages)
+              if (battleData.battlePokemonConditions) setBattlePokemonConditions(battleData.battlePokemonConditions)
+              if (battleData.revealedNpcPokemon) setRevealedNpcPokemon(battleData.revealedNpcPokemon)
+              if (battleData.revealedTrainers) setRevealedTrainers(battleData.revealedTrainers)
+            }
           } else {
+            // Fallback para localStorage
+            let data = null
             const key = currentUser.type === 'mestre' ? 'mestre_config' : `treinador_${currentUser.username}`
             const saved = localStorage.getItem(key)
             if (saved) {
               data = JSON.parse(saved)
             }
-          }
 
-          if (data) {
-            // Restaurar estados de batalha se existirem
-            if (data.pokemonStages) setPokemonStages(data.pokemonStages)
-            if (data.userBattleModifiers) setUserBattleModifiers(data.userBattleModifiers)
-            if (data.userActiveModifiers) setUserActiveModifiers(data.userActiveModifiers)
-            if (data.revealedNpcPokemon) setRevealedNpcPokemon(data.revealedNpcPokemon)
+            if (data) {
+              // Restaurar estados de batalha se existirem
+              if (data.pokemonStages) setPokemonStages(data.pokemonStages)
+              if (data.userBattleModifiers) setUserBattleModifiers(data.userBattleModifiers)
+              if (data.userActiveModifiers) setUserActiveModifiers(data.userActiveModifiers)
+              if (data.revealedNpcPokemon) setRevealedNpcPokemon(data.revealedNpcPokemon)
+            }
           }
         } catch (e) {
           console.error('Erro ao carregar dados de batalha:', e)
@@ -6983,11 +7035,11 @@ function App() {
     // Inscrever para receber atualizações em tempo real da batalha
     const unsubscribe = subscribeToBattle((data) => {
       if (data) {
-        // Atualizar estados de batalha apenas se os dados mudaram
-        if (data.battleTrainers) setBattleTrainers(data.battleTrainers)
-        if (data.battlePokemon) setBattlePokemon(data.battlePokemon)
-        if (data.battleTrainersList) setBattleTrainersList(data.battleTrainersList)
-        if (data.battlePokemonList) setBattlePokemonList(data.battlePokemonList)
+        // Atualizar estados de batalha (usar Array.isArray para arrays vazios)
+        if (Array.isArray(data.battleTrainers)) setBattleTrainers(data.battleTrainers)
+        if (Array.isArray(data.battlePokemon)) setBattlePokemon(data.battlePokemon)
+        if (Array.isArray(data.battleTrainersList)) setBattleTrainersList(data.battleTrainersList)
+        if (Array.isArray(data.battlePokemonList)) setBattlePokemonList(data.battlePokemonList)
         if (data.currentTrainerTurn !== undefined) setCurrentTrainerTurn(data.currentTrainerTurn)
         if (data.currentPokemonTurn !== undefined) setCurrentPokemonTurn(data.currentPokemonTurn)
         if (data.trainerRound !== undefined) setTrainerRound(data.trainerRound)
