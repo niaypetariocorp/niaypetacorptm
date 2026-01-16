@@ -33,7 +33,7 @@
       "Poder da Natureza",
       "Quebra Crânio",
       "Resistência",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Ivyssauro": {
@@ -70,7 +70,7 @@
       "Poder da Natureza",
       "Quebra Crânio",
       "Resistência",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Venussauro": {
@@ -108,7 +108,7 @@
       "Poder da Natureza",
       "Quebra Crânio",
       "Resistência",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Charmander": {
@@ -140,7 +140,7 @@
       "Soco Focalizado",
       "Tambor de Pança",
       "Ultraje",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Charmeleon": {
@@ -170,7 +170,7 @@
       "Soco Focalizado",
       "Tambor de Pança",
       "Ultraje",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Charizard": {
@@ -203,7 +203,7 @@
       "Soco Focalizado",
       "Tambor de Pança",
       "Ultraje",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Squirtle": {
@@ -239,7 +239,7 @@
       "Pulso do Dragão",
       "Refresco",
       "Revelação",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Wartortle": {
@@ -274,7 +274,7 @@
       "Pulso do Dragão",
       "Refresco",
       "Revelação",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Blastoise": {
@@ -309,7 +309,7 @@
       "Pulso do Dragão",
       "Refresco",
       "Revelação",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Caterpie": {
@@ -428,7 +428,7 @@
       "Fúria dos Pássaros",
       "Perseguição",
       "Revelação",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Pidgeotto": {
@@ -456,7 +456,7 @@
       "Fúria dos Pássaros",
       "Perseguição",
       "Revelação",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Pidgeot": {
@@ -484,7 +484,7 @@
       "Fúria dos Pássaros",
       "Perseguição",
       "Revelação",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Rattata": {
@@ -516,7 +516,7 @@
       "Reversão",
       "Sacrifício",
       "Último Recurso",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Raticate": {
@@ -545,7 +545,7 @@
       "Reversão",
       "Sacrifício",
       "Último Recurso",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Spearow": {
@@ -576,7 +576,7 @@
       "Corte Falso",
       "Dança das Penas",
       "Lâmina de Vento",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Fearow": {
@@ -608,7 +608,7 @@
       "Corte Falso",
       "Dança das Penas",
       "Lâmina de Vento",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Ekans": {
@@ -646,7 +646,7 @@
       "Perseguição",
       "Porrada",
       "Presa Venenosa",
-      "Troca."
+      "Troca"
     ]
   },
   "Arbok": {
@@ -681,7 +681,7 @@
       "Perseguição",
       "Porrada",
       "Presa Venenosa",
-      "Troca."
+      "Troca"
     ]
   },
   "Pikachu": {
@@ -720,7 +720,7 @@
       "Reversão",
       "Soco do Trovão",
       "Tapa Duplo",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Raichu": {
@@ -742,12 +742,15 @@
       "Reversão",
       "Soco do Trovão",
       "Tapa Duplo",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Sandshrew": {
     "naturais": {
-      "1": ["Arranhão", "Defesa Fechada"],
+      "1": [
+        "Arranhão",
+        "Defesa Fechada"
+      ],
       "3": "Ataque de Areia",
       "5": "Picada",
       "7": "Rolagem",
@@ -778,7 +781,7 @@
       "Contra-Ataque",
       "Estaca de Gelo",
       "Lanças de Gelo",
-      "Maldição."
+      "Maldição"
     ]
   },
   "Sandslash": {
@@ -800,21 +803,21 @@
       "53": "Terremoto"
     },
     "herdados": [
-      "Emboscada", 
-      "Garra Esmagadora", 
-      "Lapidação", 
-      "Resistência", 
-      "Mangual", 
+      "Emboscada",
+      "Garra Esmagadora",
+      "Lapidação",
+      "Resistência",
+      "Mangual",
       "Metalizar Garra",
-      "Contra-Ataque", 
-      "Escalada", 
+      "Contra-Ataque",
+      "Escalada",
       "Fertilizante",
       "Giro Rápido",
-      "Tiro de Lama",  
-      "Amnésia", 
-      "Contra-Ataque", 
-      "Estaca de Gelo", 
-      "Lanças de Gelo", 
+      "Tiro de Lama",
+      "Amnésia",
+      "Contra-Ataque",
+      "Estaca de Gelo",
+      "Lanças de Gelo",
       "Maldição"
     ]
   },
@@ -850,7 +853,7 @@
       "Lapidação",
       "Pelas Costas",
       "Resistência",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Nidorina": {
@@ -881,7 +884,7 @@
       "Perseguição",
       "Quebra Crânio",
       "Resistência",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Nidoqueen": {
@@ -905,7 +908,7 @@
       "Perseguição",
       "Quebra Crânio",
       "Resistência",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Nidorino": {
@@ -936,7 +939,7 @@
       "Lapidação",
       "Pelas Costas",
       "Resistência",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Nidoking": {
@@ -960,7 +963,7 @@
       "Lapidação",
       "Pelas Costas",
       "Resistência",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Clefairy": {
@@ -999,7 +1002,7 @@
       "Pulso de Cura",
       "Reserva",
       "Saltitar",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Clefable": {
@@ -1018,11 +1021,32 @@
       "Pulso de Cura",
       "Reserva",
       "Saltitar",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Vulpix": {
-    "naturais": {},
+    "naturais": {
+      "1": "Brasa",
+      "4": "Abanar Rabo",
+      "7": "Rugido",
+      "9": "Doçura",
+      "10": "Ataque Rápido",
+      "12": "Raio de Confusão",
+      "15": "Espiral de Fogo",
+      "18": "Retribuição",
+      "20": "Fogo-Fátuo",
+      "23": "Ataque Furtivo",
+      "26": "Feitiço",
+      "28": "Rajada de Chamas",
+      "31": "Extrassensorial",
+      "34": "Salvaguarda",
+      "36": "Lança-Chamas",
+      "39": "Selo",
+      "42": "Explosão de Fogo",
+      "44": "Rancor",
+      "47": "Cativar",
+      "50": "Inferno"
+    },
     "herdados": [
       "Ataque Furtivo",
       "Cativar",
@@ -1036,10 +1060,10 @@
       "Ódio",
       "Poder Secreto",
       "Troca de Forças",
-      "Uivo. Os Vulpix Campestres adicionam os seguintes Golpes à lista: Bombardeio de Chamas",
+      "Uivo",
+      "Bombardeio de Chamas",
       "Liofilização",
-      "Onda de Calor. Os Vulpix Árticos adicionam os seguintes Golpes à lista: Bis",
-      "Força Lunar."
+      "Onda de Calor"
     ]
   },
   "Ninetales": {
@@ -1057,10 +1081,10 @@
       "Ódio",
       "Poder Secreto",
       "Troca de Forças",
-      "Uivo. Os Ninetales Campestres adicionam os seguintes Golpes à lista: Bombardeio de Chamas",
+      "Uivo",
       "Liofilização",
-      "Onda de Calor. Os Ninetales Árticos adicionam os seguintes Golpes à lista: Bis",
-      "Força Lunar."
+      "Onda de Calor",
+      "Bombardeio de Chamas"
     ]
   },
   "Jiggypuff": {
@@ -1099,7 +1123,7 @@
       "Pulso de Cura",
       "Réquiem",
       "Sonambulismo",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Wiggytuff": {
@@ -1117,7 +1141,7 @@
       "Pulso de Cura",
       "Réquiem",
       "Sonambulismo",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Zubat": {
@@ -1152,7 +1176,7 @@
       "Maldição",
       "Perseguição",
       "Rajada de Vento",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Golbat": {
@@ -1186,7 +1210,7 @@
       "Maldição",
       "Perseguição",
       "Rajada de Vento",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Oddish": {
@@ -1220,7 +1244,7 @@
       "Fotossíntese",
       "Mangual",
       "Poder da Natureza",
-      "Poder Secreto."
+      "Poder Secreto"
     ]
   },
   "Gloom": {
@@ -1250,7 +1274,7 @@
       "Fotossíntese",
       "Mangual",
       "Poder da Natureza",
-      "Poder Secreto."
+      "Poder Secreto"
     ]
   },
   "Vileplume": {
@@ -1269,7 +1293,7 @@
       "Fotossíntese",
       "Mangual",
       "Poder da Natureza",
-      "Poder Secreto."
+      "Poder Secreto"
     ]
   },
   "Paras": {
@@ -1305,7 +1329,7 @@
       "Perseguição",
       "Picada",
       "Resistência",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Parasect": {
@@ -1340,7 +1364,7 @@
       "Perseguição",
       "Picada",
       "Resistência",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Venonat": {
@@ -1373,7 +1397,7 @@
       "Pó Irritante",
       "Poder Secreto",
       "Sinalizador",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Venomoth": {
@@ -1404,11 +1428,28 @@
       "Pó Irritante",
       "Poder Secreto",
       "Sinalizador",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Diglett": {
-    "naturais": {},
+    "naturais": {
+      "1": [
+        "Arranhão",
+        "Ataque de areia"
+      ],
+      "4": "Rosnado",
+      "7": "Assustar",
+      "10": "Ataque de Lama",
+      "14": "Magnitude",
+      "18": "Tremor",
+      "22": "Pelas Costas",
+      "25": "Bomba de Lama",
+      "28": "Poder Terreno",
+      "31": "Cavar",
+      "35": "Retalhar",
+      "39": "Terremoto",
+      "43": "Fissura"
+    },
     "herdados": [
       "Ataque Furtivo",
       "Cativar",
@@ -1422,14 +1463,32 @@
       "Ódio",
       "Poder Secreto",
       "Troca de Forças",
-      "Uivo. Os Diglett Não Minerais adicionam os seguintes Golpes à lista: Assustar",
+      "Uivo",
       "Bomba de Lama",
       "Guincho",
-      "Ruído. Os Diglett Minerais adicionam Açoite à lista."
+      "Ruído",
+      "Assustar"
     ]
   },
   "Dugtrio": {
-    "naturais": {},
+    "naturais": {
+      "1": [
+        "Ataque de areia",
+        "Metalizar Garra"
+      ],
+      "4": "Rosnado",
+      "7": "Assustar",
+      "10": "Ataque de Lama",
+      "14": "Magnitude",
+      "18": "Tremor",
+      "22": "Pelas Costas",
+      "25": "Bomba de Lama",
+      "28": "Poder Terreno",
+      "31": "Cavar",
+      "35": "Cabeça de Ferro",
+      "39": "Terremoto",
+      "43": "Fissura"
+    },
     "herdados": [
       "Ataque Furtivo",
       "Cativar",
@@ -1443,14 +1502,33 @@
       "Ódio",
       "Poder Secreto",
       "Troca de Forças",
-      "Uivo. Os Dugtrio Não Minerais adicionam os seguintes Golpes à lista: Assustar",
+      "Uivo",
+      "Assustar",
       "Bomba de Lama",
       "Guincho",
-      "Ruído. Os Dugtrio Minerais adicionam Açoite à lista."
+      "Ruído"
     ]
   },
   "Meowth": {
-    "naturais": {},
+    "naturais": {
+      "1": [
+        "Arranhão",
+        "Rosnado"
+      ],
+      "6": "Mordida",
+      "9": "Fingimento",
+      "14": "Garras Furiosas",
+      "17": "Guincho",
+      "22": "Ataque Furtivo",
+      "25": "Provocação",
+      "30": "Dia do Pagamento",
+      "33": "Retalhar",
+      "38": "Conspiração",
+      "41": "Garantia",
+      "46": "Cativar",
+      "49": "Emboscada",
+      "50": "Finta"
+    },
     "herdados": [
       "Amnésia",
       "Auxílio",
@@ -1460,16 +1538,31 @@
       "Hipnose",
       "Mangual",
       "Ódio",
-      "Trapaça. Os Meowth Domésticos adicionam os seguintes Golpes à lista: Abanar Rabo",
+      "Trapaça",
+      "Abanar Rabo",
       "Cauda de Ferro",
       "Farejar",
-      "Último Recurso. Os Meowth Selvagens adicionam os seguintes Golpes à lista: Adeus",
-      "Adulação",
-      "Cobiça."
+      "Último Recurso"
     ]
   },
   "Persian": {
-    "naturais": {},
+    "naturais": {
+      "1": "Estrela Cadente",
+      "6": "Mordida",
+      "9": "Fingimento",
+      "14": "Garras Furiosas",
+      "17": "Guincho",
+      "22": "Ataque Furtivo",
+      "25": "Provocação",
+      "32": "Joia do Poder",
+      "33": "Retalhar",
+      "37": "Conspiração",
+      "44": "Garantia",
+      "49": "Garantia",
+      "56": "Cativar",
+      "61": "Emboscada",
+      "65": "Finta"
+    },
     "herdados": [
       "Amnésia",
       "Auxílio",
@@ -1479,12 +1572,11 @@
       "Hipnose",
       "Mangual",
       "Ódio",
-      "Trapaça. Os Persian Domésticos adicionam os seguintes Golpes à lista: Abanar Rabo",
+      "Trapaça",
+      "Abanar Rabo",
       "Cauda de Ferro",
       "Farejar",
-      "Último Recurso. Os Persian Selvagens adicionam os seguintes Golpes à lista: Adeus",
-      "Adulação",
-      "Cobiça."
+      "Último Recurso"
     ]
   },
   "Psyduck": {
@@ -1523,7 +1615,7 @@
       "Refresco",
       "Revelação",
       "Simplificador",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Golduck": {
@@ -1558,7 +1650,7 @@
       "Refresco",
       "Revelação",
       "Simplificador",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Mankey": {
@@ -1597,7 +1689,7 @@
       "Reversão",
       "Soco Focalizado",
       "Sonambulismo",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Primeape": {
@@ -1631,7 +1723,7 @@
       "Reversão",
       "Soco Focalizado",
       "Sonambulismo",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Growlithe": {
@@ -1671,7 +1763,7 @@
       "Onda de Calor",
       "Pancada",
       "Uivo",
-      "Última Chama."
+      "Última Chama"
     ]
   },
   "Arcanine": {
@@ -1692,7 +1784,7 @@
       "Onda de Calor",
       "Pancada",
       "Uivo",
-      "Última Chama."
+      "Última Chama"
     ]
   },
   "Poliwag": {
@@ -1724,7 +1816,7 @@
       "Refresco",
       "Resistência",
       "Saltitar",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Poliwhirl": {
@@ -1755,7 +1847,7 @@
       "Refresco",
       "Resistência",
       "Saltitar",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Poliwrath": {
@@ -1778,7 +1870,7 @@
       "Refresco",
       "Resistência",
       "Saltitar",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Abra": {
@@ -1797,7 +1889,7 @@
       "Transmissibilidade",
       "Troca de Defesas",
       "Troca de Habilidades",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Kadabra": {
@@ -1829,7 +1921,7 @@
       "Transmissibilidade",
       "Troca de Defesas",
       "Troca de Habilidades",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Alakazam": {
@@ -1861,7 +1953,7 @@
       "Transmissibilidade",
       "Troca de Defesas",
       "Troca de Habilidades",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Machop": {
@@ -1901,7 +1993,7 @@
       "Soco de Fogo",
       "Soco de Gelo",
       "Soco do Trovão",
-      "Transferência."
+      "Transferência"
     ]
   },
   "Machoke": {
@@ -1937,7 +2029,7 @@
       "Soco de Fogo",
       "Soco de Gelo",
       "Soco do Trovão",
-      "Transferência."
+      "Transferência"
     ]
   },
   "Machamp": {
@@ -1974,7 +2066,7 @@
       "Soco de Fogo",
       "Soco de Gelo",
       "Soco do Trovão",
-      "Transferência."
+      "Transferência"
     ]
   },
   "Bellsprout": {
@@ -2009,7 +2101,7 @@
       "Gigadreno",
       "Sanguessuga",
       "Semente Bala",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Weepinbell": {
@@ -2043,7 +2135,7 @@
       "Gigadreno",
       "Sanguessuga",
       "Semente Bala",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Victreebel": {
@@ -2067,7 +2159,7 @@
       "Gigadreno",
       "Sanguessuga",
       "Semente Bala",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Tentacool": {
@@ -2100,7 +2192,7 @@
       "Nevoeiro",
       "Nocaute",
       "Raio Aurora",
-      "Raio de Confusão."
+      "Raio de Confusão"
     ]
   },
   "Tentacruel": {
@@ -2133,11 +2225,30 @@
       "Nevoeiro",
       "Nocaute",
       "Raio Aurora",
-      "Raio de Confusão."
+      "Raio de Confusão"
     ]
   },
   "Geodude": {
-    "naturais": {},
+    "naturais": {
+      "1": [
+        "Defesa Fechada",
+        "Investida"
+      ],
+      "4": "Esporte Terrestre",
+      "6": "Polimento",
+      "10": "Rolagem",
+      "12": "Magnitude",
+      "16": "Arremesso de Pedras",
+      "18": "Destruição",
+      "22": "Tremor",
+      "24": "Autodestruição",
+      "28": "Pedras Soltas",
+      "30": "Detonação",
+      "34": "Terremoto",
+      "36": "Explosão",
+      "40": "Faca de Dois Gumes",
+      "42": "Obelisco"
+    },
     "herdados": [
       "Automação",
       "Bloqueio",
@@ -2145,15 +2256,30 @@
       "Escalada",
       "Maldição",
       "Mangual",
-      "Resistência. Os Geodudes não Magnéticos adicionam os seguintes Golpes à lista: Braço Martelo",
+      "Resistência",
       "Megassoco",
-      "Soco Focalizado. Os Geodudes Magnéticos adicionam os seguintes Golpes à lista: Contra-Ataque",
-      "Guincho",
-      "Magnetização."
+      "Braço Martelo",
+      "Soco Focalizado",
+      "Megassoco"
     ]
   },
   "Graveler": {
-    "naturais": {},
+    "naturais": {
+      "4": "Esporte Terrestre",
+      "6": "Polimento",
+      "10": "Rolagem",
+      "12": "Magnitude",
+      "16": "Arremesso de Pedras",
+      "18": "Destruição",
+      "22": "Tremor",
+      "24": "Autodestruição",
+      "30": "Pedras Soltas",
+      "34": "Detonação",
+      "40": "Terremoto",
+      "44": "Explosão",
+      "50": "Faca de Dois Gumes",
+      "54": "Obelisco"
+    },
     "herdados": [
       "Automação",
       "Bloqueio",
@@ -2161,15 +2287,31 @@
       "Escalada",
       "Maldição",
       "Mangual",
-      "Resistência. Os Graveler não Magnéticos adicionam os seguintes Golpes à lista: Braço Martelo",
+      "Resistência",
       "Megassoco",
-      "Soco Focalizado. Os Graveler Magnéticos adicionam os seguintes Golpes à lista: Contra-Ataque",
-      "Guincho",
-      "Magnetização."
+      "Braço Martelo",
+      "Soco Focalizado",
+      "Megassoco"
     ]
   },
   "Golem": {
-    "naturais": {},
+    "naturais": {
+      "4": "Esporte Terrestre",
+      "6": "Polimento",
+      "10": "Rolagem",
+      "12": "Magnitude",
+      "16": "Arremesso de Pedras",
+      "18": "Destruição",
+      "22": "Tremor",
+      "24": "Autodestruição",
+      "30": "Pedras Soltas",
+      "34": "Detonação",
+      "40": "Terremoto",
+      "44": "Explosão",
+      "50": "Faca de Dois Gumes",
+      "54": "Obelisco",
+      "60": "Peso Pesado"
+    },
     "herdados": [
       "Automação",
       "Bloqueio",
@@ -2177,11 +2319,11 @@
       "Escalada",
       "Maldição",
       "Mangual",
-      "Resistência. Os Golem não Magnéticos adicionam os seguintes Golpes à lista: Braço Martelo",
+      "Resistência",
       "Megassoco",
-      "Soco Focalizado. Os Golem Magnéticos adicionam os seguintes Golpes à lista: Contra-Ataque",
-      "Guincho",
-      "Magnetização."
+      "Braço Martelo",
+      "Soco Focalizado",
+      "Megassoco"
     ]
   },
   "Ponyta": {
@@ -2214,7 +2356,7 @@
       "Faca de Dois Gumes",
       "Hipnose",
       "Rasteira",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Rapidash": {
@@ -2245,7 +2387,7 @@
       "Faca de Dois Gumes",
       "Hipnose",
       "Rasteira",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Slowpoke": {
@@ -2280,7 +2422,7 @@
       "Ronco",
       "Sala das Maravilhas",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Slowbro": {
@@ -2312,7 +2454,7 @@
       "Ronco",
       "Sala das Maravilhas",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Magnemite": {
@@ -2344,7 +2486,7 @@
       "Maldição",
       "Mangual",
       "Resistência",
-      "Revelação."
+      "Revelação"
     ]
   },
   "Magneton": {
@@ -2373,7 +2515,7 @@
       "Maldição",
       "Mangual",
       "Resistência",
-      "Revelação."
+      "Revelação"
     ]
   },
   "Farfectch’d": {
@@ -2414,7 +2556,7 @@
       "Revelação",
       "Simplificador",
       "Ventania",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Doduo": {
@@ -2448,7 +2590,7 @@
       "Garantia",
       "Mangual",
       "Nevoeiro",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Dodrio": {
@@ -2479,7 +2621,7 @@
       "Garantia",
       "Mangual",
       "Nevoeiro",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Seel": {
@@ -2519,7 +2661,7 @@
       "Pulso d’Água",
       "Réquiem",
       "Sinalizador",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Dewgong": {
@@ -2560,11 +2702,30 @@
       "Pulso d’Água",
       "Réquiem",
       "Sinalizador",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Grimer": {
-    "naturais": {},
+    "naturais": {
+      "1": [
+        "Gás Venenoso",
+        "Tapa"
+      ],
+      "4": "Endurecer",
+      "7": "Ataque de Lama",
+      "12": "Desabilitar",
+      "15": "Lama",
+      "17": "Bomba de Lama",
+      "21": "Minimizar",
+      "26": "Lançamento",
+      "29": "Bomba de Lodo",
+      "32": "Onda de Lama",
+      "37": "Guincho",
+      "40": "Sujeira",
+      "43": "Armadura Ácida",
+      "46": "Arroto",
+      "48": "Lembrança"
+    },
     "herdados": [
       "Careta",
       "Engolir",
@@ -2573,17 +2734,31 @@
       "Maldição",
       "Olhar Paralisante",
       "Selo",
-      "Sombra Traiçoeira. Os Grimer da Poluição adicionam os seguintes Golpes à lista: Bomba Ácida",
+      "Sombra Traiçoeira",
       "Lambida",
       "Nevoeiro",
-      "Soco Sombrio. Os Grimer do Lixo adicionam os seguintes Golpes à lista: Fumaça",
-      "Garantia",
-      "Ódio",
-      "Perseguição."
+      "Soco Sombrio",
+      "Bomba Ácida"
     ]
   },
   "Muk": {
-    "naturais": {},
+    "naturais": {
+      "1": "Intensificar Veneno",
+      "4": "Endurecer",
+      "7": "Ataque de Lama",
+      "12": "Desabilitar",
+      "15": "Lama",
+      "17": "Bomba de Lama",
+      "21": "Minimizar",
+      "26": "Lançamento",
+      "29": "Bomba de Lodo",
+      "32": "Onda de Lama",
+      "37": "Guincho",
+      "40": "Sujeira",
+      "46": "Armadura Ácida",
+      "52": "Arroto",
+      "57": "Lembrança"
+    },
     "herdados": [
       "Careta",
       "Engolir",
@@ -2592,13 +2767,11 @@
       "Maldição",
       "Olhar Paralisante",
       "Selo",
-      "Sombra Traiçoeira. Os Muk da Poluição adicionam os seguintes Golpes à lista: Bomba Ácida",
+      "Sombra Traiçoeira",
       "Lambida",
       "Nevoeiro",
-      "Soco Sombrio. Os Muk do Lixo adicionam os seguintes Golpes à lista: Fumaça",
-      "Garantia",
-      "Ódio",
-      "Perseguição."
+      "Soco Sombrio",
+      "Bomba Ácida"
     ]
   },
   "Shellder": {
@@ -2635,7 +2808,7 @@
       "Lanças de Gelo",
       "Pulso d’Água",
       "Rajada de Bolhas",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Cloyster": {
@@ -2656,7 +2829,7 @@
       "Lanças de Gelo",
       "Pulso d’Água",
       "Rajada de Bolhas",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Gastly": {
@@ -2692,7 +2865,7 @@
       "Réquiem",
       "Soco de Fogo",
       "Soco de Gelo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Haunter": {
@@ -2725,7 +2898,7 @@
       "Réquiem",
       "Soco de Fogo",
       "Soco de Gelo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Gengar": {
@@ -2758,7 +2931,7 @@
       "Réquiem",
       "Soco de Fogo",
       "Soco de Gelo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Onix": {
@@ -2796,7 +2969,7 @@
       "Mangual",
       "Pedras Soltas",
       "Peso Pesado",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Drowzee": {
@@ -2901,7 +3074,7 @@
       "Poder Antigo",
       "Porrada",
       "Resistência",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Kingler": {
@@ -2932,7 +3105,7 @@
       "Poder Antigo",
       "Porrada",
       "Resistência",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Voltorb": {
@@ -2962,7 +3135,7 @@
       "Reciclagem",
       "Refresco",
       "Rolagem",
-      "Troca de Velocidades."
+      "Troca de Velocidades"
     ]
   },
   "Electrode": {
@@ -2988,7 +3161,7 @@
       "Reciclagem",
       "Refresco",
       "Rolagem",
-      "Troca de Velocidades."
+      "Troca de Velocidades"
     ]
   },
   "Exeggcute": {
@@ -3025,11 +3198,17 @@
       "Poder da Natureza",
       "Tempestade de Folhas",
       "Troca de Forças",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Exeggutor": {
-    "naturais": {},
+    "naturais": {
+      "1": "Pisotear",
+      "17": "Psicochoque",
+      "27": "Ovo Bomba",
+      "37": "Martelo de Madeira",
+      "47": "Tempestade de Folhas"
+    },
     "herdados": [
       "Bloqueio",
       "Campo Gramado",
@@ -3044,7 +3223,7 @@
       "Poder da Natureza",
       "Tempestade de Folhas",
       "Troca de Forças",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Cubone": {
@@ -3076,11 +3255,27 @@
       "Quebra Crânio",
       "Réquiem",
       "Resistência",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Marowak": {
-    "naturais": {},
+    "naturais": {
+      "3": "Abanar Rabo",
+      "7": "Bastão Ósseo",
+      "11": "Cabeçada",
+      "13": "Encarar",
+      "17": "Focar Energia",
+      "21": "Bumerangue Ósseo",
+      "23": "Raiva",
+      "27": "Corte Falso",
+      "33": "Açoite",
+      "37": "Lançamento",
+      "43": "Cólera",
+      "49": "Esforço",
+      "53": "Faca de Dois Gumes",
+      "59": "Retaliação",
+      "65": "Sabre Ósseo"
+    },
     "herdados": [
       "Cabeça de Ferro",
       "Chute Duplo",
@@ -3091,7 +3286,7 @@
       "Quebra Crânio",
       "Réquiem",
       "Resistência",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Hitmonlee": {
@@ -3124,7 +3319,7 @@
       "Resistência",
       "Soco Bala",
       "Soco Rápido",
-      "Supervoadora."
+      "Supervoadora"
     ]
   },
   "Hitmonchan": {
@@ -3161,7 +3356,7 @@
       "Resistência",
       "Soco Bala",
       "Soco Rápido",
-      "Supervoadora."
+      "Supervoadora"
     ]
   },
   "Lickitung": {
@@ -3194,7 +3389,7 @@
       "Pancada",
       "Ronco",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Koffing": {
@@ -3229,7 +3424,7 @@
       "Onda Psíquica",
       "Rancor",
       "Sofrimento Mútuo",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Weezing": {
@@ -3261,7 +3456,7 @@
       "Onda Psíquica",
       "Rancor",
       "Sofrimento Mútuo",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Rhyhorn": {
@@ -3300,7 +3495,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Quebra Crânio",
-      "Reversão."
+      "Reversão"
     ]
   },
   "Rhydon": {
@@ -3336,7 +3531,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Quebra Crânio",
-      "Reversão."
+      "Reversão"
     ]
   },
   "Chansey": {
@@ -3368,7 +3563,7 @@
       "Presente",
       "Resistência",
       "Sino da Cura",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Tangela": {
@@ -3407,7 +3602,7 @@
       "Poder da Natureza",
       "Semente Sanguessuga",
       "Tempestade de Folhas",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Kangaskhan": {
@@ -3443,7 +3638,7 @@
       "Garra Esmagadora",
       "Pisotear",
       "Revelação",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Horsea": {
@@ -3474,7 +3669,7 @@
       "Saltitar",
       "Sinalizador",
       "Sopro do Dragão",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Seadra": {
@@ -3504,7 +3699,7 @@
       "Saltitar",
       "Sinalizador",
       "Sopro do Dragão",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Goldeen": {
@@ -3537,7 +3732,7 @@
       "Pancada",
       "Sinalizador",
       "Sonambulismo",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Seaking": {
@@ -3570,7 +3765,7 @@
       "Pancada",
       "Sinalizador",
       "Sonambulismo",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Staryu": {
@@ -3643,7 +3838,7 @@
       "Raio de Confusão",
       "Sala Mágica",
       "Truque",
-      "Vento Gelado."
+      "Vento Gelado"
     ]
   },
   "Scyther": {
@@ -3680,7 +3875,7 @@
       "Resistência",
       "Reversão",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Jynx": {
@@ -3708,7 +3903,7 @@
       "Fingimento",
       "Meditação",
       "Milagre",
-      "Soco de Gelo."
+      "Soco de Gelo"
     ]
   },
   "Electabuzz": {
@@ -3737,7 +3932,7 @@
       "Soco de Fogo",
       "Soco de Gelo",
       "Soco Dinâmico",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Magmar": {
@@ -3769,7 +3964,7 @@
       "Soco do Trovão",
       "Soco Rápido",
       "Tambor de Pança",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Pinsir": {
@@ -3802,7 +3997,7 @@
       "Mangual",
       "Picada",
       "Primeiro Eu",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Tauros": {
@@ -3890,7 +4085,7 @@
       "Redemoinho",
       "Revelação",
       "Refresco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Ditto": {
@@ -3938,7 +4133,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Vaporeon": {
@@ -3970,7 +4165,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Jolteon": {
@@ -4002,7 +4197,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Flareon": {
@@ -4034,7 +4229,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Porygon": {
@@ -4094,7 +4289,7 @@
       "Rajada de Bolhas",
       "Redemoinho",
       "Supersônico",
-      "Torção."
+      "Torção"
     ]
   },
   "Omastar": {
@@ -4128,7 +4323,7 @@
       "Rajada de Bolhas",
       "Redemoinho",
       "Supersônico",
-      "Torção."
+      "Torção"
     ]
   },
   "Kabuto": {
@@ -4160,7 +4355,7 @@
       "Rajada de Bolhas",
       "Revelação",
       "Tiro de Lama",
-      "Vento Gelado."
+      "Vento Gelado"
     ]
   },
   "Kabutops": {
@@ -4189,7 +4384,7 @@
       "Rajada de Bolhas",
       "Revelação",
       "Tiro de Lama",
-      "Vento Gelado."
+      "Vento Gelado"
     ]
   },
   "Aerodactyl": {
@@ -4221,7 +4416,7 @@
       "Perseguição",
       "Rajada de Vento",
       "Revelação",
-      "Sopro do Dragão."
+      "Sopro do Dragão"
     ]
   },
   "Snorlax": {
@@ -4257,7 +4452,7 @@
       "Lambida",
       "Maldição",
       "Perseguição",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Articuno": {
@@ -4281,9 +4476,7 @@
       "92": "Furacão",
       "99": "Zero Absoluto"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Zapdos": {
     "naturais": {
@@ -4306,9 +4499,7 @@
       "92": "Campo Magnético",
       "99": "Canhão Elétrico"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Moltres": {
     "naturais": {
@@ -4331,9 +4522,7 @@
       "92": "Furacão",
       "99": "Última Chama"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Dratini": {
     "naturais": {
@@ -4365,7 +4554,7 @@
       "Pulso d’Água",
       "Pulso do Dragão",
       "Sopro do Dragão",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Dragonair": {
@@ -4394,7 +4583,7 @@
       "Pulso d’Água",
       "Pulso do Dragão",
       "Sopro do Dragão",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Dragonite": {
@@ -4425,7 +4614,7 @@
       "Pulso d’Água",
       "Pulso do Dragão",
       "Sopro do Dragão",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Mewtwo": {
@@ -4454,7 +4643,7 @@
       "93": "Primeiro Eu",
       "100": "Impacto Psíquico"
     },
-    "herdados": [ ]
+    "herdados": []
   },
   "Mew": {
     "naturais": {
@@ -4474,7 +4663,7 @@
       "90": "Conspiração",
       "100": "Esfera da Aura"
     },
-    "herdados": [ ]
+    "herdados": []
   },
   "Chikorita": {
     "naturais": {
@@ -4508,7 +4697,7 @@
       "Refresco",
       "Semente Sanguessuga",
       "Tempestade de Folhas",
-      "Torção."
+      "Torção"
     ]
   },
   "Bayleef": {
@@ -4545,7 +4734,7 @@
       "Refresco",
       "Semente Sanguessuga",
       "Tempestade de Folhas",
-      "Torção."
+      "Torção"
     ]
   },
   "Meganium": {
@@ -4579,7 +4768,7 @@
       "Refresco",
       "Semente Sanguessuga",
       "Tempestade de Folhas",
-      "Torção."
+      "Torção"
     ]
   },
   "Cyndaquil": {
@@ -4617,7 +4806,7 @@
       "Rajada de Chamas",
       "Revelação",
       "Reversão",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Quilava": {
@@ -4651,7 +4840,7 @@
       "Rajada de Chamas",
       "Revelação",
       "Reversão",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Typhlosion": {
@@ -4684,7 +4873,7 @@
       "Rajada de Chamas",
       "Revelação",
       "Reversão",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Totodile": {
@@ -4722,7 +4911,7 @@
       "Míssil Aquático",
       "Poder Antigo",
       "Pulso d’Água",
-      "Soco de Gelo."
+      "Soco de Gelo"
     ]
   },
   "Croconaw": {
@@ -4756,7 +4945,7 @@
       "Míssil Aquático",
       "Poder Antigo",
       "Pulso d’Água",
-      "Soco de Gelo."
+      "Soco de Gelo"
     ]
   },
   "Feraligatr": {
@@ -4791,7 +4980,7 @@
       "Míssil Aquático",
       "Poder Antigo",
       "Pulso d’Água",
-      "Soco de Gelo."
+      "Soco de Gelo"
     ]
   },
   "Sentret": {
@@ -4826,7 +5015,7 @@
       "Reversão",
       "Retalhar",
       "Truque",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Furret": {
@@ -4858,7 +5047,7 @@
       "Reversão",
       "Retalhar",
       "Truque",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Hoothoot": {
@@ -4894,7 +5083,7 @@
       "Escuridão",
       "Espelho",
       "Rajada de Vento",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Noctowl": {
@@ -4925,7 +5114,7 @@
       "Escuridão",
       "Espelho",
       "Rajada de Vento",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Ledyba": {
@@ -4959,7 +5148,7 @@
       "Soco Estonteante",
       "Soco Focalizado",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Ledian": {
@@ -4992,7 +5181,7 @@
       "Soco Estonteante",
       "Soco Focalizado",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Spinarak": {
@@ -5029,7 +5218,7 @@
       "Perseguição",
       "Pó Irritante",
       "Sinalizador",
-      "Teia Elétrica."
+      "Teia Elétrica"
     ]
   },
   "Ariados": {
@@ -5062,7 +5251,7 @@
       "Perseguição",
       "Pó Irritante",
       "Sinalizador",
-      "Teia Elétrica."
+      "Teia Elétrica"
     ]
   },
   "Crobat": {
@@ -5097,7 +5286,7 @@
       "Maldição",
       "Perseguição",
       "Rajada de Vento",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Chinchou": {
@@ -5131,7 +5320,7 @@
       "Onda de Choques",
       "Pulso d’Água",
       "Redemoinho",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Lanturn": {
@@ -5166,7 +5355,7 @@
       "Onda de Choques",
       "Pulso d’Água",
       "Redemoinho",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Pichu": {
@@ -5197,7 +5386,7 @@
       "Reversão",
       "Soco do Trovão",
       "Tapa Duplo",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Cleffa": {
@@ -5226,7 +5415,7 @@
       "Pulso de Cura",
       "Reserva",
       "Saltitar",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Igglybuff": {
@@ -5253,7 +5442,7 @@
       "Pulso de Cura",
       "Réquiem",
       "Sonambulismo",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Togepi": {
@@ -5288,7 +5477,7 @@
       "Previsão",
       "Reserva",
       "Revelação",
-      "Transmissibilidade."
+      "Transmissibilidade"
     ]
   },
   "Togetic": {
@@ -5318,7 +5507,7 @@
       "Previsão",
       "Reserva",
       "Revelação",
-      "Transmissibilidade."
+      "Transmissibilidade"
     ]
   },
   "Natu": {
@@ -5358,7 +5547,7 @@
       "Refresco",
       "Simplificador",
       "Troca de Habilidades",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Xatu": {
@@ -5396,7 +5585,7 @@
       "Refresco",
       "Simplificador",
       "Troca de Habilidades",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Mareep": {
@@ -5431,7 +5620,7 @@
       "Farejar",
       "Guincho",
       "Onda Anômala",
-      "Pancada."
+      "Pancada"
     ]
   },
   "Flaaffy": {
@@ -5462,7 +5651,7 @@
       "Farejar",
       "Guincho",
       "Onda Anômala",
-      "Pancada."
+      "Pancada"
     ]
   },
   "Ampharos": {
@@ -5495,7 +5684,7 @@
       "Farejar",
       "Guincho",
       "Onda Anômala",
-      "Pancada."
+      "Pancada"
     ]
   },
   "Bellossom": {
@@ -5516,7 +5705,7 @@
       "Fotossíntese",
       "Mangual",
       "Poder da Natureza",
-      "Poder Secreto."
+      "Poder Secreto"
     ]
   },
   "Marill": {
@@ -5558,7 +5747,7 @@
       "Réquiem",
       "Superpoder",
       "Supersônico",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Azumarill": {
@@ -5600,7 +5789,7 @@
       "Réquiem",
       "Superpoder",
       "Supersônico",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Sudowoodo": {
@@ -5631,7 +5820,7 @@
       "Pedras Soltas",
       "Resistência",
       "Rolagem",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Politoed": {
@@ -5653,7 +5842,7 @@
       "Refresco",
       "Resistência",
       "Saltitar",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Hoppip": {
@@ -5688,7 +5877,7 @@
       "Maciez",
       "Mão Amiga",
       "Resistência",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Skiploom": {
@@ -5722,7 +5911,7 @@
       "Maciez",
       "Mão Amiga",
       "Resistência",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Jumpluff": {
@@ -5756,7 +5945,7 @@
       "Maciez",
       "Mão Amiga",
       "Resistência",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Aipom": {
@@ -5791,7 +5980,7 @@
       "Pular",
       "Tapa Duplo",
       "Troca",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Sunkern": {
@@ -5828,7 +6017,7 @@
       "Resistência",
       "Mão Amiga",
       "Enraizar",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Sunflora": {
@@ -5862,7 +6051,7 @@
       "Resistência",
       "Mão Amiga",
       "Enraizar",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Yanma": {
@@ -5896,7 +6085,7 @@
       "Reversão",
       "Sanguessuga",
       "Sinalizador",
-      "Vento Prateado."
+      "Vento Prateado"
     ]
   },
   "Wooper": {
@@ -5935,7 +6124,7 @@
       "Poder Antigo",
       "Recuperação",
       "Sonambulismo",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Quagsire": {
@@ -5970,7 +6159,7 @@
       "Poder Antigo",
       "Recuperação",
       "Sonambulismo",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Espeon": {
@@ -6002,7 +6191,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Umbreon": {
@@ -6034,7 +6223,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Murkrow": {
@@ -6072,7 +6261,7 @@
       "Raio de Confusão",
       "Rajada de Vento",
       "Réquiem",
-      "Transmissibilidade."
+      "Transmissibilidade"
     ]
   },
   "Slowking": {
@@ -6101,7 +6290,7 @@
       "Primeiro Eu",
       "Sala das Maravilhas",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Misdreavus": {
@@ -6136,7 +6325,7 @@
       "Sombra Traiçoeira",
       "Troca de Habilidades",
       "Vento Nefasto",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Unown": {
@@ -6193,7 +6382,7 @@
       "Poder Secreto",
       "Previsão",
       "Revelação",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Pineco": {
@@ -6226,7 +6415,7 @@
       "Resistência",
       "Transferência",
       "Tumba de Areia",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Forretress": {
@@ -6262,7 +6451,7 @@
       "Resistência",
       "Transferência",
       "Tumba de Areia",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Dunsparce": {
@@ -6304,7 +6493,7 @@
       "Poder Antigo",
       "Poder Secreto",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Gligar": {
@@ -6339,7 +6528,7 @@
       "Metalizar Garra",
       "Passar o Bastão",
       "Transferência",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Steelix": {
@@ -6377,7 +6566,7 @@
       "Mangual",
       "Pedras Soltas",
       "Peso Pesado",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Snubbull": {
@@ -6412,7 +6601,7 @@
       "Presente",
       "Sino da Cura",
       "Ronco",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Grandbull": {
@@ -6442,7 +6631,7 @@
       "Presente",
       "Sino da Cura",
       "Ronco",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Qwilfish": {
@@ -6482,7 +6671,7 @@
       "Rajada de Bolhas",
       "Salmoura",
       "Sinalizador",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Scizor": {
@@ -6514,7 +6703,7 @@
       "Resistência",
       "Reversão",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Shuckle": {
@@ -6552,7 +6741,7 @@
       "Mão Amiga",
       "Nocaute",
       "Sacrifício",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Heracross": {
@@ -6585,7 +6774,7 @@
       "Paciência",
       "Perseguição",
       "Soco Focalizado",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Sneasel": {
@@ -6625,7 +6814,7 @@
       "Ódio",
       "Perseguição",
       "Revelação",
-      "Soco de Gelo."
+      "Soco de Gelo"
     ]
   },
   "Teddiursa": {
@@ -6663,7 +6852,7 @@
       "Mastigada",
       "Metalizar Garra",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Ursaring": {
@@ -6693,7 +6882,7 @@
       "Mastigada",
       "Metalizar Garra",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Slugma": {
@@ -6729,7 +6918,7 @@
       "Onda de Calor",
       "Poder Terreno",
       "Rolagem",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Magcargo": {
@@ -6763,7 +6952,7 @@
       "Onda de Calor",
       "Poder Terreno",
       "Rolagem",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Swinub": {
@@ -6800,7 +6989,7 @@
       "Pancada",
       "Pedras Soltas",
       "Poder Antigo",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Piloswine": {
@@ -6835,7 +7024,7 @@
       "Pancada",
       "Pedras Soltas",
       "Poder Antigo",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Corsola": {
@@ -6876,7 +7065,7 @@
       "Paciência",
       "Poder da Natureza",
       "Pulso d’Água",
-      "Raio de Confusão."
+      "Raio de Confusão"
     ]
   },
   "Remoraid": {
@@ -6909,7 +7098,7 @@
       "Raio Aurora",
       "Ronco",
       "Supersônico",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Octillery": {
@@ -6942,7 +7131,7 @@
       "Raio Aurora",
       "Ronco",
       "Supersônico",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Delibird": {
@@ -6964,7 +7153,7 @@
       "Saltitar",
       "Soco de Gelo",
       "Vento Gelado",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Mantine": {
@@ -6995,7 +7184,7 @@
       "Nevoeiro",
       "Porrada",
       "Saltitar",
-      "Sinalizador."
+      "Sinalizador"
     ]
   },
   "Skarmory": {
@@ -7029,7 +7218,7 @@
       "Perseguição",
       "Rajada de Vento",
       "Resistência",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Houndour": {
@@ -7067,7 +7256,7 @@
       "Presa do Trovão",
       "Raiva",
       "Reversão",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Houndoom": {
@@ -7101,7 +7290,7 @@
       "Presa do Trovão",
       "Raiva",
       "Reversão",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Kingdra": {
@@ -7131,7 +7320,7 @@
       "Saltitar",
       "Sinalizador",
       "Sopro do Dragão",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Phanpy": {
@@ -7164,7 +7353,7 @@
       "Pancada",
       "Peso Pesado",
       "Poder Antigo",
-      "Ronco."
+      "Ronco"
     ]
   },
   "Donphan": {
@@ -7193,7 +7382,7 @@
       "Pancada",
       "Peso Pesado",
       "Poder Antigo",
-      "Ronco."
+      "Ronco"
     ]
   },
   "Porygon 2": {
@@ -7244,7 +7433,7 @@
       "Mordida",
       "Ódio",
       "Primeiro Eu",
-      "Raiva."
+      "Raiva"
     ]
   },
   "Smeargle": {
@@ -7284,7 +7473,7 @@
       "Resistência",
       "Soco Bala",
       "Soco Rápido",
-      "Supervoadora."
+      "Supervoadora"
     ]
   },
   "Hitmontop": {
@@ -7318,7 +7507,7 @@
       "Resistência",
       "Soco Bala",
       "Soco Rápido",
-      "Supervoadora."
+      "Supervoadora"
     ]
   },
   "Smoochum": {
@@ -7347,7 +7536,7 @@
       "Fingimento",
       "Meditação",
       "Milagre",
-      "Soco de Gelo."
+      "Soco de Gelo"
     ]
   },
   "Elekid": {
@@ -7380,7 +7569,7 @@
       "Soco de Fogo",
       "Soco de Gelo",
       "Soco Dinâmico",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Magby": {
@@ -7415,7 +7604,7 @@
       "Soco do Trovão",
       "Soco Rápido",
       "Tambor de Pança",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Miltank": {
@@ -7448,7 +7637,7 @@
       "Resistência",
       "Reversão",
       "Soco Estonteante",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Blissey": {
@@ -7480,7 +7669,7 @@
       "Presente",
       "Resistência",
       "Sino da Cura",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Raikou": {
@@ -7504,9 +7693,7 @@
       "78": "Mente Calma",
       "85": "Trovão"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Entei": {
     "naturais": {
@@ -7528,9 +7715,7 @@
       "78": "Mente Calma",
       "85": "Erupção"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Suicune": {
     "naturais": {
@@ -7551,9 +7736,7 @@
       "78": "Mente Calma",
       "85": "Nevasca"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Larvitar": {
     "naturais": {
@@ -7587,7 +7770,7 @@
       "Perseguição",
       "Pisotear",
       "Poder Antigo",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Pupitar": {
@@ -7618,7 +7801,7 @@
       "Perseguição",
       "Pisotear",
       "Poder Antigo",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Tyranitar": {
@@ -7650,7 +7833,7 @@
       "Perseguição",
       "Pisotear",
       "Poder Antigo",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Lugia": {
@@ -7674,9 +7857,7 @@
       "93": "Mente Calma",
       "99": "Ataque do Céu"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Ho-oh": {
     "naturais": {
@@ -7699,9 +7880,7 @@
       "93": "Mente Calma",
       "99": "Ataque do Céu"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Celebi": {
     "naturais": {
@@ -7722,9 +7901,7 @@
       "82": "Tempestade de Folhas",
       "91": "Réquiem"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Treecko": {
     "naturais": {
@@ -7761,7 +7938,7 @@
       "Semente Irritante",
       "Semente Sanguessuga",
       "Sopro do Dragão",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Grovyle": {
@@ -7798,7 +7975,7 @@
       "Semente Irritante",
       "Semente Sanguessuga",
       "Sopro do Dragão",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Sceptile": {
@@ -7836,7 +8013,7 @@
       "Semente Irritante",
       "Semente Sanguessuga",
       "Sopro do Dragão",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Torchic": {
@@ -7870,7 +8047,7 @@
       "Resistência",
       "Reversão",
       "Rasteira",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Combusken": {
@@ -7902,7 +8079,7 @@
       "Resistência",
       "Reversão",
       "Rasteira",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Blaziken": {
@@ -7936,7 +8113,7 @@
       "Resistência",
       "Reversão",
       "Rasteira",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Mudkip": {
@@ -7974,7 +8151,7 @@
       "Pisotear",
       "Poder Antigo",
       "Redemoinho",
-      "Refresco."
+      "Refresco"
     ]
   },
   "Marshtomp": {
@@ -8009,7 +8186,7 @@
       "Pisotear",
       "Poder Antigo",
       "Redemoinho",
-      "Refresco."
+      "Refresco"
     ]
   },
   "Swampert": {
@@ -8045,7 +8222,7 @@
       "Pisotear",
       "Poder Antigo",
       "Redemoinho",
-      "Refresco."
+      "Refresco"
     ]
   },
   "Poochyena": {
@@ -8080,7 +8257,7 @@
       "Presa do Trovão",
       "Presa Venenosa",
       "Primeiro Eu",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Mightyena": {
@@ -8115,7 +8292,7 @@
       "Presa do Trovão",
       "Presa Venenosa",
       "Primeiro Eu",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Zigzagoon": {
@@ -8148,7 +8325,7 @@
       "Perseguição",
       "Simplificador",
       "Sonambulismo",
-      "Truque."
+      "Truque"
     ]
   },
   "Linoone": {
@@ -8176,7 +8353,7 @@
       "Perseguição",
       "Simplificador",
       "Sonambulismo",
-      "Truque."
+      "Truque"
     ]
   },
   "Wurmple": {
@@ -8274,7 +8451,7 @@
       "Gigadreno",
       "Jato d’Água",
       "Mangual",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Lombre": {
@@ -8303,7 +8480,7 @@
       "Gigadreno",
       "Jato d’Água",
       "Mangual",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Ludicolo": {
@@ -8318,7 +8495,7 @@
       "Gigadreno",
       "Jato d’Água",
       "Mangual",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Seedot": {
@@ -8344,7 +8521,7 @@
       "Semente Irritante",
       "Semente Sanguessuga",
       "Trapaça",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Nuzleaf": {
@@ -8374,7 +8551,7 @@
       "Semente Irritante",
       "Semente Sanguessuga",
       "Trapaça",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Shiftry": {
@@ -8396,7 +8573,7 @@
       "Semente Irritante",
       "Semente Sanguessuga",
       "Trapaça",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Taillow": {
@@ -8430,7 +8607,7 @@
       "Raiva",
       "Rajada de Vento",
       "Refresco",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Swellow": {
@@ -8460,7 +8637,7 @@
       "Raiva",
       "Rajada de Vento",
       "Refresco",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Wingull": {
@@ -8493,7 +8670,7 @@
       "Neblina",
       "Nocaute",
       "Salmoura",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Pelipper": {
@@ -8528,7 +8705,7 @@
       "Neblina",
       "Nocaute",
       "Salmoura",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Ralts": {
@@ -8563,7 +8740,7 @@
       "Sombra Traiçoeira",
       "Troca de Habilidades",
       "Trocar de Lugar",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Kirlia": {
@@ -8597,7 +8774,7 @@
       "Sombra Traiçoeira",
       "Troca de Habilidades",
       "Trocar de Lugar",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Gardevoir": {
@@ -8632,7 +8809,7 @@
       "Sombra Traiçoeira",
       "Troca de Habilidades",
       "Trocar de Lugar",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Surskit": {
@@ -8663,7 +8840,7 @@
       "Resistência",
       "Revelação",
       "Sinalizador",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Masquerain": {
@@ -8695,7 +8872,7 @@
       "Resistência",
       "Revelação",
       "Sinalizador",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Shroomish": {
@@ -8726,7 +8903,7 @@
       "Semente Bala",
       "Semente Irritante",
       "Soco de Drenagem",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Breloom": {
@@ -8754,7 +8931,7 @@
       "Semente Bala",
       "Semente Irritante",
       "Soco de Drenagem",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Slakoth": {
@@ -8784,7 +8961,7 @@
       "Perseguição",
       "Retalhar",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Vigoroth": {
@@ -8810,7 +8987,7 @@
       "Perseguição",
       "Retalhar",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Slaking": {
@@ -8840,7 +9017,7 @@
       "Perseguição",
       "Retalhar",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Nincada": {
@@ -8867,7 +9044,7 @@
       "Sacrifício",
       "Ventania",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Ninjask": {
@@ -8895,7 +9072,7 @@
       "Sacrifício",
       "Ventania",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Shedinja": {
@@ -8942,7 +9119,7 @@
       "Estímulo",
       "Extrassensorial",
       "Ronco",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Loudred": {
@@ -8972,7 +9149,7 @@
       "Estímulo",
       "Extrassensorial",
       "Ronco",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Exploud": {
@@ -9005,7 +9182,7 @@
       "Estímulo",
       "Extrassensorial",
       "Ronco",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Makuhita": {
@@ -9044,7 +9221,7 @@
       "Soco Bala",
       "Soco Dinâmico",
       "Soco Focalizado",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Hariyama": {
@@ -9079,7 +9256,7 @@
       "Soco Bala",
       "Soco Dinâmico",
       "Soco Focalizado",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Azurill": {
@@ -9117,7 +9294,7 @@
       "Réquiem",
       "Superpoder",
       "Supersônico",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Nosepass": {
@@ -9148,7 +9325,7 @@
       "Magnitude",
       "Pedras Soltas",
       "Resistência",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Skitty": {
@@ -9189,7 +9366,7 @@
       "Pelas Costas",
       "Poder Cósmico",
       "Simplificador",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Delcatty": {
@@ -9208,7 +9385,7 @@
       "Pelas Costas",
       "Poder Cósmico",
       "Simplificador",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Sableye": {
@@ -9247,7 +9424,7 @@
       "Pelas Costas",
       "Recuperação",
       "Selo",
-      "Truque."
+      "Truque"
     ]
   },
   "Mawile": {
@@ -9290,7 +9467,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Presa Venenosa",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Aron": {
@@ -9328,7 +9505,7 @@
       "Pedras Soltas",
       "Pisotear",
       "Reversão",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Lairon": {
@@ -9362,7 +9539,7 @@
       "Pedras Soltas",
       "Pisotear",
       "Reversão",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Aggron": {
@@ -9396,7 +9573,7 @@
       "Pedras Soltas",
       "Pisotear",
       "Reversão",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Meditite": {
@@ -9433,7 +9610,7 @@
       "Soco Dinâmico",
       "Soco do Trovão",
       "Troca de Defesas",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Medicham": {
@@ -9469,7 +9646,7 @@
       "Soco Dinâmico",
       "Soco do Trovão",
       "Troca de Defesas",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Electrike": {
@@ -9505,7 +9682,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Rajada de Chamas",
-      "Troca."
+      "Troca"
     ]
   },
   "Manectric": {
@@ -9538,7 +9715,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Rajada de Chamas",
-      "Troca."
+      "Troca"
     ]
   },
   "Plusle": {
@@ -9573,7 +9750,7 @@
       "Charme",
       "Choro",
       "Descarga",
-      "Desejo."
+      "Desejo"
     ]
   },
   "Minun": {
@@ -9608,7 +9785,7 @@
       "Charme",
       "Choro",
       "Descarga",
-      "Desejo."
+      "Desejo"
     ]
   },
   "Volbeat": {
@@ -9639,7 +9816,7 @@
       "Soco Estonteante",
       "Truque",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Illumise": {
@@ -9671,7 +9848,7 @@
       "Raio de Confusão",
       "Truque",
       "Vento Prateado",
-      "Zumbido."
+      "Zumbido"
     ]
   },
   "Roselia": {
@@ -9707,7 +9884,7 @@
       "Leitura Mental",
       "Pó Sonífero",
       "Semente Bala",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Gulpin": {
@@ -9739,7 +9916,7 @@
       "Poluição",
       "Sofrimento Mútuo",
       "Sujeira",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Swalot": {
@@ -9772,7 +9949,7 @@
       "Poluição",
       "Sofrimento Mútuo",
       "Sujeira",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Carvanha": {
@@ -9802,7 +9979,7 @@
       "Poder Antigo",
       "Presa Psíquica",
       "Salmoura",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Sharpedo": {
@@ -9831,7 +10008,7 @@
       "Poder Antigo",
       "Presa Psíquica",
       "Salmoura",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Wailmer": {
@@ -9866,7 +10043,7 @@
       "Maldição",
       "Pancada",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Wailord": {
@@ -9900,7 +10077,7 @@
       "Maldição",
       "Pancada",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Numel": {
@@ -9939,7 +10116,7 @@
       "Poder Antigo",
       "Resistência",
       "Rolagem",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Camerupt": {
@@ -9975,7 +10152,7 @@
       "Poder Antigo",
       "Resistência",
       "Rolagem",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Torkoal": {
@@ -10008,7 +10185,7 @@
       "Rajada de Chamas",
       "Resistência",
       "Sonambulismo",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Spoink": {
@@ -10042,7 +10219,7 @@
       "Resistência",
       "Simplificador",
       "Troca de Habilidades",
-      "Truque."
+      "Truque"
     ]
   },
   "Grumpig": {
@@ -10077,7 +10254,7 @@
       "Resistência",
       "Simplificador",
       "Troca de Habilidades",
-      "Truque."
+      "Truque"
     ]
   },
   "Spinda": {
@@ -10113,7 +10290,7 @@
       "Sonambulismo",
       "Transmissibilidade",
       "Truque",
-      "Vento Gelado."
+      "Vento Gelado"
     ]
   },
   "Trapinch": {
@@ -10148,7 +10325,7 @@
       "Resistência",
       "Sinalizador",
       "Tiro de Lama",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Vibrava": {
@@ -10178,7 +10355,7 @@
       "Resistência",
       "Sinalizador",
       "Tiro de Lama",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Flygon": {
@@ -10208,7 +10385,7 @@
       "Resistência",
       "Sinalizador",
       "Tiro de Lama",
-      "Ventania."
+      "Ventania"
     ]
   },
   "Cacnea": {
@@ -10250,7 +10427,7 @@
       "Rasteira",
       "Semente Irritante",
       "Soco Dinâmico",
-      "Troca."
+      "Troca"
     ]
   },
   "Cacturne": {
@@ -10289,7 +10466,7 @@
       "Rasteira",
       "Semente Irritante",
       "Soco Dinâmico",
-      "Troca."
+      "Troca"
     ]
   },
   "Swablu": {
@@ -10324,7 +10501,7 @@
       "Perseguição",
       "Raiva",
       "Troca de Forças",
-      "Vozeirão."
+      "Vozeirão"
     ]
   },
   "Altaria": {
@@ -10357,7 +10534,7 @@
       "Perseguição",
       "Raiva",
       "Troca de Forças",
-      "Vozeirão."
+      "Vozeirão"
     ]
   },
   "Zangoose": {
@@ -10395,7 +10572,7 @@
       "Mangual",
       "Metalizar Garra",
       "Prevenção",
-      "Sacrifício."
+      "Sacrifício"
     ]
   },
   "Seviper": {
@@ -10435,7 +10612,7 @@
       "Pancada",
       "Sacrifício",
       "Torção",
-      "Troca."
+      "Troca"
     ]
   },
   "Lunatone": {
@@ -10520,7 +10697,7 @@
       "Mangual",
       "Poder Terreno",
       "Redemoinho",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Whiscash": {
@@ -10555,7 +10732,7 @@
       "Mangual",
       "Poder Terreno",
       "Redemoinho",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Corphish": {
@@ -10589,7 +10766,7 @@
       "Pancada",
       "Poder Antigo",
       "Superpoder",
-      "Troca."
+      "Troca"
     ]
   },
   "Crawdaunt": {
@@ -10624,7 +10801,7 @@
       "Pancada",
       "Poder Antigo",
       "Superpoder",
-      "Troca."
+      "Troca"
     ]
   },
   "Baltoy": {
@@ -10713,7 +10890,7 @@
       "Pedras Soltas",
       "Recuperação",
       "Resistência",
-      "Torção."
+      "Torção"
     ]
   },
   "Cradily": {
@@ -10743,7 +10920,7 @@
       "Pedras Soltas",
       "Recuperação",
       "Resistência",
-      "Torção."
+      "Torção"
     ]
   },
   "Anorith": {
@@ -10775,7 +10952,7 @@
       "Maldição",
       "Míssil Aquático",
       "Nocaute",
-      "Pulso d’Água."
+      "Pulso d’Água"
     ]
   },
   "Armaldo": {
@@ -10803,7 +10980,7 @@
       "Maldição",
       "Míssil Aquático",
       "Nocaute",
-      "Pulso d’Água."
+      "Pulso d’Água"
     ]
   },
   "Feebas": {
@@ -10824,7 +11001,7 @@
       "Pulso do Dragão",
       "Raio de Confusão",
       "Salmoura",
-      "Sopro do Dragão."
+      "Sopro do Dragão"
     ]
   },
   "Milotic": {
@@ -10857,7 +11034,7 @@
       "Pulso do Dragão",
       "Raio de Confusão",
       "Salmoura",
-      "Sopro do Dragão."
+      "Sopro do Dragão"
     ]
   },
   "Castform": {
@@ -10892,7 +11069,7 @@
       "Poder Cósmico",
       "Previsão",
       "Troca de Defesas",
-      "Vento Nefasto."
+      "Vento Nefasto"
     ]
   },
   "Kecleon": {
@@ -10929,7 +11106,7 @@
       "Soco Estonteante",
       "Trapaça",
       "Troca de Habilidades",
-      "Truque."
+      "Truque"
     ]
   },
   "Shuppet": {
@@ -10962,7 +11139,7 @@
       "Sujeira",
       "Travessia Fantasmagórica",
       "Vento Nefasto",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Banette": {
@@ -10994,7 +11171,7 @@
       "Sujeira",
       "Travessia Fantasmagórica",
       "Vento Nefasto",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Duskull": {
@@ -11027,7 +11204,7 @@
       "Sofrimento Mútuo",
       "Troca de Habilidades",
       "Vento Nefasto",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Dusclops": {
@@ -11057,7 +11234,7 @@
       "Sofrimento Mútuo",
       "Troca de Habilidades",
       "Vento Nefasto",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Tropius": {
@@ -11093,7 +11270,7 @@
       "Porrada",
       "Semente Bala",
       "Semente Sanguessuga",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Chimecho": {
@@ -11122,7 +11299,7 @@
       "Previsão",
       "Recuperação",
       "Reserva",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Absol": {
@@ -11163,7 +11340,7 @@
       "Passar o Bastão",
       "Pelas Costas",
       "Primeiro Eu",
-      "Substituição."
+      "Substituição"
     ]
   },
   "Wynaut": {
@@ -11212,7 +11389,7 @@
       "Feitiço",
       "Paciência",
       "Rolagem",
-      "Troca."
+      "Troca"
     ]
   },
   "Glalie": {
@@ -11242,7 +11419,7 @@
       "Feitiço",
       "Paciência",
       "Rolagem",
-      "Troca."
+      "Troca"
     ]
   },
   "Spheal": {
@@ -11280,7 +11457,7 @@
       "Rolagem",
       "Sinalizador",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Sealeo": {
@@ -11314,7 +11491,7 @@
       "Rolagem",
       "Sinalizador",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Walrein": {
@@ -11348,7 +11525,7 @@
       "Rolagem",
       "Sinalizador",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Clamperl": {
@@ -11372,7 +11549,7 @@
       "Refresco",
       "Resistência",
       "Salmoura",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Huntail": {
@@ -11402,7 +11579,7 @@
       "Refresco",
       "Resistência",
       "Salmoura",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Gorebyss": {
@@ -11432,7 +11609,7 @@
       "Refresco",
       "Resistência",
       "Salmoura",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Relicanth": {
@@ -11465,7 +11642,7 @@
       "Ronco",
       "Salmoura",
       "Sonambulismo",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Luvdisc": {
@@ -11500,7 +11677,7 @@
       "Salmoura",
       "Pulso de Cura",
       "Saltitar",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Bagon": {
@@ -11529,7 +11706,7 @@
       "Investida do Dragão",
       "Presa de Fogo",
       "Pulso do Dragão",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Shelgon": {
@@ -11558,7 +11735,7 @@
       "Investida do Dragão",
       "Presa de Fogo",
       "Pulso do Dragão",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Salamence": {
@@ -11589,7 +11766,7 @@
       "Investida do Dragão",
       "Presa de Fogo",
       "Pulso do Dragão",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Beldum": {
@@ -11599,7 +11776,7 @@
     "herdados": [
       "Cabeça de Ferro",
       "Cabeçada Zen",
-      "Defesa de Ferro."
+      "Defesa de Ferro"
     ]
   },
   "Metang": {
@@ -11622,7 +11799,7 @@
     "herdados": [
       "Cabeça de Ferro",
       "Cabeçada Zen",
-      "Defesa de Ferro."
+      "Defesa de Ferro"
     ]
   },
   "Metagross": {
@@ -11642,7 +11819,7 @@
     "herdados": [
       "Cabeça de Ferro",
       "Cabeçada Zen",
-      "Defesa de Ferro."
+      "Defesa de Ferro"
     ]
   },
   "Regirock": {
@@ -11665,9 +11842,7 @@
       "61": "Superpoder",
       "67": "Hiper-Raio"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Regice": {
     "naturais": {
@@ -11689,9 +11864,7 @@
       "61": "Superpoder",
       "67": "Hiper-Raio"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Registeel": {
     "naturais": {
@@ -11719,9 +11892,7 @@
       "61": "Superpoder",
       "67": "Hiper-Raio"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Latias": {
     "naturais": {
@@ -11747,9 +11918,7 @@
       "56": "Pulso do Dragão",
       "61": "Desejo de Cura"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Latios": {
     "naturais": {
@@ -11775,9 +11944,7 @@
       "56": "Pulso do Dragão",
       "61": "Lembrança"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Kyogre": {
     "naturais": {
@@ -11798,9 +11965,7 @@
       "80": "Faca de Dois Gumes",
       "90": "Esguicho"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Groudon": {
     "naturais": {
@@ -11821,9 +11986,7 @@
       "80": "Braço Martelo",
       "90": "Erupção"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Rayquaza": {
     "naturais": {
@@ -11841,9 +12004,7 @@
       "80": "Hiper-Raio",
       "90": "Pulso do Dragão"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Jirachi": {
     "naturais": {
@@ -11866,9 +12027,7 @@
       "65": "Último Recurso",
       "70": "Desejo de Destruição"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Deoxys": {
     "naturais": {
@@ -11882,9 +12041,7 @@
       "49": "Cabeçada Zen",
       "67": "Impulso Psíquico"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Turtwig": {
     "naturais": {
@@ -11917,7 +12074,7 @@
       "Poder Terreno",
       "Semente Irritante",
       "Superpoder",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Grotle": {
@@ -11950,7 +12107,7 @@
       "Poder Terreno",
       "Semente Irritante",
       "Superpoder",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Torterra": {
@@ -11985,7 +12142,7 @@
       "Poder Terreno",
       "Semente Irritante",
       "Superpoder",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Chimchar": {
@@ -12020,7 +12177,7 @@
       "Soco de Fogo",
       "Soco do Trovão",
       "Soco Focalizado",
-      "Submissão."
+      "Submissão"
     ]
   },
   "Monferno": {
@@ -12053,7 +12210,7 @@
       "Soco de Fogo",
       "Soco do Trovão",
       "Soco Focalizado",
-      "Submissão."
+      "Submissão"
     ]
   },
   "Infernape": {
@@ -12086,7 +12243,7 @@
       "Soco de Fogo",
       "Soco do Trovão",
       "Soco Focalizado",
-      "Submissão."
+      "Submissão"
     ]
   },
   "Piplup": {
@@ -12118,7 +12275,7 @@
       "Paciência",
       "Vento Gelado",
       "Ronco",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Prinplup": {
@@ -12151,7 +12308,7 @@
       "Paciência",
       "Vento Gelado",
       "Ronco",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Empoleon": {
@@ -12185,7 +12342,7 @@
       "Paciência",
       "Vento Gelado",
       "Ronco",
-      "Supersônico."
+      "Supersônico"
     ]
   },
   "Starly": {
@@ -12218,7 +12375,7 @@
       "Fúria",
       "Perseguição",
       "Revelação",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Staravia": {
@@ -12247,7 +12404,7 @@
       "Fúria",
       "Perseguição",
       "Revelação",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Staraptor": {
@@ -12278,7 +12435,7 @@
       "Fúria",
       "Perseguição",
       "Revelação",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Bidoof": {
@@ -12312,7 +12469,7 @@
       "Quebra Crânio",
       "Resistência",
       "Rolagem",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Bibarel": {
@@ -12342,7 +12499,7 @@
       "Quebra Crânio",
       "Resistência",
       "Rolagem",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Kricketot": {
@@ -12407,7 +12564,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Sinalizador",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Luxio": {
@@ -12438,7 +12595,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Sinalizador",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Luxray": {
@@ -12470,7 +12627,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Sinalizador",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Budew": {
@@ -12495,7 +12652,7 @@
       "Leitura Mental",
       "Pó Sonífero",
       "Semente Bala",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Roserade": {
@@ -12514,7 +12671,7 @@
       "Leitura Mental",
       "Pó Sonífero",
       "Semente Bala",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Cranidos": {
@@ -12545,7 +12702,7 @@
       "Mastigada",
       "Porrada",
       "Pisotear",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Rampardos": {
@@ -12573,7 +12730,7 @@
       "Mastigada",
       "Porrada",
       "Pisotear",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Shieldon": {
@@ -12606,7 +12763,7 @@
       "Guincho",
       "Maldição",
       "Pancada",
-      "Pedras Soltas."
+      "Pedras Soltas"
     ]
   },
   "Bastiodon": {
@@ -12636,7 +12793,7 @@
       "Guincho",
       "Maldição",
       "Pancada",
-      "Pedras Soltas."
+      "Pedras Soltas"
     ]
   },
   "Burmy": {
@@ -12744,7 +12901,7 @@
       "Mangual",
       "Mordida",
       "Oferenda",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Buizel": {
@@ -12778,7 +12935,7 @@
       "Primeiro Eu",
       "Retalhar",
       "Tapa Duplo",
-      "Troca."
+      "Troca"
     ]
   },
   "Floatzel": {
@@ -12811,7 +12968,7 @@
       "Primeiro Eu",
       "Retalhar",
       "Tapa Duplo",
-      "Troca."
+      "Troca"
     ]
   },
   "Cherubi": {
@@ -12845,7 +13002,7 @@
       "Folha Navalha",
       "Poder da Natureza",
       "Pulso de Cura",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Cherrim": {
@@ -12877,7 +13034,7 @@
       "Folha Navalha",
       "Poder da Natureza",
       "Pulso de Cura",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Shellos": {
@@ -12909,7 +13066,7 @@
       "Liberação",
       "Maldição",
       "Neblina",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Gastrodon": {
@@ -12940,7 +13097,7 @@
       "Liberação",
       "Maldição",
       "Neblina",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Ambipom": {
@@ -12972,7 +13129,7 @@
       "Pular",
       "Tapa Duplo",
       "Troca",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Drifloon": {
@@ -13007,7 +13164,7 @@
       "Lembrança",
       "Nevoeiro",
       "Pancada",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Drifblim": {
@@ -13038,7 +13195,7 @@
       "Lembrança",
       "Nevoeiro",
       "Pancada",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Buneary": {
@@ -13080,7 +13237,7 @@
       "Soco de Gelo",
       "Soco do Trovão",
       "Soco Focalizado",
-      "Troca."
+      "Troca"
     ]
   },
   "Lopunny": {
@@ -13118,7 +13275,7 @@
       "Soco de Gelo",
       "Soco do Trovão",
       "Soco Focalizado",
-      "Troca."
+      "Troca"
     ]
   },
   "Mismagius": {
@@ -13136,7 +13293,7 @@
       "Sombra Traiçoeira",
       "Troca de Habilidades",
       "Vento Nefasto",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Honchkrow": {
@@ -13163,7 +13320,7 @@
       "Raio de Confusão",
       "Rajada de Vento",
       "Réquiem",
-      "Transmissibilidade."
+      "Transmissibilidade"
     ]
   },
   "Glameow": {
@@ -13193,7 +13350,7 @@
       "Garantia",
       "Mangual",
       "Mordida",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Purugly": {
@@ -13222,7 +13379,7 @@
       "Garantia",
       "Mangual",
       "Mordida",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Chingling": {
@@ -13245,7 +13402,7 @@
       "Previsão",
       "Recuperação",
       "Reserva",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Stunky": {
@@ -13283,7 +13440,7 @@
       "Perseguição",
       "Poluição",
       "Rajada de Chamas",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Skuntank": {
@@ -13318,7 +13475,7 @@
       "Perseguição",
       "Poluição",
       "Rajada de Chamas",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Bronzor": {
@@ -13396,7 +13553,7 @@
       "Pedras Soltas",
       "Resistência",
       "Rolagem",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Mime Jr.": {
@@ -13438,7 +13595,7 @@
       "Raio de Confusão",
       "Sala Mágica",
       "Truque",
-      "Vento Gelado."
+      "Vento Gelado"
     ]
   },
   "Happiny": {
@@ -13464,7 +13621,7 @@
       "Presente",
       "Resistência",
       "Sino da Cura",
-      "Último Recurso."
+      "Último Recurso"
     ]
   },
   "Chatot": {
@@ -13498,7 +13655,7 @@
       "Escuridão",
       "Sonambulismo",
       "Supersônico",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Spiritomb": {
@@ -13527,7 +13684,7 @@
       "Sofrimento Mútuo",
       "Sombra Traiçoeira",
       "Trapaça",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Gible": {
@@ -13556,7 +13713,7 @@
       "Sopro do Dragão",
       "Tiro de Lama",
       "Tumba de Areia",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Gabite": {
@@ -13585,7 +13742,7 @@
       "Sopro do Dragão",
       "Tiro de Lama",
       "Tumba de Areia",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Garchomp": {
@@ -13615,7 +13772,7 @@
       "Sopro do Dragão",
       "Tiro de Lama",
       "Tumba de Areia",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Munchlax": {
@@ -13652,7 +13809,7 @@
       "Lambida",
       "Maldição",
       "Perseguição",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Riolu": {
@@ -13686,7 +13843,7 @@
       "Onda de Vácuo",
       "Rasteira",
       "Soco Bala",
-      "Supervoadora."
+      "Supervoadora"
     ]
   },
   "Lucario": {
@@ -13722,7 +13879,7 @@
       "Onda de Vácuo",
       "Rasteira",
       "Soco Bala",
-      "Supervoadora."
+      "Supervoadora"
     ]
   },
   "Hippopotas": {
@@ -13750,7 +13907,7 @@
       "Relaxar",
       "Sonambulismo",
       "Tumba de Areia",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Hippowdon": {
@@ -13777,7 +13934,7 @@
       "Relaxar",
       "Sonambulismo",
       "Tumba de Areia",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Skorupi": {
@@ -13814,7 +13971,7 @@
       "Perseguição",
       "Raio de Confusão",
       "Retalhar",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Drapion": {
@@ -13846,7 +14003,7 @@
       "Perseguição",
       "Raio de Confusão",
       "Retalhar",
-      "Rajada de Vento."
+      "Rajada de Vento"
     ]
   },
   "Croagunk": {
@@ -13883,7 +14040,7 @@
       "Primeiro Eu",
       "Soco Bala",
       "Soco de Drenagem",
-      "Soco Dinâmico."
+      "Soco Dinâmico"
     ]
   },
   "Toxicroak": {
@@ -13919,7 +14076,7 @@
       "Primeiro Eu",
       "Soco Bala",
       "Soco de Drenagem",
-      "Soco Dinâmico."
+      "Soco Dinâmico"
     ]
   },
   "Carnivine": {
@@ -13954,7 +14111,7 @@
       "Pó Sonífero",
       "Porrada",
       "Semente Irritante",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Finneon": {
@@ -13985,7 +14142,7 @@
       "Raio Aurora",
       "Salmoura",
       "Saltitar",
-      "Sinalizador."
+      "Sinalizador"
     ]
   },
   "Lumineon": {
@@ -14015,7 +14172,7 @@
       "Raio Aurora",
       "Salmoura",
       "Saltitar",
-      "Sinalizador."
+      "Sinalizador"
     ]
   },
   "Mantyke": {
@@ -14050,7 +14207,7 @@
       "Nevoeiro",
       "Porrada",
       "Saltitar",
-      "Sinalizador."
+      "Sinalizador"
     ]
   },
   "Snover": {
@@ -14081,7 +14238,7 @@
       "Pisotear",
       "Quebra Crânio",
       "Semente Bala",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Abomasnow": {
@@ -14108,7 +14265,7 @@
       "Pisotear",
       "Quebra Crânio",
       "Semente Bala",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Weavile": {
@@ -14143,7 +14300,7 @@
       "Ódio",
       "Perseguição",
       "Revelação",
-      "Soco de Gelo."
+      "Soco de Gelo"
     ]
   },
   "Magnezone": {
@@ -14172,7 +14329,7 @@
       "Maldição",
       "Mangual",
       "Resistência",
-      "Revelação."
+      "Revelação"
     ]
   },
   "Lickilicky": {
@@ -14205,7 +14362,7 @@
       "Pancada",
       "Ronco",
       "Sonambulismo",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Rhyperior": {
@@ -14242,7 +14399,7 @@
       "Presa de Gelo",
       "Presa do Trovão",
       "Quebra Crânio",
-      "Reversão."
+      "Reversão"
     ]
   },
   "Tangrowth": {
@@ -14278,7 +14435,7 @@
       "Poder da Natureza",
       "Semente Sanguessuga",
       "Tempestade de Folhas",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Electivire": {
@@ -14309,7 +14466,7 @@
       "Soco de Fogo",
       "Soco de Gelo",
       "Soco Dinâmico",
-      "Soco Focalizado."
+      "Soco Focalizado"
     ]
   },
   "Magmortar": {
@@ -14342,7 +14499,7 @@
       "Soco do Trovão",
       "Soco Rápido",
       "Tambor de Pança",
-      "Troca de Forças."
+      "Troca de Forças"
     ]
   },
   "Togekiss": {
@@ -14359,7 +14516,7 @@
       "Previsão",
       "Reserva",
       "Revelação",
-      "Transmissibilidade."
+      "Transmissibilidade"
     ]
   },
   "Yanmega": {
@@ -14389,7 +14546,7 @@
       "Reversão",
       "Sanguessuga",
       "Sinalizador",
-      "Vento Prateado."
+      "Vento Prateado"
     ]
   },
   "Leafeon": {
@@ -14421,7 +14578,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Glaceon": {
@@ -14453,7 +14610,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Gliscor": {
@@ -14487,7 +14644,7 @@
       "Metalizar Garra",
       "Passar o Bastão",
       "Transferência",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Mamoswine": {
@@ -14521,7 +14678,7 @@
       "Pancada",
       "Pedras Soltas",
       "Poder Antigo",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Porygon Z": {
@@ -14574,7 +14731,7 @@
       "Sombra Traiçoeira",
       "Troca de Habilidades",
       "Trocar de Lugar",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Probopass": {
@@ -14604,7 +14761,7 @@
       "Magnitude",
       "Pedras Soltas",
       "Resistência",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Dusknoir": {
@@ -14633,7 +14790,7 @@
       "Sofrimento Mútuo",
       "Troca de Habilidades",
       "Vento Nefasto",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Froslass": {
@@ -14662,7 +14819,7 @@
       "Feitiço",
       "Paciência",
       "Rolagem",
-      "Troca."
+      "Troca"
     ]
   },
   "Rotom": {
@@ -14683,9 +14840,7 @@
       "57": "Carga",
       "64": "Descarga"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Uxie": {
     "naturais": {
@@ -14704,9 +14859,7 @@
       "66": "Dádiva da Natureza",
       "76": "Lembrança"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Mesprit": {
     "naturais": {
@@ -14725,9 +14878,7 @@
       "66": "Dádiva da Natureza",
       "76": "Desejo de Cura"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Azelf": {
     "naturais": {
@@ -14746,9 +14897,7 @@
       "66": "Dádiva da Natureza",
       "76": "Explosão"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Dialga": {
     "naturais": {
@@ -14769,9 +14918,7 @@
       "50": "Canhão de Luz",
       "55": "Bloquear Cura"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Palkia": {
     "naturais": {
@@ -14791,9 +14938,7 @@
       "50": "Hidrobomba",
       "55": "Bloquear Cura"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Heatran": {
     "naturais": {
@@ -14816,9 +14961,7 @@
       "88": "Obelisco",
       "96": "Tempestade de Magma"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Regigigas": {
     "naturais": {
@@ -14836,9 +14979,7 @@
       "90": "Peso Pesado",
       "100": "Gigaimpacto"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Giratina": {
     "naturais": {
@@ -14859,9 +15000,7 @@
       "50": "Feitiço",
       "55": "Bloquear Cura"
     },
-    "herdados": [
-     
-    ]
+    "herdados": []
   },
   "Cresselia": {
     "naturais": {
@@ -14882,9 +15021,7 @@
       "93": "Paranormal",
       "99": "Força Lunar"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Phione": {
     "naturais": {
@@ -14902,9 +15039,7 @@
       "61": "Mergulho",
       "69": "Dança da Chuva"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Manaphy": {
     "naturais": {
@@ -14924,9 +15059,7 @@
       "69": "Dança da Chuva",
       "76": "Troca de Corações"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Darkrai": {
     "naturais": {
@@ -14952,9 +15085,7 @@
       "84": "Devorar Sonhos",
       "93": "Pulso Sombrio"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Shaymin": {
     "naturais": {
@@ -14983,9 +15114,7 @@
       ],
       "100": "Semente Ofuscante"
     },
-    "herdados": [
-      
-    ]
+    "herdados": []
   },
   "Arceus": {
     "naturais": {
@@ -15006,9 +15135,7 @@
       "90": "Réquiem",
       "100": "Julgamento"
     },
-    "herdados": [
-    
-    ]
+    "herdados": []
   },
   "Victini": {
     "naturais": {
@@ -15031,9 +15158,7 @@
       "89": "Reserva",
       "97": "Superaquecimento"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Snivy": {
     "naturais": {
@@ -15064,7 +15189,7 @@
       "Folhas Mágicas",
       "Ofuscar",
       "Olhar Paralisante",
-      "Perseguição."
+      "Perseguição"
     ]
   },
   "Servine": {
@@ -15095,7 +15220,7 @@
       "Folhas Mágicas",
       "Ofuscar",
       "Olhar Paralisante",
-      "Perseguição."
+      "Perseguição"
     ]
   },
   "Serperior": {
@@ -15126,7 +15251,7 @@
       "Folhas Mágicas",
       "Ofuscar",
       "Olhar Paralisante",
-      "Perseguição."
+      "Perseguição"
     ]
   },
   "Tepig": {
@@ -15158,7 +15283,7 @@
       "Peso Pesado",
       "Magnitude",
       "Sonambulismo",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Pignite": {
@@ -15191,7 +15316,7 @@
       "Peso Pesado",
       "Magnitude",
       "Sonambulismo",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Emboar": {
@@ -15223,7 +15348,7 @@
       "Peso Pesado",
       "Magnitude",
       "Sonambulismo",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Oshawott": {
@@ -15252,7 +15377,7 @@
       "Garantia",
       "Guincho",
       "Imitação",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Dewott": {
@@ -15280,7 +15405,7 @@
       "Garantia",
       "Guincho",
       "Imitação",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Samurott": {
@@ -15309,7 +15434,7 @@
       "Garantia",
       "Guincho",
       "Imitação",
-      "Salmoura."
+      "Salmoura"
     ]
   },
   "Patrat": {
@@ -15339,7 +15464,7 @@
       "Mangual",
       "Perseguição",
       "Revelação",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Watchog": {
@@ -15368,7 +15493,7 @@
       "Mangual",
       "Perseguição",
       "Revelação",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Lillipup": {
@@ -15404,7 +15529,7 @@
       "Presa do Trovão",
       "Presa Psíquica",
       "Resistência",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Herdier": {
@@ -15435,7 +15560,7 @@
       "Presa do Trovão",
       "Presa Psíquica",
       "Resistência",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Stoutland": {
@@ -15466,7 +15591,7 @@
       "Presa do Trovão",
       "Presa Psíquica",
       "Resistência",
-      "Uivo."
+      "Uivo"
     ]
   },
   "Purrloin": {
@@ -15498,7 +15623,7 @@
       "Cobiça",
       "Dia do Pagamento",
       "Imitação",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Liepard": {
@@ -15529,7 +15654,7 @@
       "Cobiça",
       "Dia do Pagamento",
       "Imitação",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Pansage": {
@@ -15564,7 +15689,7 @@
       "Rasteira",
       "Semente Bala",
       "Tempestade de Folhas",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Simisage": {
@@ -15580,7 +15705,7 @@
       "Rasteira",
       "Semente Bala",
       "Tempestade de Folhas",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Pansear": {
@@ -15615,7 +15740,7 @@
       "Rasteira",
       "Soco de Fogo",
       "Sonambulismo",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Simisear": {
@@ -15631,7 +15756,7 @@
       "Rasteira",
       "Semente Bala",
       "Tempestade de Folhas",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Panpour": {
@@ -15666,7 +15791,7 @@
       "Hidrobomba",
       "Interpretação",
       "Rasteira",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Simipour": {
@@ -15682,7 +15807,7 @@
       "Rasteira",
       "Semente Bala",
       "Tempestade de Folhas",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Munna": {
@@ -15717,7 +15842,7 @@
       "Mão Amiga",
       "Passar o Bastão",
       "Poder Secreto",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Musharna": {
@@ -15732,7 +15857,7 @@
       "Mão Amiga",
       "Passar o Bastão",
       "Poder Secreto",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Pidove": {
@@ -15761,7 +15886,7 @@
       "Desejo",
       "Emboscada",
       "Hipnose",
-      "Oferenda."
+      "Oferenda"
     ]
   },
   "Tranquill": {
@@ -15789,7 +15914,7 @@
       "Desejo",
       "Emboscada",
       "Hipnose",
-      "Oferenda."
+      "Oferenda"
     ]
   },
   "Unfezant": {
@@ -15817,7 +15942,7 @@
       "Desejo",
       "Emboscada",
       "Hipnose",
-      "Oferenda."
+      "Oferenda"
     ]
   },
   "Blitzle": {
@@ -15846,7 +15971,7 @@
       "Onda de Choques",
       "Primeiro Eu",
       "Raiva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Zebstrika": {
@@ -15875,7 +16000,7 @@
       "Onda de Choques",
       "Primeiro Eu",
       "Raiva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Roggenrola": {
@@ -15904,7 +16029,7 @@
       "Maldição",
       "Mira",
       "Peso Pesado",
-      "Tumba de Pedra."
+      "Tumba de Pedra"
     ]
   },
   "Boldore": {
@@ -15932,7 +16057,7 @@
       "Maldição",
       "Mira",
       "Peso Pesado",
-      "Tumba de Pedra."
+      "Tumba de Pedra"
     ]
   },
   "Gigalith": {
@@ -15961,7 +16086,7 @@
       "Maldição",
       "Mira",
       "Peso Pesado",
-      "Tumba de Pedra."
+      "Tumba de Pedra"
     ]
   },
   "Woobat": {
@@ -15995,7 +16120,7 @@
       "Nocaute",
       "Reserva",
       "Supersônico",
-      "Transmissibilidade."
+      "Transmissibilidade"
     ]
   },
   "Swoobat": {
@@ -16028,7 +16153,7 @@
       "Nocaute",
       "Reserva",
       "Supersônico",
-      "Transmissibilidade."
+      "Transmissibilidade"
     ]
   },
   "Drilbur": {
@@ -16059,7 +16184,7 @@
       "Poder Terreno",
       "Quebra Crânio",
       "Ruído",
-      "Submissão."
+      "Submissão"
     ]
   },
   "Excadrill": {
@@ -16088,7 +16213,7 @@
       "Poder Terreno",
       "Quebra Crânio",
       "Ruído",
-      "Submissão."
+      "Submissão"
     ]
   },
   "Audino": {
@@ -16125,7 +16250,7 @@
       "Desejo de Cura",
       "Oferenda",
       "Sino da Cura",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Timburr": {
@@ -16160,7 +16285,7 @@
       "Reversão",
       "Soco Cometa",
       "Soco de Drenagem",
-      "Soco Rápido."
+      "Soco Rápido"
     ]
   },
   "Gurdurr": {
@@ -16191,7 +16316,7 @@
       "Reversão",
       "Soco Cometa",
       "Soco de Drenagem",
-      "Soco Rápido."
+      "Soco Rápido"
     ]
   },
   "Conkeldurr": {
@@ -16222,7 +16347,7 @@
       "Reversão",
       "Soco Cometa",
       "Soco de Drenagem",
-      "Soco Rápido."
+      "Soco Rápido"
     ]
   },
   "Tympole": {
@@ -16253,7 +16378,7 @@
       "Pulso d’Água",
       "Refresco",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Palpitoad": {
@@ -16280,7 +16405,7 @@
       "Pulso d’Água",
       "Refresco",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Seismitoad": {
@@ -16309,7 +16434,7 @@
       "Pulso d’Água",
       "Refresco",
       "Ronco",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Throh": {
@@ -16450,7 +16575,7 @@
       "Derrubada",
       "Escalada",
       "Espinhos",
-      "Espinhos Tóxicos."
+      "Espinhos Tóxicos"
     ]
   },
   "Whirlipede": {
@@ -16476,7 +16601,7 @@
       "Derrubada",
       "Escalada",
       "Espinhos",
-      "Espinhos Tóxicos."
+      "Espinhos Tóxicos"
     ]
   },
   "Scolipede": {
@@ -16503,7 +16628,7 @@
       "Derrubada",
       "Escalada",
       "Espinhos",
-      "Espinhos Tóxicos."
+      "Espinhos Tóxicos"
     ]
   },
   "Cottonee": {
@@ -16535,7 +16660,7 @@
       "Espancamento",
       "Lembrança",
       "Semente Irritante",
-      "Troca."
+      "Troca"
     ]
   },
   "Whimsicott": {
@@ -16555,7 +16680,7 @@
       "Espancamento",
       "Lembrança",
       "Semente Irritante",
-      "Troca."
+      "Troca"
     ]
   },
   "Petilil": {
@@ -16586,7 +16711,7 @@
       "Enraizar",
       "Paciência",
       "Resistência",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Lilligant": {
@@ -16605,7 +16730,7 @@
       "Enraizar",
       "Paciência",
       "Resistência",
-      "Semente Irritante."
+      "Semente Irritante"
     ]
   },
   "Basculin": {
@@ -16640,7 +16765,7 @@
       "Redemoinho",
       "Salmoura",
       "Tiro de Lama",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Sandile": {
@@ -16677,7 +16802,7 @@
       "Perseguição",
       "Presa de Fogo",
       "Presa do Trovão",
-      "Primeiro Eu."
+      "Primeiro Eu"
     ]
   },
   "Krokorok": {
@@ -16710,7 +16835,7 @@
       "Perseguição",
       "Presa de Fogo",
       "Presa do Trovão",
-      "Primeiro Eu."
+      "Primeiro Eu"
     ]
   },
   "Krookodile": {
@@ -16743,7 +16868,7 @@
       "Perseguição",
       "Presa de Fogo",
       "Presa do Trovão",
-      "Primeiro Eu."
+      "Primeiro Eu"
     ]
   },
   "Darumaka": {
@@ -16775,7 +16900,7 @@
       "Furto",
       "Resistência",
       "Soco Focalizado",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Darmanitan": {
@@ -16808,7 +16933,7 @@
       "Furto",
       "Resistência",
       "Soco Focalizado",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Maractus": {
@@ -16843,7 +16968,7 @@
       "Pular",
       "Semente Bala",
       "Semente Irritante",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Dwebble": {
@@ -16874,7 +16999,7 @@
       "Fertilizante",
       "Maldição",
       "Resistência",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Crustle": {
@@ -16904,7 +17029,7 @@
       "Fertilizante",
       "Maldição",
       "Resistência",
-      "Tumba de Areia."
+      "Tumba de Areia"
     ]
   },
   "Scraggy": {
@@ -16940,7 +17065,7 @@
       "Soco de Drenagem",
       "Soco de Fogo",
       "Soco de Gelo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Scrafty": {
@@ -16972,7 +17097,7 @@
       "Soco de Drenagem",
       "Soco de Fogo",
       "Soco de Gelo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Sigilyph": {
@@ -17004,7 +17129,7 @@
       "Previsão",
       "Reserva",
       "Transmissibilidade",
-      "Troca de Habilidades."
+      "Troca de Habilidades"
     ]
   },
   "Yamask": {
@@ -17039,7 +17164,7 @@
       "Pesadelo",
       "Resistência",
       "Selo",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Cofagrigus": {
@@ -17071,7 +17196,7 @@
       "Pesadelo",
       "Resistência",
       "Selo",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Tirtouga": {
@@ -17108,7 +17233,7 @@
       "Pancada",
       "Pulso d’Água",
       "Redemoinho",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Carracosta": {
@@ -17140,7 +17265,7 @@
       "Pancada",
       "Pulso d’Água",
       "Redemoinho",
-      "Troca de Defesas."
+      "Troca de Defesas"
     ]
   },
   "Archen": {
@@ -17175,7 +17300,7 @@
       "Poder Terreno",
       "Pulso do Dragão",
       "Troca",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Archeops": {
@@ -17205,7 +17330,7 @@
       "Poder Terreno",
       "Pulso do Dragão",
       "Troca",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Trubbish": {
@@ -17239,7 +17364,7 @@
       "Esporte Terrestre",
       "Maldição",
       "Nevoeiro",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Garbodor": {
@@ -17269,7 +17394,7 @@
       "Esporte Terrestre",
       "Maldição",
       "Nevoeiro",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Zorua": {
@@ -17302,7 +17427,7 @@
       "Imitação",
       "Lembrança",
       "Pelas Costas",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Zoroark": {
@@ -17332,7 +17457,7 @@
       "Imitação",
       "Lembrança",
       "Pelas Costas",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Minccino": {
@@ -17364,7 +17489,7 @@
       "Mangual",
       "Nocaute",
       "Resistência",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Cinccino": {
@@ -17378,7 +17503,7 @@
       "Mangual",
       "Nocaute",
       "Resistência",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Gothita": {
@@ -17407,7 +17532,7 @@
       "Milagre",
       "Olhar Paralisante",
       "Pulso de Cura",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Gothorita": {
@@ -17435,7 +17560,7 @@
       "Milagre",
       "Olhar Paralisante",
       "Pulso de Cura",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Gothitelle": {
@@ -17463,7 +17588,7 @@
       "Milagre",
       "Olhar Paralisante",
       "Pulso de Cura",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Solosis": {
@@ -17493,7 +17618,7 @@
       "Poder Secreto",
       "Raio de Confusão",
       "Selo",
-      "Truque."
+      "Truque"
     ]
   },
   "Duosion": {
@@ -17522,7 +17647,7 @@
       "Poder Secreto",
       "Raio de Confusão",
       "Selo",
-      "Truque."
+      "Truque"
     ]
   },
   "Reuniclus": {
@@ -17553,7 +17678,7 @@
       "Poder Secreto",
       "Raio de Confusão",
       "Selo",
-      "Truque."
+      "Truque"
     ]
   },
   "Duckett": {
@@ -17582,7 +17707,7 @@
       "Primeiro Eu",
       "Salmoura",
       "Ventania",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Swanna": {
@@ -17610,7 +17735,7 @@
       "Primeiro Eu",
       "Salmoura",
       "Ventania",
-      "Vento Cortante."
+      "Vento Cortante"
     ]
   },
   "Vanillite": {
@@ -17639,7 +17764,7 @@
       "Geada",
       "Magnetização",
       "Pulso d’Água",
-      "Selo."
+      "Selo"
     ]
   },
   "Vanillish": {
@@ -17667,7 +17792,7 @@
       "Geada",
       "Magnetização",
       "Pulso d’Água",
-      "Selo."
+      "Selo"
     ]
   },
   "Vanilluxe": {
@@ -17695,7 +17820,7 @@
       "Geada",
       "Magnetização",
       "Pulso d’Água",
-      "Selo."
+      "Selo"
     ]
   },
   "Deerling": {
@@ -17727,7 +17852,7 @@
       "Fotossíntese",
       "Passar o Bastão",
       "Semente Irritante",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Sawsbuck": {
@@ -17756,7 +17881,7 @@
       "Fotossíntese",
       "Passar o Bastão",
       "Semente Irritante",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Emolga": {
@@ -17788,7 +17913,7 @@
       "Empoleirar",
       "Onda de Choques",
       "Passar o Bastão",
-      "Troca de Velocidades."
+      "Troca de Velocidades"
     ]
   },
   "Karrablast": {
@@ -17818,7 +17943,7 @@
       "Nocaute",
       "Picada",
       "Perfuração",
-      "Perseguição."
+      "Perseguição"
     ]
   },
   "Escavalier": {
@@ -17848,7 +17973,7 @@
       "Nocaute",
       "Picada",
       "Perfuração",
-      "Perseguição."
+      "Perseguição"
     ]
   },
   "Foongus": {
@@ -17877,7 +18002,7 @@
       "Pó Venenoso",
       "Resistência",
       "Rolagem",
-      "Vômito."
+      "Vômito"
     ]
   },
   "Amoonguss": {
@@ -17905,7 +18030,7 @@
       "Pó Venenoso",
       "Resistência",
       "Rolagem",
-      "Vômito."
+      "Vômito"
     ]
   },
   "Frillish": {
@@ -17933,7 +18058,7 @@
       "Neblina",
       "Raio de Confusão",
       "Recuperação",
-      "Sofrimento Mútuo."
+      "Sofrimento Mútuo"
     ]
   },
   "Jellicent": {
@@ -17957,7 +18082,7 @@
       "Neblina",
       "Raio de Confusão",
       "Recuperação",
-      "Sofrimento Mútuo."
+      "Sofrimento Mútuo"
     ]
   },
   "Alomomola": {
@@ -17990,7 +18115,7 @@
       "Neblina",
       "Refresco",
       "Resistência",
-      "Sofrimento Mútuo."
+      "Sofrimento Mútuo"
     ]
   },
   "Joltik": {
@@ -18022,7 +18147,7 @@
       "Desabilitar",
       "Escalada",
       "Perseguição",
-      "Picada Venenosa."
+      "Picada Venenosa"
     ]
   },
   "Galvantula": {
@@ -18050,7 +18175,7 @@
       "Desabilitar",
       "Escalada",
       "Perseguição",
-      "Picada Venenosa."
+      "Picada Venenosa"
     ]
   },
   "Ferroseed": {
@@ -18082,7 +18207,7 @@
       "Pedras Soltas",
       "Semente Bala",
       "Semente Irritante",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Ferrothorn": {
@@ -18111,7 +18236,7 @@
       "Pedras Soltas",
       "Semente Bala",
       "Semente Irritante",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Klink": {
@@ -18251,7 +18376,7 @@
       "Troca de Defesas",
       "Troca de Forças",
       "Troca de Habilidades",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Beheeyem": {
@@ -18284,7 +18409,7 @@
       "Troca de Defesas",
       "Troca de Forças",
       "Troca de Habilidades",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Litwick": {
@@ -18317,7 +18442,7 @@
       "Fumaça",
       "Nevoeiro",
       "Onda de Calor",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Lampent": {
@@ -18346,7 +18471,7 @@
       "Fumaça",
       "Nevoeiro",
       "Onda de Calor",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Chandelure": {
@@ -18359,7 +18484,7 @@
       "Fumaça",
       "Nevoeiro",
       "Onda de Calor",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Axew": {
@@ -18391,7 +18516,7 @@
       "Lâmina de Vento",
       "Pulso do Dragão",
       "Resistência",
-      "Reversão."
+      "Reversão"
     ]
   },
   "Fraxure": {
@@ -18422,7 +18547,7 @@
       "Lâmina de Vento",
       "Pulso do Dragão",
       "Resistência",
-      "Reversão."
+      "Reversão"
     ]
   },
   "Haxorus": {
@@ -18453,7 +18578,7 @@
       "Lâmina de Vento",
       "Pulso do Dragão",
       "Resistência",
-      "Reversão."
+      "Reversão"
     ]
   },
   "Cubchoo": {
@@ -18483,7 +18608,7 @@
       "Garantia",
       "Soco de Gelo",
       "Soco Focalizado",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Beartic": {
@@ -18513,7 +18638,7 @@
       "Garantia",
       "Soco de Gelo",
       "Soco Focalizado",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Cryogonal": {
@@ -18575,7 +18700,7 @@
       "Leitura Mental",
       "Passar o Bastão",
       "Perseguição",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Accelgor": {
@@ -18605,7 +18730,7 @@
       "Leitura Mental",
       "Passar o Bastão",
       "Perseguição",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Stunfisk": {
@@ -18642,7 +18767,7 @@
       "Poder Terreno",
       "Primeiro Eu",
       "Sofrimento Mútuo",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Mienfoo": {
@@ -18673,7 +18798,7 @@
       "Rasteira",
       "Resistência",
       "Ringue",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Mienshao": {
@@ -18703,7 +18828,7 @@
       "Rasteira",
       "Resistência",
       "Ringue",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Druddigon": {
@@ -18738,7 +18863,7 @@
       "Pelas Costas",
       "Perseguição",
       "Presa de Fogo",
-      "Presa do Trovão."
+      "Presa do Trovão"
     ]
   },
   "Golett": {
@@ -18815,7 +18940,7 @@
       "Pelas Costas",
       "Perseguição",
       "Prevenção",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Bisharp": {
@@ -18844,7 +18969,7 @@
       "Pelas Costas",
       "Perseguição",
       "Prevenção",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Bouffalant": {
@@ -18875,7 +19000,7 @@
       "Escalada",
       "Pisotear",
       "Quebra Crânio",
-      "Tiro de Lama."
+      "Tiro de Lama"
     ]
   },
   "Rufflet": {
@@ -18954,7 +19079,7 @@
       "Empoleirar",
       "Nocaute",
       "Olhar Paralisante",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Mandibuzz": {
@@ -18982,7 +19107,7 @@
       "Empoleirar",
       "Nocaute",
       "Olhar Paralisante",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Heatmor": {
@@ -19022,7 +19147,7 @@
       "Pancada",
       "Pelas Costas",
       "Perseguição",
-      "Sonambulismo."
+      "Sonambulismo"
     ]
   },
   "Durant": {
@@ -19051,7 +19176,7 @@
       "Guincho",
       "Passar o Bastão",
       "Presa do Trovão",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Deino": {
@@ -19085,7 +19210,7 @@
       "Presa de Fogo",
       "Presa de Gelo",
       "Presa do Trovão",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Zweilous": {
@@ -19115,7 +19240,7 @@
       "Presa de Fogo",
       "Presa de Gelo",
       "Presa do Trovão",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Hydreigon": {
@@ -19145,7 +19270,7 @@
       "Presa de Fogo",
       "Presa de Gelo",
       "Presa do Trovão",
-      "Pulso Sombrio."
+      "Pulso Sombrio"
     ]
   },
   "Larvesta": {
@@ -19172,7 +19297,7 @@
       "Lançar Teia",
       "Magnetização",
       "Resistência",
-      "Revelação."
+      "Revelação"
     ]
   },
   "Volcarona": {
@@ -19197,7 +19322,7 @@
       "Lançar Teia",
       "Magnetização",
       "Resistência",
-      "Revelação."
+      "Revelação"
     ]
   },
   "Cobalion": {
@@ -19219,9 +19344,7 @@
       "55": "Jorro Metálico",
       "61": "Corpo a Corpo"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Terrakion": {
     "naturais": {
@@ -19242,9 +19365,7 @@
       "55": "Obelisco",
       "61": "Corpo a Corpo"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Virizion": {
     "naturais": {
@@ -19265,9 +19386,7 @@
       "55": "Lâmina Vegetal",
       "61": "Corpo a Corpo"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Tornadus": {
     "naturais": {
@@ -19291,9 +19410,7 @@
       "73": "Braço Martelo",
       "79": "Açoite"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Thundurus": {
     "naturais": {
@@ -19317,9 +19434,7 @@
       "73": "Braço Martelo",
       "79": "Açoite"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Reshiram": {
     "naturais": {
@@ -19342,9 +19457,7 @@
       "92": "Vozeirão",
       "100": "Chama Azul"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Zekrom": {
     "naturais": {
@@ -19367,9 +19480,7 @@
       "92": "Vozeirão",
       "100": "Ataque de Raios"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Landorus": {
     "naturais": {
@@ -19393,9 +19504,7 @@
       "73": "Braço Martelo",
       "79": "Ultraje"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Kyurem": {
     "naturais": {
@@ -19425,9 +19534,7 @@
       "85": "Ultraje",
       "92": "Vozeirão"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Keldeo": {
     "naturais": {
@@ -19448,9 +19555,7 @@
       "67": "Hidrobomba",
       "73": "Corpo a Corpo"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Meloetta": {
     "naturais": {
@@ -19470,9 +19575,7 @@
       "78": "Corpo a Corpo",
       "85": "Réquiem"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Genesect": {
     "naturais": {
@@ -19497,9 +19600,7 @@
       "73": "Hiper-Raio",
       "77": "Autodestruição"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Chespin": {
     "naturais": {
@@ -19525,7 +19626,7 @@
       "Maldição",
       "Prevenção",
       "Rolagem",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Quilladin": {
@@ -19551,7 +19652,7 @@
       "Maldição",
       "Prevenção",
       "Rolagem",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Chesnaught": {
@@ -19579,7 +19680,7 @@
       "Maldição",
       "Prevenção",
       "Rolagem",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Fennekin": {
@@ -19605,7 +19706,7 @@
       "Desejo",
       "Hipnose",
       "Manto Mágico",
-      "Onda de Calor."
+      "Onda de Calor"
     ]
   },
   "Braixen": {
@@ -19629,7 +19730,7 @@
       "Desejo",
       "Hipnose",
       "Manto Mágico",
-      "Onda de Calor."
+      "Onda de Calor"
     ]
   },
   "Delphox": {
@@ -19655,7 +19756,7 @@
       "Desejo",
       "Hipnose",
       "Manto Mágico",
-      "Onda de Calor."
+      "Onda de Calor"
     ]
   },
   "Froakie": {
@@ -19681,7 +19782,7 @@
       "Esporte Aquático",
       "Esporte Terrestre",
       "Leitura Mental",
-      "Oferenda."
+      "Oferenda"
     ]
   },
   "Frogadier": {
@@ -19705,7 +19806,7 @@
       "Esporte Aquático",
       "Esporte Terrestre",
       "Leitura Mental",
-      "Oferenda."
+      "Oferenda"
     ]
   },
   "Greninja": {
@@ -19732,7 +19833,7 @@
       "Esporte Aquático",
       "Esporte Terrestre",
       "Leitura Mental",
-      "Oferenda."
+      "Oferenda"
     ]
   },
   "Bunnelby": {
@@ -19759,7 +19860,7 @@
     "herdados": [
       "Defesa Fechada",
       "Espinhos",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Diggersby": {
@@ -19781,7 +19882,7 @@
     "herdados": [
       "Defesa Fechada",
       "Espinhos",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Fletchling": {
@@ -19806,7 +19907,7 @@
     "herdados": [
       "Cauda de Vento",
       "Furto",
-      "Prevenção."
+      "Prevenção"
     ]
   },
   "Fletchinder": {
@@ -19829,7 +19930,7 @@
     "herdados": [
       "Cauda de Vento",
       "Furto",
-      "Prevenção."
+      "Prevenção"
     ]
   },
   "Talonflame": {
@@ -19852,7 +19953,7 @@
     "herdados": [
       "Cauda de Vento",
       "Furto",
-      "Prevenção."
+      "Prevenção"
     ]
   },
   "Scatterbug": {
@@ -19862,7 +19963,7 @@
     "herdados": [
       "Esporos Paralisantes",
       "Pó Irritante",
-      "Pó Venenoso."
+      "Pó Venenoso"
     ]
   },
   "Vivillon": {
@@ -19882,7 +19983,7 @@
     "herdados": [
       "Esporos Paralisantes",
       "Pó Irritante",
-      "Pó Venenoso."
+      "Pó Venenoso"
     ]
   },
   "Litleo": {
@@ -19910,7 +20011,7 @@
       "Bocejo",
       "Bombardeio de Chamas",
       "Espiral de Fogo",
-      "Furto."
+      "Furto"
     ]
   },
   "Pyroar": {
@@ -19934,7 +20035,7 @@
       "Bocejo",
       "Bombardeio de Chamas",
       "Espiral de Fogo",
-      "Furto."
+      "Furto"
     ]
   },
   "Flabébé": {
@@ -19959,7 +20060,7 @@
     "herdados": [
       "Camuflagem",
       "Cativar",
-      "Imitação."
+      "Imitação"
     ]
   },
   "Floette": {
@@ -19980,7 +20081,7 @@
     "herdados": [
       "Camuflagem",
       "Cativar",
-      "Imitação."
+      "Imitação"
     ]
   },
   "Florges": {
@@ -19988,7 +20089,7 @@
     "herdados": [
       "Camuflagem",
       "Cativar",
-      "Imitação."
+      "Imitação"
     ]
   },
   "Skiddo": {
@@ -20015,7 +20116,7 @@
     "herdados": [
       "Bebida Láctea",
       "Defesa Fechada",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Gogoat": {
@@ -20041,7 +20142,7 @@
     "herdados": [
       "Bebida Láctea",
       "Defesa Fechada",
-      "Rolagem."
+      "Rolagem"
     ]
   },
   "Pancham": {
@@ -20069,7 +20170,7 @@
       "Prevenção",
       "Primeiro Eu",
       "Revogação",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Pangoro": {
@@ -20097,7 +20198,7 @@
       "Prevenção",
       "Primeiro Eu",
       "Revogação",
-      "Trapaça."
+      "Trapaça"
     ]
   },
   "Furfrou": {
@@ -20123,7 +20224,7 @@
       "Elaborar",
       "Interpretação",
       "Mímica",
-      "Refresco."
+      "Refresco"
     ]
   },
   "Espurr": {
@@ -20144,7 +20245,7 @@
       "Auxílio",
       "Barreira",
       "Bocejo",
-      "Truque."
+      "Truque"
     ]
   },
   "Mewostic": {
@@ -20153,7 +20254,7 @@
       "Auxílio",
       "Barreira",
       "Bocejo",
-      "Truque."
+      "Truque"
     ]
   },
   "Mewostic Macho": {
@@ -20237,7 +20338,7 @@
       "Defesa Aberta",
       "Ruído",
       "Sombra Traiçoeira",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Doublade": {
@@ -20260,7 +20361,7 @@
       "Defesa Aberta",
       "Ruído",
       "Sombra Traiçoeira",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Aegislash": {
@@ -20274,7 +20375,7 @@
       "Defesa Aberta",
       "Ruído",
       "Sombra Traiçoeira",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Spritzee": {
@@ -20302,7 +20403,7 @@
       "Cativar",
       "Desabilitar",
       "Desejo",
-      "Refresco."
+      "Refresco"
     ]
   },
   "Aromatisse": {
@@ -20328,7 +20429,7 @@
       "Cativar",
       "Desabilitar",
       "Desejo",
-      "Refresco."
+      "Refresco"
     ]
   },
   "Swirlix": {
@@ -20356,7 +20457,7 @@
       "Bocejo",
       "Depois de Você",
       "Imitação",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Slurpuff": {
@@ -20380,7 +20481,7 @@
       "Bocejo",
       "Depois de Você",
       "Imitação",
-      "Tambor de Pança."
+      "Tambor de Pança"
     ]
   },
   "Inkay": {
@@ -20411,7 +20512,7 @@
       "Camuflagem",
       "Compartilhar Forças",
       "Simplificador",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Malamar": {
@@ -20437,7 +20538,7 @@
       "Camuflagem",
       "Compartilhar Forças",
       "Simplificador",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Binacle": {
@@ -20464,7 +20565,7 @@
       "Cócegas",
       "Esporte Aquático",
       "Mão Amiga",
-      "Troca."
+      "Troca"
     ]
   },
   "Barbaracle": {
@@ -20489,7 +20590,7 @@
       "Cócegas",
       "Esporte Aquático",
       "Mão Amiga",
-      "Troca."
+      "Troca"
     ]
   },
   "Skrelp": {
@@ -20518,7 +20619,7 @@
       "Brincadeira",
       "Espinhos Tóxicos",
       "Intensificar Veneno",
-      "Nevoeiro."
+      "Nevoeiro"
     ]
   },
   "Dragalge": {
@@ -20544,7 +20645,7 @@
       "Brincadeira",
       "Espinhos Tóxicos",
       "Intensificar Veneno",
-      "Nevoeiro."
+      "Nevoeiro"
     ]
   },
   "Clauncher": {
@@ -20570,7 +20671,7 @@
       "Mão Amiga",
       "Míssil Aquático",
       "Patola",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Clawitzer": {
@@ -20596,7 +20697,7 @@
       "Mão Amiga",
       "Míssil Aquático",
       "Patola",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Helioptile": {
@@ -20621,7 +20722,7 @@
       "Agilidade",
       "Campo Elétrico",
       "Camuflagem",
-      "Ofuscar."
+      "Ofuscar"
     ]
   },
   "Heliolisk": {
@@ -20630,7 +20731,7 @@
       "Agilidade",
       "Campo Elétrico",
       "Camuflagem",
-      "Ofuscar."
+      "Ofuscar"
     ]
   },
   "Tyrunt": {
@@ -20660,7 +20761,7 @@
       "Presa de Fogo",
       "Presa de Gelo",
       "Presa Venenosa",
-      "Presa do Trovão."
+      "Presa do Trovão"
     ]
   },
   "Tyrantrum": {
@@ -20689,7 +20790,7 @@
       "Presa de Fogo",
       "Presa de Gelo",
       "Presa Venenosa",
-      "Presa do Trovão."
+      "Presa do Trovão"
     ]
   },
   "Amaura": {
@@ -20720,7 +20821,7 @@
       "Descarga",
       "Escudo Espelho",
       "Magnetização",
-      "Nevoeiro."
+      "Nevoeiro"
     ]
   },
   "Aurorus": {
@@ -20748,7 +20849,7 @@
       "Descarga",
       "Escudo Espelho",
       "Magnetização",
-      "Nevoeiro."
+      "Nevoeiro"
     ]
   },
   "Sylveon": {
@@ -20780,7 +20881,7 @@
       "Maldição",
       "Mangual",
       "Reserva",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Hawlucha": {
@@ -20812,7 +20913,7 @@
       "Passar o Bastão",
       "Prevenção",
       "Primeiro Eu",
-      "Trocar de Lugar."
+      "Trocar de Lugar"
     ]
   },
   "Dedenne": {
@@ -20840,7 +20941,7 @@
       "Cobiça",
       "Dádiva da Natureza",
       "Mão Amiga",
-      "Onda Anômala."
+      "Onda Anômala"
     ]
   },
   "Carbink": {
@@ -20890,7 +20991,7 @@
       "Cauda Venenosa",
       "Contra-Ataque",
       "Maldição",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Sliggoo": {
@@ -20911,7 +21012,7 @@
       "Cauda Venenosa",
       "Contra-Ataque",
       "Maldição",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Goodra": {
@@ -20935,7 +21036,7 @@
       "Cauda Venenosa",
       "Contra-Ataque",
       "Maldição",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Klekfi": {
@@ -20963,7 +21064,7 @@
       "Defesa de Ferro",
       "Mira",
       "Roubo",
-      "Troca."
+      "Troca"
     ]
   },
   "Phantump": {
@@ -20989,7 +21090,7 @@
       "Intensificar Veneno",
       "Oferenda",
       "Rancor",
-      "Selo."
+      "Selo"
     ]
   },
   "Trevenant": {
@@ -21012,7 +21113,7 @@
       "Intensificar Veneno",
       "Oferenda",
       "Rancor",
-      "Selo."
+      "Selo"
     ]
   },
   "Pumpkaboo": {
@@ -21038,7 +21139,7 @@
     "herdados": [
       "Desabilitar",
       "Oferenda",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Gourgeist": {
@@ -21062,7 +21163,7 @@
     "herdados": [
       "Desabilitar",
       "Oferenda",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Bergmite": {
@@ -21089,7 +21190,7 @@
       "Barreira",
       "Escudo Espelho",
       "Neblina",
-      "Recuperação."
+      "Recuperação"
     ]
   },
   "Avalugg": {
@@ -21114,7 +21215,7 @@
       "Barreira",
       "Escudo Espelho",
       "Neblina",
-      "Recuperação."
+      "Recuperação"
     ]
   },
   "Noibat": {
@@ -21142,7 +21243,7 @@
       "Cauda de Vento",
       "Furto",
       "Troca",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Noivern": {
@@ -21167,7 +21268,7 @@
       "Cauda de Vento",
       "Furto",
       "Troca",
-      "Ultraje."
+      "Ultraje"
     ]
   },
   "Xerneas": {
@@ -21193,9 +21294,7 @@
       "88": "Gigaimpacto",
       "93": "Ultraje"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Yveltal": {
     "naturais": {
@@ -21220,15 +21319,11 @@
       "88": "Hiper-Raio",
       "93": "Ataque do Céu"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Zygarde": {
     "naturais": {},
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Diancie": {
     "naturais": {
@@ -21255,9 +21350,7 @@
       "60": "Tela de Luz",
       "70": "Salvaguarda"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Hoopa": {
     "naturais": {
@@ -21290,9 +21383,7 @@
         "Vácuo Dimensional"
       ]
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Volcanion": {
     "naturais": {
@@ -21311,9 +21402,7 @@
       "76": "Explosão",
       "85": "Gêiser"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Rowlet": {
     "naturais": {
@@ -21341,7 +21430,7 @@
       "Nevoeiro",
       "Passar o Bastão",
       "Raio de Confusão",
-      "Vento Nefasto."
+      "Vento Nefasto"
     ]
   },
   "Dartrix": {
@@ -21366,7 +21455,7 @@
       "Nevoeiro",
       "Passar o Bastão",
       "Raio de Confusão",
-      "Vento Nefasto."
+      "Vento Nefasto"
     ]
   },
   "Decidueye": {
@@ -21392,7 +21481,7 @@
       "Nevoeiro",
       "Passar o Bastão",
       "Raio de Confusão",
-      "Vento Nefasto."
+      "Vento Nefasto"
     ]
   },
   "Litten": {
@@ -21421,7 +21510,7 @@
       "Mastigada",
       "Onda de Calor",
       "Pancada",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Torracat": {
@@ -21446,7 +21535,7 @@
       "Mastigada",
       "Onda de Calor",
       "Pancada",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Incineroar": {
@@ -21473,7 +21562,7 @@
       "Mastigada",
       "Onda de Calor",
       "Pancada",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Popplio": {
@@ -21502,7 +21591,7 @@
       "Charme",
       "Névoa Aromática",
       "Réquiem",
-      "Sala das Maravilhas."
+      "Sala das Maravilhas"
     ]
   },
   "Brionne": {
@@ -21527,7 +21616,7 @@
       "Charme",
       "Névoa Aromática",
       "Réquiem",
-      "Sala das Maravilhas."
+      "Sala das Maravilhas"
     ]
   },
   "Primarina": {
@@ -21553,7 +21642,7 @@
       "Charme",
       "Névoa Aromática",
       "Réquiem",
-      "Sala das Maravilhas."
+      "Sala das Maravilhas"
     ]
   },
   "Pikipek": {
@@ -21577,7 +21666,7 @@
       "Clamor",
       "Espelho",
       "Estrondo",
-      "Fúria dos Pássaros."
+      "Fúria dos Pássaros"
     ]
   },
   "Trumbeak": {
@@ -21600,7 +21689,7 @@
       "Clamor",
       "Espelho",
       "Estrondo",
-      "Fúria dos Pássaros."
+      "Fúria dos Pássaros"
     ]
   },
   "Toucannon": {
@@ -21624,7 +21713,7 @@
       "Clamor",
       "Espelho",
       "Estrondo",
-      "Fúria dos Pássaros."
+      "Fúria dos Pássaros"
     ]
   },
   "Yungoos": {
@@ -21649,7 +21738,7 @@
     "herdados": [
       "Descansar",
       "Último Recurso",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Gumshoos": {
@@ -21673,7 +21762,7 @@
     "herdados": [
       "Descansar",
       "Último Recurso",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Grubbin": {
@@ -21693,7 +21782,7 @@
       "Cavar",
       "Endurecer",
       "Resistência",
-      "Teia Elétrica."
+      "Teia Elétrica"
     ]
   },
   "Charjabug": {
@@ -21715,7 +21804,7 @@
       "Cavar",
       "Endurecer",
       "Resistência",
-      "Teia Elétrica."
+      "Teia Elétrica"
     ]
   },
   "Vikavolt": {
@@ -21737,7 +21826,7 @@
       "Cavar",
       "Endurecer",
       "Resistência",
-      "Teia Elétrica."
+      "Teia Elétrica"
     ]
   },
   "Crabrawler": {
@@ -21760,7 +21849,7 @@
       "Amnésia",
       "Defesa Aberta",
       "Esforço",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Crabominable": {
@@ -21783,7 +21872,7 @@
       "Amnésia",
       "Defesa Aberta",
       "Esforço",
-      "Superpoder."
+      "Superpoder"
     ]
   },
   "Oricorio": {
@@ -21809,7 +21898,7 @@
       "Cativar",
       "Cauda de Vento",
       "Picotar",
-      "Salvaguarda."
+      "Salvaguarda"
     ]
   },
   "Cutiefly": {
@@ -21831,7 +21920,7 @@
       "Oferenda",
       "Passar o Bastão",
       "Troca de Habilidades",
-      "Troca de Velocidades."
+      "Troca de Velocidades"
     ]
   },
   "Ribombee": {
@@ -21853,7 +21942,7 @@
       "Oferenda",
       "Passar o Bastão",
       "Troca de Habilidades",
-      "Troca de Velocidades."
+      "Troca de Velocidades"
     ]
   },
   "Rockruff": {
@@ -21881,7 +21970,7 @@
       "Garra Esmagadora",
       "Pelas Costas",
       "Presa de Fogo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Lycanroc": {
@@ -21914,7 +22003,6 @@
   },
   "Lycanroc Diurna": {
     "naturais": {
-      "Evolução": "Aceleração",
       "1": [
         "Investida",
         "Encarar"
@@ -21931,7 +22019,8 @@
       "37": "Careta",
       "40": "Mastigada",
       "45": "Escalada",
-      "48": "Obelisco"
+      "48": "Obelisco",
+      "Evolução": "Aceleração"
     },
     "herdados": [
       "Açoite",
@@ -21943,7 +22032,6 @@
   },
   "Lycanroc Crepuscular": {
     "naturais": {
-      "Evolução": "Açoite",
       "1": [
         "Investida",
         "Encarar"
@@ -21960,7 +22048,8 @@
       "37": "Careta",
       "40": "Mastigada",
       "45": "Escalada",
-      "48": "Obelisco"
+      "48": "Obelisco",
+      "Evolução": "Açoite"
     },
     "herdados": [
       "Açoite",
@@ -21972,7 +22061,6 @@
   },
   "Lycanroc Noturna": {
     "naturais": {
-      "Evolução": "Contra-Ataque",
       "1": [
         "Investida",
         "Encarar"
@@ -21989,7 +22077,8 @@
       "37": "Careta",
       "40": "Mastigada",
       "45": "Escalada",
-      "48": "Obelisco"
+      "48": "Obelisco",
+      "Evolução": "Contra-Ataque"
     },
     "herdados": [
       "Açoite",
@@ -22023,7 +22112,7 @@
       "Água Barrenta",
       "Esporte Aquático",
       "Neblina",
-      "Pulso d’Água."
+      "Pulso d’Água"
     ]
   },
   "Mareanie": {
@@ -22046,7 +22135,7 @@
       "Engolir",
       "Estocagem",
       "Liberação",
-      "Nevoeiro."
+      "Nevoeiro"
     ]
   },
   "Toxapex": {
@@ -22069,7 +22158,7 @@
       "Engolir",
       "Estocagem",
       "Liberação",
-      "Nevoeiro."
+      "Nevoeiro"
     ]
   },
   "Mudbray": {
@@ -22094,7 +22183,7 @@
       "Corpo a Corpo",
       "Faca de Dois Gumes",
       "Magnitude",
-      "Pancada."
+      "Pancada"
     ]
   },
   "Mudsdale": {
@@ -22118,7 +22207,7 @@
       "Corpo a Corpo",
       "Faca de Dois Gumes",
       "Magnitude",
-      "Pancada."
+      "Pancada"
     ]
   },
   "Dewpider": {
@@ -22144,7 +22233,7 @@
       "Compartilhar Forças",
       "Estocagem",
       "Liberação",
-      "Raio Aurora."
+      "Raio Aurora"
     ]
   },
   "Araquanid": {
@@ -22166,7 +22255,7 @@
       "Compartilhar Forças",
       "Estocagem",
       "Liberação",
-      "Raio Aurora."
+      "Raio Aurora"
     ]
   },
   "Fomantis": {
@@ -22188,7 +22277,7 @@
       "Desanuviar",
       "Esfera Climática",
       "Gigadreno",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Lurantis": {
@@ -22210,7 +22299,7 @@
       "Desanuviar",
       "Esfera Climática",
       "Gigadreno",
-      "Tempestade de Folhas."
+      "Tempestade de Folhas"
     ]
   },
   "Morelull": {
@@ -22235,7 +22324,7 @@
       "Crescimento",
       "Esporos Paralisantes",
       "Pó Venenoso",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Shiinotic": {
@@ -22259,7 +22348,7 @@
       "Crescimento",
       "Esporos Paralisantes",
       "Pó Venenoso",
-      "Semente Sanguessuga."
+      "Semente Sanguessuga"
     ]
   },
   "Salandit": {
@@ -22286,7 +22375,7 @@
       "Ataque de Areia",
       "Fingimento",
       "Furto",
-      "Nocaute."
+      "Nocaute"
     ]
   },
   "Salazzle": {
@@ -22310,7 +22399,7 @@
       "Ataque de Areia",
       "Fingimento",
       "Furto",
-      "Nocaute."
+      "Nocaute"
     ]
   },
   "Stufful": {
@@ -22338,7 +22427,7 @@
       "Repuxo",
       "Resistência",
       "Soco de Gelo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Bewear": {
@@ -22363,7 +22452,7 @@
       "Repuxo",
       "Resistência",
       "Soco de Gelo",
-      "Soco do Trovão."
+      "Soco do Trovão"
     ]
   },
   "Bounsweet": {
@@ -22384,7 +22473,7 @@
       "Brincadeira",
       "Charme",
       "Finta",
-      "Fotossíntese."
+      "Fotossíntese"
     ]
   },
   "Steenee": {
@@ -22408,7 +22497,7 @@
       "Brincadeira",
       "Charme",
       "Finta",
-      "Fotossíntese."
+      "Fotossíntese"
     ]
   },
   "Tsareena": {
@@ -22433,7 +22522,7 @@
       "Brincadeira",
       "Charme",
       "Finta",
-      "Fotossíntese."
+      "Fotossíntese"
     ]
   },
   "Comfey": {
@@ -22464,7 +22553,7 @@
       "Amnésia",
       "Cântico da Sorte",
       "Depois de Você",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Oranguru": {
@@ -22489,7 +22578,7 @@
       "Campo Psíquico",
       "Extrassensorial",
       "Sala das Maravilhas",
-      "Sala de Truques."
+      "Sala de Truques"
     ]
   },
   "Passimian": {
@@ -22516,7 +22605,7 @@
       "Cabeça de Ferro",
       "Finta",
       "Prevenção",
-      "Ringue."
+      "Ringue"
     ]
   },
   "Wimpod": {
@@ -22531,7 +22620,7 @@
       "Endurecer",
       "Espinhos",
       "Metalizar Garra",
-      "Míssil Aquático."
+      "Míssil Aquático"
     ]
   },
   "Golisopod": {
@@ -22554,7 +22643,7 @@
       "Endurecer",
       "Espinhos",
       "Metalizar Garra",
-      "Míssil Aquático."
+      "Míssil Aquático"
     ]
   },
   "Sandygast": {
@@ -22582,7 +22671,7 @@
       "Estocagem",
       "Liberação",
       "Poder Antigo",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Palossand": {
@@ -22606,7 +22695,7 @@
       "Estocagem",
       "Liberação",
       "Poder Antigo",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Pyukumuku": {
@@ -22635,7 +22724,7 @@
       "Intensificar Veneno",
       "Oferenda",
       "Passar o Bastão",
-      "Resistência."
+      "Resistência"
     ]
   },
   "Tipo Nulo": {
@@ -22735,7 +22824,7 @@
       "Brincadeira",
       "Canção",
       "Charme",
-      "Desejo."
+      "Desejo"
     ]
   },
   "Turtonator": {
@@ -22762,7 +22851,7 @@
       "Defesa Aberta",
       "Espiral de Fogo",
       "Investida de Cabeça",
-      "Vingança."
+      "Vingança"
     ]
   },
   "Togedemaru": {
@@ -22794,7 +22883,7 @@
       "Mangual",
       "Presente",
       "Reversão",
-      "Voz Encantadora."
+      "Voz Encantadora"
     ]
   },
   "Mimikyu": {
@@ -22821,7 +22910,7 @@
       "Maldição",
       "Pesadelo",
       "Rancor",
-      "Vínculo do Destino."
+      "Vínculo do Destino"
     ]
   },
   "Bruxish": {
@@ -22843,7 +22932,7 @@
       "Presa de Gelo",
       "Presa Venenosa",
       "Pulso d’Água",
-      "Raiva."
+      "Raiva"
     ]
   },
   "Drampa": {
@@ -22870,7 +22959,7 @@
       "Brincadeira",
       "Furacão",
       "Investida do Dragão",
-      "Lâmina de Vento."
+      "Lâmina de Vento"
     ]
   },
   "Dhelmise": {
@@ -22919,7 +23008,7 @@
     "herdados": [
       "Contra-Ataque",
       "Reversão",
-      "Sopro do Dragão."
+      "Sopro do Dragão"
     ]
   },
   "Hakamo-O": {
@@ -22942,7 +23031,7 @@
     "herdados": [
       "Contra-Ataque",
       "Reversão",
-      "Sopro do Dragão."
+      "Sopro do Dragão"
     ]
   },
   "Kommo-O": {
@@ -22965,7 +23054,7 @@
     "herdados": [
       "Contra-Ataque",
       "Reversão",
-      "Sopro do Dragão."
+      "Sopro do Dragão"
     ]
   },
   "Tapu Koko": {
@@ -22987,9 +23076,7 @@
       "53": "Agilidade",
       "58": "Esfera Elétrica"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Tapu Lele": {
     "naturais": {
@@ -23010,9 +23097,7 @@
       "53": "Adulação",
       "58": "Força Lunar"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Tapu Bulu": {
     "naturais": {
@@ -23033,9 +23118,7 @@
       "53": "Megachifre",
       "58": "Quebra Crânio"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Tapu Fini": {
     "naturais": {
@@ -23056,27 +23139,21 @@
       "53": "Anel de Água",
       "58": "Hidrobomba"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Cosmog": {
     "naturais": {
       "1": "Saltitar",
       "23": "Teletransporte"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Cosmoem": {
     "naturais": {
       "23": "Teletransporte",
       "Evolução": "Poder Cósmico"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Solgaleo": {
     "naturais": {
@@ -23100,9 +23177,7 @@
       "73": "Gigaimpacto",
       "Evolução": "Aço Solar"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Lunala": {
     "naturais": {
@@ -23126,9 +23201,7 @@
       "73": "Hiper-Raio",
       "Evolução": "Feixe Espectral"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Nihilego": {
     "naturais": {
@@ -23152,9 +23225,7 @@
       "67": "Sala das Maravilhas",
       "73": "Investida de Cabeça"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Buzzwole": {
     "naturais": {
@@ -23178,9 +23249,7 @@
       "67": "Superpoder",
       "73": "Soco Focalizado"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Pheromosa": {
     "naturais": {
@@ -23204,9 +23273,7 @@
       "67": "Supervoadora",
       "73": "Troca de Velocidades"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Xurkitree": {
     "naturais": {
@@ -23230,9 +23297,7 @@
       "67": "Dilúvio Iônico",
       "73": "Canhão Elétrico"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Celesteela": {
     "naturais": {
@@ -23256,9 +23321,7 @@
       "67": "Peso Pesado",
       "73": "Faca de Dois Gumes"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Kartana": {
     "naturais": {
@@ -23282,9 +23345,7 @@
       "67": "Corte Psíquico",
       "73": "Guilhotina"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Guzzlord": {
     "naturais": {
@@ -23308,9 +23369,7 @@
       "67": "Torção",
       "73": "Investida do Dragão"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Necrozma": {
     "naturais": {
@@ -23333,9 +23392,7 @@
       "67": "Torção",
       "73": "Laser"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Magearna": {
     "naturais": {
@@ -23358,9 +23415,7 @@
       "89": "Troca de Corações",
       "97": "Curinga"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Marshadow": {
     "naturais": {
@@ -23383,9 +23438,7 @@
       "56": "Pelas Costas",
       "60": "Esforço"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Poipole": {
     "naturais": {
@@ -23404,9 +23457,7 @@
       "41": "Toxicidade",
       "47": "Aguilhão"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Naganadel": {
     "naturais": {
@@ -23422,9 +23473,7 @@
       "61": "Pulso do Dragão",
       "Evolução": "Vento Cortante"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Stakataka": {
     "naturais": {
@@ -23444,9 +23493,7 @@
       "53": "Defesa Aberta",
       "61": "Faca de Dois Gumes"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Blacephalon": {
     "naturais": {
@@ -23465,9 +23512,7 @@
       "47": "Truque",
       "59": "Perder a Cabeça"
     },
-    "herdados": [
-      "-"
-    ]
+    "herdados": []
   },
   "Zeraora": {
     "naturais": {
@@ -23490,8 +23535,569 @@
       "47": "Corpo a Corpo",
       "50": "Descarga"
     },
+    "herdados": []
+  },
+  "Raichu de Alola": {
+    "naturais": {
+      "1": "Paranormal"
+    },
     "herdados": [
-      "-"
+      "Bis",
+      "Campo Elétrico",
+      "Cântico da Sorte",
+      "Carga",
+      "Cócegas",
+      "Desejo",
+      "Fingimento",
+      "Investida Trovão",
+      "Mangual",
+      "Oferenda",
+      "Paciência",
+      "Presente",
+      "Resistência",
+      "Reversão",
+      "Soco do Trovão",
+      "Tapa Duplo",
+      "Voz Encantadora"
+    ]
+  },
+  "Sandshrew de Alola": {
+    "naturais": {
+      "1": [
+        "Arranhão",
+        "Defesa Fechada"
+      ],
+      "3": "Paciência",
+      "5": "Geada",
+      "7": "Anel de Gelo",
+      "9": "Giro Rápido",
+      "11": "Corte Furioso",
+      "14": "Metalizar Garra",
+      "17": "Estrela Cadente",
+      "20": "Garras Furiosas",
+      "23": "Defesa de Ferro",
+      "26": "Retalhar",
+      "30": "Cabeça de Ferro",
+      "34": "Girobola",
+      "38": "Dança das Espadas",
+      "42": "Granizo",
+      "46": "Nevasca"
+    },
+    "herdados": [
+      "Emboscada",
+      "Garra Esmagadora",
+      "Lapidação",
+      "Resistência",
+      "Mangual",
+      "Metalizar Garra",
+      "Amnésia",
+      "Contra-Ataque",
+      "Estaca de Gelo",
+      "Lanças de Gelo",
+      "Maldição"
+    ]
+  },
+  "Sandslash de Alola": {
+    "naturais": {
+      "1": "Lanças de Gelo"
+    },
+    "herdados": [
+      "Emboscada",
+      "Garra Esmagadora",
+      "Lapidação",
+      "Resistência",
+      "Mangual",
+      "Metalizar Garra",
+      "Amnésia",
+      "Contra-Ataque",
+      "Estaca de Gelo",
+      "Lanças de Gelo",
+      "Maldição"
+    ]
+  },
+  "Vulpix de Alola": {
+    "naturais": {
+      "1": "Geada",
+      "4": "Abanar Rabo",
+      "7": "Rugido",
+      "9": "Doçura",
+      "10": "Estilhaços de Gelo",
+      "12": "Raio de Confusão",
+      "15": "Vento Gelado",
+      "18": "Retribuição",
+      "20": "Neblina",
+      "23": "Ataque Furtivo",
+      "26": "Feitiço",
+      "28": "Raio Aurora",
+      "31": "Extrassensorial",
+      "34": "Salvaguarda",
+      "36": "Raio de Gelo",
+      "39": "Selo",
+      "42": "Raio de Gelo",
+      "44": "Rancor",
+      "47": "Cativar",
+      "50": "Zero Absoluto"
+    },
+    "herdados": [
+      "Ataque Furtivo",
+      "Cativar",
+      "Caudada",
+      "Charme",
+      "Desabilitar",
+      "Extrassensorial",
+      "Feitiço",
+      "Hipnose",
+      "Mangual",
+      "Ódio",
+      "Poder Secreto",
+      "Troca de Forças",
+      "Uivo",
+      "Bis",
+      "Força Lunar"
+    ]
+  },
+  "Ninetales de Alola": {
+    "naturais": {
+      "1": "Luz Mágica"
+    },
+    "herdados": [
+      "Ataque Furtivo",
+      "Cativar",
+      "Caudada",
+      "Charme",
+      "Desabilitar",
+      "Extrassensorial",
+      "Feitiço",
+      "Hipnose",
+      "Mangual",
+      "Ódio",
+      "Poder Secreto",
+      "Troca de Forças",
+      "Uivo",
+      "Bis",
+      "Força Lunar"
+    ]
+  },
+  "Diglett de Alola": {
+    "naturais": {
+      "1": [
+        "Ataque de Areia",
+        "Metalizar Garra"
+      ],
+      "4": "Rosnado",
+      "7": "Assustar",
+      "10": "Ataque de Lama",
+      "14": "Magnitude",
+      "18": "Tremor",
+      "22": "Pelas Costas",
+      "25": "Bomba de Lama",
+      "28": "Poder Terreno",
+      "31": "Cavar",
+      "35": "Cabeça de Ferro",
+      "39": "Terremoto",
+      "43": "Fissura"
+    },
+    "herdados": [
+      "Ataque Furtivo",
+      "Cativar",
+      "Caudada",
+      "Charme",
+      "Desabilitar",
+      "Extrassensorial",
+      "Feitiço",
+      "Hipnose",
+      "Mangual",
+      "Ódio",
+      "Poder Secreto",
+      "Troca de Forças",
+      "Uivo",
+      "Açoite"
+    ]
+  },
+  "Dugtrio de Alola": {
+    "naturais": {
+      "1": "Tumba de Areia",
+      "4": "Rosnado",
+      "7": "Assustar",
+      "10": "Ataque de Lama",
+      "14": "Magnitude",
+      "18": "Tremor",
+      "22": "Pelas Costas",
+      "25": "Bomba de Lama",
+      "30": "Poder Terreno",
+      "35": "Cavar",
+      "41": "Cabeça de Ferro",
+      "47": "Terremoto",
+      "53": "Fissura"
+    },
+    "herdados": [
+      "Ataque Furtivo",
+      "Cativar",
+      "Caudada",
+      "Charme",
+      "Desabilitar",
+      "Extrassensorial",
+      "Feitiço",
+      "Hipnose",
+      "Mangual",
+      "Ódio",
+      "Poder Secreto",
+      "Troca de Forças",
+      "Uivo",
+      "Açoite"
+    ]
+  },
+  "Meowth de Alola": {
+    "naturais": {
+      "1": [
+        "Arranhão",
+        "Rosnado"
+      ],
+      "6": "Mordida",
+      "9": "Fingimento",
+      "14": "Garras Furiosas",
+      "17": "Guincho",
+      "22": "Ataque Furtivo",
+      "25": "Provocação",
+      "30": "Dia do Pagamento",
+      "33": "Retalhar",
+      "38": "Conspiração",
+      "41": "Garantia",
+      "46": "Cativar",
+      "49": "Emboscada",
+      "50": "Finta",
+      "55": "Pulso Sombrio"
+    },
+    "herdados": [
+      "Amnésia",
+      "Auxílio",
+      "Castigo",
+      "Charme",
+      "Furto",
+      "Hipnose",
+      "Mangual",
+      "Ódio",
+      "Trapaça",
+      "Adeus",
+      "Adulação",
+      "Cobiça"
+    ]
+  },
+  "Persian de Alola": {
+    "naturais": {
+      "1": "Estrela Cadente",
+      "6": "Mordida",
+      "9": "Fingimento",
+      "14": "Garras Furiosas",
+      "17": "Guincho",
+      "22": "Ataque Furtivo",
+      "25": "Provocação",
+      "32": "Joia do Poder",
+      "33": "Retalhar",
+      "37": "Conspiração",
+      "44": "Garantia",
+      "49": "Garantia",
+      "56": "Cativar",
+      "61": "Emboscada",
+      "65": "Finta",
+      "69": "Pulso Sombrio"
+    },
+    "herdados": [
+      "Amnésia",
+      "Auxílio",
+      "Castigo",
+      "Charme",
+      "Furto",
+      "Hipnose",
+      "Mangual",
+      "Ódio",
+      "Trapaça",
+      "Adeus",
+      "Adulação",
+      "Cobiça"
+    ]
+  },
+  "Geodude de Alola": {
+    "naturais": {
+      "1": [
+        "Defesa Fechada",
+        "Investida"
+      ],
+      "4": "Carga",
+      "6": "Polimento",
+      "10": "Rolagem",
+      "12": "Faísca",
+      "16": "Arremesso de Pedras",
+      "18": "Destruição",
+      "22": "Soco do Trovão",
+      "24": "Autodestruição",
+      "28": "Pedras Soltas",
+      "30": "Detonação",
+      "34": "Descarga",
+      "36": "Explosão",
+      "40": "Faca de Dois Gumes",
+      "42": "Obelisco"
+    },
+    "herdados": [
+      "Automação",
+      "Bloqueio",
+      "Defesa Aberta",
+      "Escalada",
+      "Maldição",
+      "Mangual",
+      "Resistência",
+      "Contra-Ataque",
+      "Guincho",
+      "Magnetização"
+    ]
+  },
+  "Graveler de Alola": {
+    "naturais": {
+      "4": "Carga",
+      "6": "Polimento",
+      "10": "Rolagem",
+      "12": "Faísca",
+      "16": "Arremesso de Pedras",
+      "18": "Destruição",
+      "22": "Soco do Trovão",
+      "24": "Autodestruição",
+      "30": "Pedras Soltas",
+      "34": "Detonação",
+      "40": "Descarga",
+      "44": "Explosão",
+      "50": "Faca de Dois Gumes",
+      "54": "Obelisco"
+    },
+    "herdados": [
+      "Automação",
+      "Bloqueio",
+      "Defesa Aberta",
+      "Escalada",
+      "Maldição",
+      "Mangual",
+      "Resistência",
+      "Contra-Ataque",
+      "Guincho",
+      "Magnetização"
+    ]
+  },
+  "Golem de Alola": {
+    "naturais": {
+      "4": "Carga",
+      "6": "Polimento",
+      "10": "Rolagem",
+      "12": "Faísca",
+      "16": "Arremesso de Pedras",
+      "18": "Destruição",
+      "22": "Soco do Trovão",
+      "24": "Autodestruição",
+      "30": "Pedras Soltas",
+      "34": "Detonação",
+      "40": "Descarga",
+      "44": "Explosão",
+      "50": "Faca de Dois Gumes",
+      "54": "Obelisco",
+      "60": "Peso Pesado"
+    },
+    "herdados": [
+      "Automação",
+      "Bloqueio",
+      "Defesa Aberta",
+      "Escalada",
+      "Maldição",
+      "Mangual",
+      "Resistência",
+      "Contra-Ataque",
+      "Guincho",
+      "Magnetização"
+    ]
+  },
+  "Grimer de Alola": {
+    "naturais": {
+      "1": [
+        "Gás Venenoso",
+        "Tapa"
+      ],
+      "4": "Endurecer",
+      "7": "Mordida",
+      "12": "Desabilitar",
+      "15": "Bomba Ácida",
+      "17": "Presa Venenosa",
+      "21": "Minimizar",
+      "26": "Lançamento",
+      "29": "Nocaute",
+      "32": "Mastigada",
+      "37": "Guincho",
+      "40": "Sujeira",
+      "43": "Armadura Ácida",
+      "46": "Arroto",
+      "48": "Lembrança"
+    },
+    "herdados": [
+      "Careta",
+      "Engolir",
+      "Estocagem",
+      "Liberação",
+      "Maldição",
+      "Olhar Paralisante",
+      "Selo",
+      "Sombra Traiçoeira",
+      "Fumaça",
+      "Garantia",
+      "Ódio",
+      "Perseguição"
+    ]
+  },
+  "Muk de Alola": {
+    "naturais": {
+      "1": "Intensificar Veneno",
+      "4": "Endurecer",
+      "7": "Mordida",
+      "12": "Desabilitar",
+      "15": "Bomba Ácida",
+      "17": "Presa Venenosa",
+      "21": "Minimizar",
+      "26": "Lançamento",
+      "29": "Nocaute",
+      "32": "Mastigada",
+      "37": "Guincho",
+      "40": "Sujeira",
+      "46": "Armadura Ácida",
+      "52": "Arroto",
+      "57": "Lembrança"
+    },
+    "herdados": [
+      "Careta",
+      "Engolir",
+      "Estocagem",
+      "Liberação",
+      "Maldição",
+      "Olhar Paralisante",
+      "Selo",
+      "Sombra Traiçoeira",
+      "Fumaça",
+      "Garantia",
+      "Ódio",
+      "Perseguição"
+    ]
+  },
+  "Exeggutor de Alola": {
+    "naturais": {
+      "1": [
+        "Cabeça do Dragão",
+        "Pisotear"
+      ],
+      "17": "Psicochoque",
+      "27": "Ovo Bomba",
+      "37": "Martelo de Madeira",
+      "47": "Tempestade de Folhas"
+    },
+    "herdados": [
+      "Bloqueio",
+      "Campo Gramado",
+      "Cântico da Sorte",
+      "Dádiva da Natureza",
+      "Enraizar",
+      "Fotossíntese",
+      "Gigadreno",
+      "Luar",
+      "Maldição",
+      "Poder Antigo",
+      "Poder da Natureza",
+      "Tempestade de Folhas",
+      "Troca de Forças",
+      "Troca de Habilidades"
+    ]
+  },
+  "Marowak de Alola": {
+    "naturais": {
+      "3": "Abanar Rabo",
+      "7": "Bastão Ósseo",
+      "11": "Anel de Fogo",
+      "13": "Encarar",
+      "17": "Feitiço",
+      "21": "Bumerangue Ósseo",
+      "23": "Fogo-Fátuo",
+      "27": "Osso Sombrio",
+      "33": "Açoite",
+      "37": "Lançamento",
+      "43": "Cólera",
+      "49": "Esforço",
+      "53": "Bombardeio de Chamas",
+      "59": "Retaliação",
+      "65": "Sabre Ósseo"
+    },
+    "herdados": [
+      "Cabeça de Ferro",
+      "Chute Duplo",
+      "Detecção",
+      "Guincho",
+      "Poder Antigo",
+      "Lapidação",
+      "Quebra Crânio",
+      "Réquiem",
+      "Resistência",
+      "Tambor de Pança"
+    ]
+  },
+  "Wattrel": {
+    "naturais": {
+      "1": "Bicada",
+      "3": "Rosnado",
+      "4": "Choque do Trovão",
+      "7": "Ataque Rápido",
+      "11": "Picotar",
+      "15": "Faísca",
+      "19": "Bico Broca",
+      "23": "Empoleirar",
+      "27": "Asa de Aço",
+      "32": "Agilidade",
+      "37": "Descarga",
+      "43": "Trovão"
+    },
+    "herdados": [
+      "Dança das Penas",
+      "Esfera Climática",
+      "Agilidade",
+      "Vento Cortante",
+      "Cauda de Vento",
+      "Golpe Aéreo",
+      "Esfera Elétrica",
+      "Onda Trovão",
+      "Carga Selvagem",
+      "Faísca"
+    ]
+  },
+  "Kilowattrel": {
+    "naturais": {
+      "1": [
+        "Bicada",
+        "Rosnado",
+        "Esfera Elétrica"
+      ],
+      "4": "Choque do Trovão",
+      "7": "Ataque Rápido",
+      "11": "Picotar",
+      "15": "Faísca",
+      "19": "Bico Broca",
+      "24": "Empoleirar",
+      "30": "Asa de Aço",
+      "36": "Agilidade",
+      "43": "Descarga",
+      "48": "Trovão",
+      "55": "Furacão"
+    },
+    "herdados": [
+      "Dança das Penas",
+      "Esfera Climática",
+      "Agilidade",
+      "Vento Cortante",
+      "Cauda de Vento",
+      "Golpe Aéreo",
+      "Esfera Elétrica",
+      "Onda Trovão",
+      "Carga Selvagem",
+      "Faísca"
     ]
   }
 }

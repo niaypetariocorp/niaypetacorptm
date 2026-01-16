@@ -894,7 +894,7 @@ const POKELOJA_DATA = {
     { name: 'Lureball', price: 2000, description: '+0, ou -15 se o alvo foi atraído ao encontro por uma isca.', image: '/pokeballs/lureball.png' },
     { name: 'Luxuryball', price: 2000, description: '-5, Fica feliz.', image: '/pokeballs/luxuryball.png' },
     { name: 'Nestball', price: 2000, description: '+0; ou -15 se o Nível do alvo é menor que 10.', image: '/pokeballs/nestball.png' },
-    { name: 'Netball', price: 2000, description: '+0, ou -15 se o Nível do alvo é menor que 10.', image: '/pokeballs/netball.png' },
+    { name: 'Netball', price: 2000, description: '+0, ou -15 se o alvo é dos Tipos Água ou Inseto.', image: '/pokeballs/netball.png' },
     { name: 'Parkball', price: 2000, description: '+0, Pokébola autorizadas para uso dentro de uma Zona de Safari.', image: '/pokeballs/parkball.png' },
     { name: 'Premierball', price: 2000, description: '+0', image: '/pokeballs/premierball.png' },
     { name: 'Quickball', price: 2000, description: '-20, ou -15 se for usada na segunda rodada do combate ou -10 se for usada depois da segunda rodada', image: '/pokeballs/quickball.png' },
@@ -913,6 +913,464 @@ const POKELOJA_DATA = {
     { name: 'PP-up', price: 9800, description: 'Escolha um Golpe* do pokémon.Se o Golpe escolhido tinha Frequência Rodada Sim Rodada Não, ele agora pode ser usado À Vontade. Se o Golpe escolhido tinha Frequência Por Encontro, ele agora pode ser usado Rodada Sim Rodada Não. Se ele possuía Frequência Centro Pokémon, ele agora pode ser usado Por Encontro.', image: '/pokeballs/ppup.png' },
     { name: 'Rare Candy', price: 48000, description: 'O pokémon ganha 1 nível.', image: '/pokeballs/rarecandy.png' }
   ]
+}
+
+// Componente de Combate Interlúdio
+function CombateInterludioApp({ darkMode }) {
+  const [level, setLevel] = useState(10)
+  const [advantage2, setAdvantage2] = useState(false)
+  const [advantage4, setAdvantage4] = useState(false)
+  const [buffs, setBuffs] = useState(3)
+  const [formula, setFormula] = useState('')
+
+  // Calcular d12s baseados no nível
+  const calculateD12FromLevel = (lvl) => {
+    let d12Count = 0
+    if (lvl >= 1) d12Count += 1
+    if (lvl >= 10) d12Count += Math.floor(lvl / 10)
+    return d12Count
+  }
+
+  // Calcular a fórmula
+  const calculateFormula = () => {
+    const d12Count = calculateD12FromLevel(level)
+    let d6Count = 0
+    if (advantage2) d6Count += 1
+    if (advantage4) d6Count += 2
+    const d4Count = buffs
+
+    const formulaParts = []
+    if (d12Count > 0) formulaParts.push(`${d12Count}d12`)
+    if (d6Count > 0) formulaParts.push(`${d6Count}d6`)
+    if (d4Count > 0) formulaParts.push(`${d4Count}d4`)
+
+    setFormula(formulaParts.length > 0 ? formulaParts.join(' + ') : 'Nenhum dado na fórmula')
+  }
+
+  useEffect(() => {
+    calculateFormula()
+  }, [level, advantage2, advantage4, buffs])
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <h2 className={`text-2xl font-bold ${darkMode ? 'text-cyan-400' : 'text-blue-600'}`}>
+          Calculadora de Fórmulas com Dados
+        </h2>
+        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          Insira os valores abaixo para calcular a fórmula baseada em nível, vantagens e buffs.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Nível */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4`}>
+          <label className={`block mb-2 font-bold ${darkMode ? 'text-cyan-400' : 'text-blue-600'}`}>
+            Nível (1 a 100)
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            value={level}
+            onChange={(e) => setLevel(Math.min(100, Math.max(1, parseInt(e.target.value) || 1)))}
+            className={`w-full px-3 py-2 rounded border-2 ${
+              darkMode
+                ? 'bg-gray-700 border-gray-600 text-white'
+                : 'bg-white border-gray-300 text-gray-800'
+            }`}
+          />
+        </div>
+
+        {/* Vantagens */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4`}>
+          <label className={`block mb-2 font-bold ${darkMode ? 'text-cyan-400' : 'text-blue-600'}`}>
+            Vantagens
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={advantage2}
+                onChange={(e) => {
+                  setAdvantage2(e.target.checked)
+                  if (e.target.checked) setAdvantage4(false)
+                }}
+                className="w-5 h-5"
+              />
+              <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Vantagem x2 (1d6)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={advantage4}
+                onChange={(e) => {
+                  setAdvantage4(e.target.checked)
+                  if (e.target.checked) setAdvantage2(false)
+                }}
+                className="w-5 h-5"
+              />
+              <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>Vantagem x4 (2d6)</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Buffs */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4`}>
+          <label className={`block mb-2 font-bold ${darkMode ? 'text-cyan-400' : 'text-blue-600'}`}>
+            Pontos de Buffs (0 a 100)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={buffs}
+            onChange={(e) => setBuffs(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+            className={`w-full px-3 py-2 rounded border-2 ${
+              darkMode
+                ? 'bg-gray-700 border-gray-600 text-white'
+                : 'bg-white border-gray-300 text-gray-800'
+            }`}
+          />
+        </div>
+      </div>
+
+      {/* Resultado */}
+      <div className={`${darkMode ? 'bg-gray-800 border-blue-500' : 'bg-white border-blue-400'} border-l-4 rounded-lg p-6`}>
+        <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-cyan-400' : 'text-blue-600'}`}>
+          Fórmula Resultante:
+        </h3>
+        <div className={`text-3xl font-mono font-bold text-center py-6 rounded-lg ${
+          darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {formula}
+        </div>
+
+        <div className={`mt-6 pt-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <p className={`font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Explicação da fórmula:</p>
+          <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg p-4 mb-3`}>
+            <p className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Nível:</p>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              Do nível 1 ao 9, adiciona-se 1d12. Adiciona-se 1d12 extra nos níveis 10, 20, 30, 40, 50, 60, 70, 80, 90, 100.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+              <div className={`text-center py-1 rounded ${darkMode ? 'bg-gray-600' : 'bg-white'}`}>
+                <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Nível 1-9: 1d12</span>
+              </div>
+              <div className={`text-center py-1 rounded ${darkMode ? 'bg-gray-600' : 'bg-white'}`}>
+                <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Nível 10-19: 2d12</span>
+              </div>
+              <div className={`text-center py-1 rounded ${darkMode ? 'bg-gray-600' : 'bg-white'}`}>
+                <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Nível 20-29: 3d12</span>
+              </div>
+              <div className={`text-center py-1 rounded ${darkMode ? 'bg-gray-600' : 'bg-white'}`}>
+                <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Nível 30-39: 4d12</span>
+              </div>
+            </div>
+          </div>
+          <ul className={`list-disc list-inside space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <li><strong>Vantagem x2:</strong> Adiciona 1d6 à fórmula</li>
+            <li><strong>Vantagem x4:</strong> Adiciona 2d6 à fórmula</li>
+            <li><strong>Pontos de Buffs:</strong> Cada ponto adiciona 1d4 à fórmula</li>
+          </ul>
+          <div className="flex justify-center gap-4 mt-4">
+            <div className="w-12 h-12 bg-pink-600 rounded-lg flex items-center justify-center font-bold text-white">d12</div>
+            <div className="w-12 h-12 bg-cyan-500 rounded-lg flex items-center justify-center font-bold text-white">d6</div>
+            <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center font-bold text-white">d4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Componente de Concurso Interlúdio
+function ConcursoInterludioApp({ darkMode }) {
+  const aptitudes = ['Vigor', 'Estilo', 'Beleza', 'Ternura', 'Perspicácia']
+
+  const contestTags = [
+    { tag: 'Abertura', score: '2d4', effect: '+2d4 à Pontuação se for o primeiro da rodada.' },
+    { tag: 'Abstração', score: '2d4', effect: 'A Expectativa do Jurado não poderá ser aumentada durante aquela rodada.' },
+    { tag: 'Clímax', score: '0', effect: 'Dobre a Pontuação que ganhar na próxima rodada.' },
+    { tag: 'Cobiça', score: '0', effect: 'Reduza à metade a Pontuação do competidor que Pontuou imediatamente antes e adicione a quantidade reduzida à sua Pontuação.' },
+    { tag: 'Conquista', score: '2d4', effect: 'A Expectativa do Jurado não poderá ser reduzida durante aquela rodada.' },
+    { tag: 'Constrangimento', score: '2d4', effect: 'Independentemente da Aptidão do Golpe, ele sempre reduz em 1 a Expectativa de todos os Jurados.' },
+    { tag: 'Continuação', score: '0', effect: 'A Pontuação deste Golpe é 1d4 se for o primeiro ou o segundo da rodada; 2d4 se for o terceiro ou o quarto da rodada; ou 3d4 se for o último da rodada.' },
+    { tag: 'Dedicatória', score: '1d4', effect: '+3d4 se nenhum outro competidor escolheu o mesmo Jurado naquela rodada.' },
+    { tag: 'Desfecho', score: '0', effect: 'A Pontuação deste Golpe se torna 15d4 se todos os competidores se apresentaram para o mesmo jurado. Só é possível usar um Golpe com este Descritor se o competidor for o quarto ou quinto na ordem da rodada.' },
+    { tag: 'Despedida', score: '2d4', effect: 'Dobre a Pontuação se estiver na última rodada da Apelação.' },
+    { tag: 'Encerramento', score: '2d4', effect: '+2d4 à Pontuação se for o último da rodada.' },
+    { tag: 'Entrada', score: '2d4', effect: 'Na próxima rodada, o competidor será o primeiro da rodada.' },
+    { tag: 'Especial', score: '0', effect: 'Na próxima rodada, o competidor poderá escolher sua posição na ordem da rodada.' },
+    { tag: 'Excentricidade', score: '2d4', effect: 'A Pontuação deste Golpe é Xd4, em que X é igual a 6 - a Expectativa do Jurado antes do Golpe.' },
+    { tag: 'Extravagância', score: '0', effect: 'Independentemente da Aptidão do Golpe, ele sempre aumenta em 1 a Expectativa de todos os Jurados.' },
+    { tag: 'Incentivo', score: '2d4', effect: '+2d4 se o Golpe aumentar a Expectativa.' },
+    { tag: 'Modelo', score: '0', effect: 'A Pontuação deste Golpe é Xd4, em que X é a Expectativa do Jurado antes do Golpe.' },
+    { tag: 'Modéstia', score: '2d4', effect: 'Este Golpe pode ser usado várias rodadas seguidas e ainda obter o benefício de +1d4, desde que seja da Aptidão associada ao Concurso.' },
+    { tag: 'Originalidade', score: '0', effect: 'Independentemente da Aptidão do Golpe, ele sempre aumenta em 2 a Expectativa do Jurado.' },
+    { tag: 'Pausa', score: '2d4', effect: 'Na próxima rodada, o competidor será o último da rodada.' },
+    { tag: 'Perspectiva', score: '2d4', effect: '+3d4 se a Expectativa do Jurado atingiu a Expectativa máxima durante a rodada.' },
+    { tag: 'Proveito', score: '1d4', effect: '+3d4 à Pontuação se houve algum aumento de Expectativa nas últimas duas rodadas da Apelação.' },
+    { tag: 'Reviravolta', score: '1d4', effect: '+3d4 à Pontuação se possuir a menor Pontuação.' },
+    { tag: 'Segurança', score: '3d4', effect: 'Não tem.' },
+    { tag: 'Sorteio', score: '2d4', effect: 'Na próxima rodada, a ordem será necessariamente sorteada.' },
+    { tag: 'Surpresa', score: '2d4', effect: 'Este Golpe sempre é o primeiro da rodada, ignorando a ordem.' }
+  ]
+
+  const pokemonNames = [
+    'Pikachu', 'Eevee', 'Bulbasaur', 'Charmander', 'Squirtle',
+    'Jigglypuff', 'Meowth', 'Psyduck', 'Snorlax', 'Lucario',
+    'Gardevoir', 'Gengar', 'Dragonite', 'Mewtwo', 'Mew',
+    'Charizard', 'Blastoise', 'Venusaur', 'Gyarados', 'Arcanine'
+  ]
+
+  const [selectedAptitude, setSelectedAptitude] = useState('Vigor')
+  const [pokemonCount, setPokemonCount] = useState(5)
+  const [pokemonList, setPokemonList] = useState([])
+  const [stats, setStats] = useState({ selected: 0, total: 0 })
+
+  // Rolar dados
+  const rollDice = (diceString) => {
+    if (diceString === '0') return 0
+    const [numDice, diceType] = diceString.split('d').map(Number)
+    let total = 0
+    for (let i = 0; i < numDice; i++) {
+      total += Math.floor(Math.random() * diceType) + 1
+    }
+    return total
+  }
+
+  // Gerar golpe aleatório com aptidão ponderada
+  const generateRandomMove = (aptitude) => {
+    const weightedAptitudes = [...aptitudes, aptitude]
+    const randomAptitude = weightedAptitudes[Math.floor(Math.random() * weightedAptitudes.length)]
+    const randomTag = contestTags[Math.floor(Math.random() * contestTags.length)]
+    return { aptitude: randomAptitude, tag: randomTag }
+  }
+
+  // Gerar Pokémon
+  const generatePokemon = () => {
+    let selectedCount = 0
+    let totalMoves = 0
+    const newList = []
+
+    for (let i = 0; i < pokemonCount; i++) {
+      const moves = []
+      for (let j = 0; j < 4; j++) {
+        const move = generateRandomMove(selectedAptitude)
+        moves.push(move)
+        totalMoves++
+        if (move.aptitude === selectedAptitude) selectedCount++
+      }
+      newList.push({
+        id: i + 1,
+        name: pokemonNames[Math.floor(Math.random() * pokemonNames.length)],
+        moves,
+        score: null,
+        scoreDetails: null
+      })
+    }
+
+    setPokemonList(newList)
+    setStats({ selected: selectedCount, total: totalMoves })
+  }
+
+  // Calcular pontuação de um Pokémon
+  const calculatePokemonScore = (pokemonId) => {
+    setPokemonList(prev => prev.map(pokemon => {
+      if (pokemon.id !== pokemonId) return pokemon
+
+      let totalScore = 0
+      const details = []
+
+      pokemon.moves.forEach((move, idx) => {
+        let score = rollDice(move.tag.score)
+        if (move.aptitude === selectedAptitude) {
+          score += rollDice('1d4')
+        }
+        details.push({ move: `${move.aptitude} - ${move.tag.tag}`, score })
+        totalScore += score
+      })
+
+      return { ...pokemon, score: totalScore, scoreDetails: details }
+    }))
+  }
+
+  // Calcular todas as pontuações
+  const calculateAllScores = () => {
+    pokemonList.forEach(p => calculatePokemonScore(p.id))
+  }
+
+  useEffect(() => {
+    generatePokemon()
+  }, [])
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <h2 className={`text-2xl font-bold ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+          Calculadora de Concurso Pokémon
+        </h2>
+        <p className={`${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          Sorteie golpes para concursos Pokémon e calcule suas notas. A aptidão selecionada tem <span className={`font-bold px-1 rounded ${darkMode ? 'bg-yellow-600' : 'bg-yellow-200'}`}>peso 2</span> no sorteio dos golpes.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Configurações */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4`}>
+          <h3 className={`font-bold mb-3 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Configurações do Concurso</h3>
+
+          <div className="mb-4">
+            <label className={`block mb-2 font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Aptidão:</label>
+            <select
+              value={selectedAptitude}
+              onChange={(e) => setSelectedAptitude(e.target.value)}
+              className={`w-full px-3 py-2 rounded border-2 ${
+                darkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-800'
+              }`}
+            >
+              {aptitudes.map(apt => (
+                <option key={apt} value={apt}>{apt}</option>
+              ))}
+            </select>
+            <p className={`text-sm mt-2 p-2 rounded ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+              A aptidão selecionada terá <strong>peso 2</strong> no sorteio dos golpes.
+            </p>
+          </div>
+
+          <div className="mb-4">
+            <label className={`block mb-2 font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Número de Pokémon (1-20):</label>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={pokemonCount}
+              onChange={(e) => setPokemonCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+              className={`w-full px-3 py-2 rounded border-2 ${
+                darkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-800'
+              }`}
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={generatePokemon}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+            >
+              Sortear Golpes
+            </button>
+            <button
+              onClick={calculateAllScores}
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+            >
+              Calcular Notas
+            </button>
+          </div>
+
+          {/* Estatísticas */}
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className={`text-center p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <div className={`text-xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{stats.selected}</div>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aptidão selecionada</div>
+            </div>
+            <div className={`text-center p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <div className={`text-xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{stats.total}</div>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total de golpes</div>
+            </div>
+            <div className={`text-center p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <div className={`text-xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                {stats.total > 0 ? Math.round((stats.selected / stats.total) * 100) : 0}%
+              </div>
+              <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Porcentagem</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Lista de Pokémon */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4 max-h-96 overflow-y-auto`}>
+          <h3 className={`font-bold mb-3 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Pokémon e Seus Golpes</h3>
+
+          <div className="space-y-3">
+            {pokemonList.map(pokemon => (
+              <div key={pokemon.id} className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-3 border-l-4 border-red-500`}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.name}</span>
+                  <span className="w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    {pokemon.id}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  {pokemon.moves.map((move, idx) => (
+                    <div key={idx} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} p-2 rounded border-l-2 border-blue-500`}>
+                      <span className={`font-semibold ${move.aptitude === selectedAptitude ? 'text-green-500' : 'text-red-400'}`}>
+                        {move.aptitude}{move.aptitude === selectedAptitude ? ' ✓' : ''}
+                      </span>
+                      <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}> - </span>
+                      <span className={`font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{move.tag.tag}</span>
+                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Pontuação basal: {move.tag.score}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => calculatePokemonScore(pokemon.id)}
+                  className="mt-2 w-full px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-semibold"
+                >
+                  Calcular nota
+                </button>
+
+                {pokemon.score !== null && (
+                  <div className={`mt-2 p-2 rounded text-center ${darkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                    <div className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                      Pontuação Total: {pokemon.score}
+                    </div>
+                    {pokemon.scoreDetails && (
+                      <div className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {pokemon.scoreDetails.map((d, i) => (
+                          <div key={i}>{i + 1}. {d.move}: {d.score}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabela de Tags */}
+      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-4`}>
+        <h3 className={`font-bold mb-3 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Tags de Concurso e Seus Efeitos</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-blue-600 text-white">
+                <th className="p-2 text-left">Tag de Concurso</th>
+                <th className="p-2 text-left">Pontuação Basal</th>
+                <th className="p-2 text-left">Efeito</th>
+              </tr>
+            </thead>
+            <tbody>
+              {contestTags.map((tag, idx) => (
+                <tr key={tag.tag} className={idx % 2 === 0 ? (darkMode ? 'bg-gray-700' : 'bg-gray-50') : (darkMode ? 'bg-gray-800' : 'bg-white')}>
+                  <td className={`p-2 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{tag.tag}</td>
+                  <td className={`p-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{tag.score}</td>
+                  <td className={`p-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{tag.effect}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function App() {
@@ -953,7 +1411,15 @@ function App() {
   const [speciesSearchSend, setSpeciesSearchSend] = useState('') // Busca de espécie no modal de envio
   const [natureSearchSend, setNatureSearchSend] = useState('') // Busca de natureza no modal de envio
   const [showAbilityModal, setShowAbilityModal] = useState(false) // Modal de detalhes da habilidade
-  const [selectedAbility, setSelectedAbility] = useState(null) // Habilidade selecionada para ver detalhes
+  const [selectedAbility, setSelectedAbility] = useState(null) // Habilidade selecionada
+
+  // Estados de pesquisa e filtro do PC
+  const [pcSearchQuery, setPcSearchQuery] = useState('') // Busca por nome/espécie no PC
+  const [pcTypeFilter, setPcTypeFilter] = useState('') // Filtro de tipo no PC
+
+  // Estados de pesquisa e filtro da Pokédex
+  const [pokedexSearchQuery, setPokedexSearchQuery] = useState('') // Busca por espécie na Pokédex
+  const [pokedexTypeFilter, setPokedexTypeFilter] = useState('') // Filtro de tipo na Pokédex para ver detalhes
 
   // Estados para área de Batalha
   const [battleTrainers, setBattleTrainers] = useState([]) // Treinadores enviados para batalha
@@ -967,6 +1433,21 @@ function App() {
   const [battlePokemonConditions, setBattlePokemonConditions] = useState({}) // Condições dos pokémons em batalha {pokemonId: [{condition, rounds}, ...]}
   const pokemonBattleRefs = useRef([]) // Refs para os elementos dos pokémons em batalha
   const [selectedTeamPokemon, setSelectedTeamPokemon] = useState(null) // Pokémon selecionado do time principal para ver detalhes
+
+  // Estados para Dano/Cura Treinador em Batalha
+  const [showTrainerBattleDamageModal, setShowTrainerBattleDamageModal] = useState(false)
+  const [trainerBattleDamageAmount, setTrainerBattleDamageAmount] = useState('')
+
+  // Estados para Dano/Cura Treinador NPC em Batalha (Mestre)
+  const [showNpcTrainerBattleDamageModal, setShowNpcTrainerBattleDamageModal] = useState(false)
+  const [npcTrainerBattleDamageAmount, setNpcTrainerBattleDamageAmount] = useState('')
+  const [selectedNpcTrainerForDamage, setSelectedNpcTrainerForDamage] = useState(null)
+
+  // Estados para Dano/Cura Pokémon NPC em Batalha (Mestre)
+  const [showNpcPokemonBattleDamageModal, setShowNpcPokemonBattleDamageModal] = useState(false)
+  const [npcPokemonBattleDamageAmount, setNpcPokemonBattleDamageAmount] = useState('')
+  const [selectedNpcPokemonForDamage, setSelectedNpcPokemonForDamage] = useState(null)
+
   const [showBattleMoveModal, setShowBattleMoveModal] = useState(false) // Modal de golpe na batalha
   const [selectedBattleMove, setSelectedBattleMove] = useState(null) // Golpe selecionado na batalha
   const [showBattleAbilityModal, setShowBattleAbilityModal] = useState(false) // Modal de habilidade na batalha
@@ -987,7 +1468,7 @@ function App() {
   const [revealedNpcPokemon, setRevealedNpcPokemon] = useState({}) // {pokemonId: boolean} - controla se nome/tipo está revelado
   const [revealedTrainers, setRevealedTrainers] = useState({}) // {trainerId: boolean} - controla se nome do treinador está revelado
   const [pokemonStages, setPokemonStages] = useState({}) // {pokemonId: {ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0}}
-  const [trainerStages, setTrainerStages] = useState({}) // {trainerId: {ataque: 0, defesa: 0, velocidade: 0}}
+  const [trainerStages, setTrainerStages] = useState({}) // {trainerId: {ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0}}
   const [battleTrainerConditions, setBattleTrainerConditions] = useState({}) // {trainerId: [{condition, rounds}, null, null]}
   const [showModifiersSection, setShowModifiersSection] = useState(false) // Controla expansão da seção Modificadores
   const [showCaptureSection, setShowCaptureSection] = useState(false) // Controla expansão da seção Lançar Pokébola
@@ -1003,6 +1484,7 @@ function App() {
   const [showLevelModal, setShowLevelModal] = useState(false)
   const [showClassModal, setShowClassModal] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+  const [showImagePCModal, setShowImagePCModal] = useState(false)
   const [showHPModal, setShowHPModal] = useState(false)
   const [showBattleHPModal, setShowBattleHPModal] = useState(false)
   const [battleHpValue, setBattleHpValue] = useState('')
@@ -1313,6 +1795,7 @@ function App() {
   const [customActionCost, setCustomActionCost] = useState('') // Custo da ação customizada
   const [customActionPlayer, setCustomActionPlayer] = useState(null) // Player que está criando ação customizada
   const [customActionType, setCustomActionType] = useState('') // 'jn' ou 'rt'
+  const [interludioApp, setInterludioApp] = useState(null) // null, 'combate', 'concurso'
 
   // Ações de JN (Jogo de Narração)
   const acoesJN = [
@@ -2330,14 +2813,27 @@ function App() {
     // Se não for acurácia automática, rolar 1d20
     if (!isAutoAccuracy) {
       const accuracyRoll = Math.floor(Math.random() * 20) + 1
+
+      // Obter fase de precisão do Pokémon
+      const pokemonId = selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`
+      const stages = pokemonStages[pokemonId] || {}
+      const precisaoStage = stages.precisao || 0
+
+      // Calcular resultado final com modificador de precisão
+      const finalResult = accuracyRoll + precisaoStage
+      let detailsParts = `1d20 = ${accuracyRoll}`
+      if (precisaoStage !== 0) {
+        detailsParts += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`
+      }
+
       setTimeout(() => {
         setChatMessages(prevMessages => [...prevMessages, {
           username: currentUser.username,
           text: `🎲 Teste de Acurácia: 1d20`,
           timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           isDiceRoll: true,
-          diceResult: accuracyRoll,
-          diceDetails: `1d20 = ${accuracyRoll}`
+          diceResult: finalResult,
+          diceDetails: detailsParts
         }])
       }, 100)
     }
@@ -2557,7 +3053,7 @@ function App() {
   }
 
   // Função para rolar teste de acurácia
-  const handleRollAccuracy = (moveName) => {
+  const handleRollAccuracy = (moveName, pokemonIdOverride = null) => {
     const moveData = GOLPES_DATA[moveName]
     if (!moveData) return
 
@@ -2584,6 +3080,18 @@ function App() {
     const modifierDetails = []
     const currentUserModifiers = userBattleModifiers[currentUser.username] || []
     const currentUserActiveIndexes = userActiveModifiers[currentUser.username] || []
+
+    // Obter fase de precisão do Pokémon ativo
+    // Usar pokemonIdOverride se fornecido, senão usar o ID do pokemon ativo
+    const pokemonId = pokemonIdOverride || activePokemon?.id || (activePokemon ? `team-${activePokemon.species}` : null)
+    const stages = pokemonId ? (pokemonStages[pokemonId] || {}) : {}
+    const precisaoStage = stages.precisao || 0
+
+    // Adicionar modificador de precisão (cada ponto de fase = +1 ou -1 na rolagem)
+    if (precisaoStage !== 0) {
+      modifiersTotal += precisaoStage
+      modifierDetails.push(`Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`)
+    }
 
     for (const modIndex of currentUserActiveIndexes) {
       const modifier = currentUserModifiers[modIndex]
@@ -2730,10 +3238,10 @@ function App() {
   const handleSaveTalentinho = () => {
     if (!talentinhoForm.nome || !talentinhoForm.expressao) return
 
-    // Filtrar alvos vazios antes de salvar
+    // Filtrar alvos vazios antes de salvar (nova estrutura: {operador, valor})
     const talentinhoToSave = {
       ...talentinhoForm,
-      alvos: (talentinhoForm.alvos || []).filter(alvo => alvo.trim() !== '')
+      alvos: (talentinhoForm.alvos || []).filter(alvo => alvo.valor && alvo.valor.trim() !== '')
     }
 
     if (editingTalentinhoIndex !== null) {
@@ -2786,16 +3294,53 @@ function App() {
 
     messageText += `Total: ${result.finalResult}`
 
-    // Processar alvos se existirem
+    // Processar alvos se existirem (nova estrutura: {operador, valor})
     if (talentinho.alvos && talentinho.alvos.length > 0) {
       messageText += `\n\n📍 Alvos:`
-      talentinho.alvos.forEach((alvoExpr, idx) => {
+      talentinho.alvos.forEach((alvo, idx) => {
+        // Suportar tanto a nova estrutura {operador, valor} quanto a antiga (string)
+        let alvoExpr, operador
+        if (typeof alvo === 'object' && alvo.valor) {
+          alvoExpr = alvo.valor
+          operador = alvo.operador || '>='
+        } else {
+          // Compatibilidade com formato antigo (string)
+          alvoExpr = alvo
+          operador = '>='
+        }
+
         const alvoResult = processCommandExpression(alvoExpr)
         if (alvoResult) {
-          const comparison = result.finalResult > alvoResult.finalResult ? '✅ SUCESSO' :
-                           result.finalResult === alvoResult.finalResult ? '⚖️ EMPATE' :
-                           '❌ FALHA'
-          messageText += `\nAlvo ${idx + 1}: ${alvoResult.finalResult} - ${comparison}`
+          const rolagem = result.finalResult
+          const alvoValor = alvoResult.finalResult
+
+          // Avaliar sucesso/falha baseado no operador
+          let sucesso = false
+          let operadorTexto = ''
+          switch (operador) {
+            case '>=':
+              sucesso = rolagem >= alvoValor
+              operadorTexto = 'maior ou igual a'
+              break
+            case '<=':
+              sucesso = rolagem <= alvoValor
+              operadorTexto = 'menor ou igual a'
+              break
+            case '>':
+              sucesso = rolagem > alvoValor
+              operadorTexto = 'maior que'
+              break
+            case '<':
+              sucesso = rolagem < alvoValor
+              operadorTexto = 'menor que'
+              break
+            default:
+              sucesso = rolagem >= alvoValor
+              operadorTexto = 'maior ou igual a'
+          }
+
+          const comparison = sucesso ? '✅ SUCESSO' : '❌ FALHA'
+          messageText += `\nAlvo ${idx + 1}: ${operadorTexto} ${alvoValor} - ${comparison}`
         } else {
           messageText += `\nAlvo ${idx + 1}: Expressão inválida`
         }
@@ -3077,14 +3622,44 @@ function App() {
     setTrainerStages(prev => {
       const current = prev[trainerId] || {
         ataque: 0,
+        ataqueEspecial: 0,
         defesa: 0,
-        velocidade: 0
+        defesaEspecial: 0,
+        velocidade: 0,
+        precisao: 0
       }
       const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
-      return {
+
+      const newStages = {
         ...prev,
         [trainerId]: { ...current, [attribute]: newValue }
       }
+
+      // Atualizar evasões no battleTrainersList se for defesa, defesaEspecial ou velocidade
+      if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
+        setBattleTrainersList(prevList => prevList.map(trainer => {
+          if (trainer.id === trainerId && trainer.baseAttributes) {
+            const stages = newStages[trainerId]
+            const defesaMultiplier = getStageMultiplier(stages.defesa)
+            const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
+            const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
+
+            const defesaAdjusted = Math.floor(trainer.baseAttributes.defesa * defesaMultiplier)
+            const defesaEspecialAdjusted = Math.floor(trainer.baseAttributes.defesaEspecial * defesaEspecialMultiplier)
+            const velocidadeAdjusted = Math.floor(trainer.baseAttributes.velocidade * velocidadeMultiplier)
+
+            return {
+              ...trainer,
+              evasaoFisica: Math.floor(defesaAdjusted / 5),
+              evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
+              evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
+            }
+          }
+          return trainer
+        }))
+      }
+
+      return newStages
     })
   }
 
@@ -4269,8 +4844,16 @@ function App() {
     setShowImageModal(true)
   }
 
+  // Abrir modal de imagem para Pokémon do PC
+  const openImagePCModal = (pokemon) => {
+    setSelectedPokemonForImage(pokemon)
+    setImageUrl(pokemonImages[pokemon.id] || '')
+    setImageUploadType('link')
+    setShowImagePCModal(true)
+  }
+
   // Salvar imagem do Pokémon
-  const handleSaveImage = () => {
+  const handleSaveImage = (isPC = false) => {
     if (imageUploadType === 'link' && imageUrl.trim()) {
       try {
         setPokemonImages({
@@ -4278,6 +4861,7 @@ function App() {
           [selectedPokemonForImage.id]: imageUrl
         })
         setShowImageModal(false)
+        setShowImagePCModal(false)
         setImageUrl('')
         setSelectedPokemonForImage(null)
       } catch (error) {
@@ -4286,7 +4870,7 @@ function App() {
       }
     } else if (imageUploadType === 'file') {
       // Para upload de arquivo local, usamos FileReader
-      const fileInput = document.getElementById('pokemon-image-file')
+      const fileInput = document.getElementById(isPC ? 'pokemon-image-file-pc' : 'pokemon-image-file')
       if (fileInput && fileInput.files && fileInput.files[0]) {
         const file = fileInput.files[0]
 
@@ -4322,6 +4906,7 @@ function App() {
                 [selectedPokemonForImage.id]: compressedDataUrl
               })
               setShowImageModal(false)
+              setShowImagePCModal(false)
               setImageUrl('')
               setSelectedPokemonForImage(null)
             } catch (error) {
@@ -5107,6 +5692,118 @@ function App() {
     setSelectedNpcPokemon(null)
   }
 
+  // Função para aplicar dano ou cura ao Treinador em Batalha
+  const applyTrainerBattleDamage = (isDamage) => {
+    if (!trainerBattleDamageAmount) return
+
+    const amount = parseInt(trainerBattleDamageAmount)
+    if (isNaN(amount) || amount <= 0) return
+
+    const maxHP = getMaxHP()
+    let newHP
+
+    if (isDamage) {
+      newHP = Math.max(0, currentHP - amount)
+    } else {
+      newHP = Math.min(maxHP, currentHP + amount)
+    }
+
+    setCurrentHP(newHP)
+
+    // Atualizar também na lista de batalha
+    setBattleTrainersList(prev => prev.map(trainer => {
+      if (trainer.nome === currentUser?.username) {
+        return { ...trainer, hp: newHP }
+      }
+      return trainer
+    }))
+
+    setShowTrainerBattleDamageModal(false)
+    setTrainerBattleDamageAmount('')
+  }
+
+  // Função para aplicar dano ou cura ao Treinador NPC em Batalha (Mestre)
+  const applyNpcTrainerBattleDamage = (isDamage) => {
+    if (!selectedNpcTrainerForDamage || !npcTrainerBattleDamageAmount) return
+
+    const amount = parseInt(npcTrainerBattleDamageAmount)
+    if (isNaN(amount) || amount <= 0) return
+
+    const maxHP = selectedNpcTrainerForDamage.maxHP
+    const currentTrainerHP = selectedNpcTrainerForDamage.hp !== undefined ? selectedNpcTrainerForDamage.hp : maxHP
+
+    let newHP
+    if (isDamage) {
+      newHP = Math.max(0, currentTrainerHP - amount)
+    } else {
+      newHP = Math.min(maxHP, currentTrainerHP + amount)
+    }
+
+    // Atualizar o treinador NPC no card (usando npcId que é o ID original)
+    const originalNpcId = selectedNpcTrainerForDamage.npcId
+    if (originalNpcId) {
+      setNpcTrainers(prev => prev.map(trainer => {
+        if (trainer.id === originalNpcId) {
+          return { ...trainer, currentHP: newHP }
+        }
+        return trainer
+      }))
+    }
+
+    // Atualizar também na lista de batalha
+    setBattleTrainersList(prev => prev.map(trainer => {
+      if (trainer.id === selectedNpcTrainerForDamage.id) {
+        return { ...trainer, hp: newHP }
+      }
+      return trainer
+    }))
+
+    setShowNpcTrainerBattleDamageModal(false)
+    setNpcTrainerBattleDamageAmount('')
+    setSelectedNpcTrainerForDamage(null)
+  }
+
+  // Função para aplicar dano ou cura ao Pokémon NPC em Batalha (Mestre)
+  const applyNpcPokemonBattleDamage = (isDamage) => {
+    if (!selectedNpcPokemonForDamage || !npcPokemonBattleDamageAmount) return
+
+    const amount = parseInt(npcPokemonBattleDamageAmount)
+    if (isNaN(amount) || amount <= 0) return
+
+    const maxHP = selectedNpcPokemonForDamage.maxHP
+    const currentPokemonHP = selectedNpcPokemonForDamage.hp !== undefined ? selectedNpcPokemonForDamage.hp : maxHP
+
+    let newHP
+    if (isDamage) {
+      newHP = Math.max(0, currentPokemonHP - amount)
+    } else {
+      newHP = Math.min(maxHP, currentPokemonHP + amount)
+    }
+
+    // Atualizar o Pokémon NPC no card (usando npcId que é o ID original)
+    const originalNpcId = selectedNpcPokemonForDamage.npcId
+    if (originalNpcId) {
+      setNpcPokemon(prev => prev.map(pokemon => {
+        if (pokemon.id === originalNpcId) {
+          return { ...pokemon, currentHP: newHP }
+        }
+        return pokemon
+      }))
+    }
+
+    // Atualizar também na lista de batalha
+    setBattlePokemonList(prev => prev.map(pokemon => {
+      if (pokemon.id === selectedNpcPokemonForDamage.id) {
+        return { ...pokemon, hp: newHP }
+      }
+      return pokemon
+    }))
+
+    setShowNpcPokemonBattleDamageModal(false)
+    setNpcPokemonBattleDamageAmount('')
+    setSelectedNpcPokemonForDamage(null)
+  }
+
   // Função para alternar condição de captura
   const toggleNpcCondition = (pokemonId, condition) => {
     setNpcConditions(prev => ({
@@ -5354,7 +6051,17 @@ function App() {
       velocidade: attributes.velocidade,
       evasaoFisica: evasion.fisica,
       evasaoEspecial: evasion.especial,
-      evasaoVeloz: evasion.veloz
+      evasaoVeloz: evasion.veloz,
+      level: level,
+      ataque: attributes.ataque || 0,
+      ataqueEspecial: attributes.ataqueEspecial || 0,
+      baseAttributes: {
+        defesa: attributes.defesa,
+        defesaEspecial: attributes.defesaEspecial,
+        velocidade: attributes.velocidade,
+        ataque: attributes.ataque,
+        ataqueEspecial: attributes.ataqueEspecial
+      }
     }
     setBattleTrainers(prev => [...prev, battleData])
     alert(`${battleData.nome} enviado para a Batalha!`)
@@ -5385,6 +6092,8 @@ function App() {
       golpes: pokemon.golpesAprendidos || pokemon.moves || [],
       habilidades: habilidades,
       isExotic: pokemon.isExotic || false,
+      isNpc: true,
+      npcId: pokemon.id,
       // Armazenar atributos totais base para cálculo de fases
       totalAttributes: {
         ataque: pokemon.attributes.ataque,
@@ -5399,15 +6108,31 @@ function App() {
   }
 
   const sendNpcTrainerToBattle = (trainer) => {
+    const fakeTrainerNames = ['Treinador A', 'Treinador B', 'Treinador C', 'Treinador D', 'Treinador E', 'Pessoa Misteriosa', 'Fulano', 'Ciclano', 'Beltrano', 'Aspirante', 'Novato', 'Veterano']
+    const fakeTrainerName = fakeTrainerNames[Math.floor(Math.random() * fakeTrainerNames.length)]
+
     const battleData = {
       id: `npc-trainer-${Date.now()}-${Math.random()}`,
       nome: trainer.name,
+      nomeFalso: fakeTrainerName,
       hp: trainer.currentHP !== undefined ? trainer.currentHP : trainer.hp,
       maxHP: trainer.hp,
       velocidade: trainer.attributes.velocidade,
       evasaoFisica: Math.floor(trainer.attributes.defesa / 5),
       evasaoEspecial: Math.floor(trainer.attributes.defesaEspecial / 5),
-      evasaoVeloz: Math.floor(trainer.attributes.velocidade / 10)
+      evasaoVeloz: Math.floor(trainer.attributes.velocidade / 10),
+      isNpc: true,
+      npcId: trainer.id,
+      level: trainer.level || 1,
+      ataque: trainer.attributes.ataque || 0,
+      ataqueEspecial: trainer.attributes.ataqueEspecial || 0,
+      baseAttributes: {
+        defesa: trainer.attributes.defesa,
+        defesaEspecial: trainer.attributes.defesaEspecial,
+        velocidade: trainer.attributes.velocidade,
+        ataque: trainer.attributes.ataque,
+        ataqueEspecial: trainer.attributes.ataqueEspecial
+      }
     }
     setBattleTrainers(prev => [...prev, battleData])
     alert(`${battleData.nome} enviado para a Batalha!`)
@@ -6057,9 +6782,23 @@ function App() {
           {/* Lista de Pokémon gerados com botão para adicionar como NPC */}
           {npcPokemonList.length > 0 && (
             <div className={`mt-8 p-6 rounded-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-xl`}>
-              <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                Pokémon Gerados Recentemente
-              </h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Pokémon Gerados Recentemente ({npcPokemonList.length})
+                </h3>
+                <button
+                  onClick={() => {
+                    if (confirm('Tem certeza que deseja limpar todos os Pokémon gerados recentemente?')) {
+                      setNpcPokemonList([])
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
+                  title="Limpar todos os Pokémon gerados"
+                >
+                  <Trash2 size={18} />
+                  Limpar Todos
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {npcPokemonList.map(pokemon => (
                   <div
@@ -6997,16 +7736,28 @@ function App() {
                             )}
                           </div>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeNpcPokemon(pokemon.id)
-                          }}
-                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Remover NPC"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              sendNpcPokemonToBattle(pokemon)
+                            }}
+                            className="bg-cyan-500 text-white p-1.5 rounded-lg hover:bg-cyan-600"
+                            title="Enviar para Batalha"
+                          >
+                            <ArrowRightCircle size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeNpcPokemon(pokemon.id)
+                            }}
+                            className="bg-red-500 text-white p-1.5 rounded-lg hover:bg-red-600"
+                            title="Remover NPC"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       // Card expandido - todas as informações
@@ -7903,7 +8654,7 @@ function App() {
                     <div className="space-y-2">
                       {safeTrainersList.map((trainer, idx) => {
                         const trainerConditions = battleTrainerConditions[trainer.id] || [null, null, null]
-                        const stages = trainerStages[trainer.id] || { ataque: 0, defesa: 0, velocidade: 0 }
+                        const stages = trainerStages[trainer.id] || { ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0 }
 
                         return (
                           <div
@@ -7938,23 +8689,135 @@ function App() {
                               Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}
                             </div>
 
-                            {/* Checkbox Revelar Nome */}
-                            <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
-                              <label className="flex items-center gap-2 cursor-pointer mb-2">
-                                <input
-                                  type="checkbox"
-                                  checked={revealedTrainers[trainer.id] || false}
-                                  onChange={(e) => setRevealedTrainers({
-                                    ...revealedTrainers,
-                                    [trainer.id]: e.target.checked
-                                  })}
-                                  className="w-4 h-4 cursor-pointer"
-                                />
-                                <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                  Revelar Nome
-                                </span>
-                              </label>
-                            </div>
+                            {/* Botão Dano/Cura NPC Treinador */}
+                            {trainer.isNpc && (
+                              <button
+                                onClick={() => {
+                                  setSelectedNpcTrainerForDamage(trainer)
+                                  setShowNpcTrainerBattleDamageModal(true)
+                                }}
+                                className={`w-full mt-2 flex items-center justify-center gap-1 py-2 rounded-lg font-semibold text-sm ${darkMode ? 'bg-gradient-to-r from-red-700 to-green-700 hover:from-red-600 hover:to-green-600' : 'bg-gradient-to-r from-red-500 to-green-500 hover:from-red-600 hover:to-green-600'} text-white`}
+                              >
+                                <Sword size={14} />
+                                Dano/Cura
+                                <Heart size={14} />
+                              </button>
+                            )}
+
+                            {/* Botões Acurácia e Dano NPC Treinador */}
+                            {trainer.isNpc && (
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={() => {
+                                    const d20Roll = Math.floor(Math.random() * 20) + 1
+                                    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+                                    // Obter fase de precisão do treinador NPC
+                                    const trainerNpcStages = trainerStages[trainer.id] || { precisao: 0 }
+                                    const precisaoStage = trainerNpcStages.precisao || 0
+
+                                    // Calcular resultado final com modificador de precisão
+                                    const finalResult = d20Roll + precisaoStage
+                                    let detailsParts = `1d20 = ${d20Roll}`
+                                    if (precisaoStage !== 0) {
+                                      detailsParts += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`
+                                    }
+
+                                    const message = `🎲 Acurácia ${trainer.nome}\n${detailsParts}\nTotal: ${finalResult}`
+
+                                    setChatMessages(prevMessages => [...prevMessages, {
+                                      username: 'Mestre',
+                                      text: message,
+                                      timestamp,
+                                      isDiceRoll: true,
+                                      diceResult: finalResult
+                                    }])
+                                  }}
+                                  className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg font-semibold text-sm ${darkMode ? 'bg-purple-700 hover:bg-purple-600' : 'bg-purple-500 hover:bg-purple-600'} text-white`}
+                                  title="Rolar Acurácia"
+                                >
+                                  <Dices size={14} />
+                                  Acurácia
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+                                    // Obter nível e ataque base do treinador NPC
+                                    const trainerLevel = trainer.level || 1
+                                    const ataqueBase = trainer.baseAttributes?.ataque || trainer.ataque || 0
+
+                                    // Aplicar fase de ataque ao atributo
+                                    const trainerNpcStages = trainerStages[trainer.id] || { ataque: 0 }
+                                    const ataqueStage = trainerNpcStages.ataque || 0
+                                    const ataqueMultiplier = getStageMultiplier(ataqueStage)
+                                    const ataqueTotal = Math.floor(ataqueBase * ataqueMultiplier)
+
+                                    let damageRoll, damageBonus, diceType
+
+                                    // Determinar dano baseado no nível (mesma lógica dos treinadores)
+                                    if (trainerLevel >= 1 && trainerLevel <= 6) {
+                                      diceType = '1d10+4'
+                                      damageRoll = Math.floor(Math.random() * 10) + 1
+                                      damageBonus = 4
+                                    } else if (trainerLevel >= 7 && trainerLevel <= 14) {
+                                      diceType = '1d12+6'
+                                      damageRoll = Math.floor(Math.random() * 12) + 1
+                                      damageBonus = 6
+                                    } else {
+                                      diceType = '2d8+6'
+                                      const dice1 = Math.floor(Math.random() * 8) + 1
+                                      const dice2 = Math.floor(Math.random() * 8) + 1
+                                      damageRoll = dice1 + dice2
+                                      damageBonus = 6
+                                    }
+
+                                    const baseDamage = damageRoll + damageBonus
+                                    const totalDamage = baseDamage + ataqueTotal
+
+                                    let stageInfo = ''
+                                    if (ataqueStage !== 0) {
+                                      stageInfo = ` [Fase ATQ: ${ataqueStage > 0 ? '+' : ''}${ataqueStage} → ${ataqueBase}→${ataqueTotal}]`
+                                    }
+
+                                    const message = `⚔️ ${trainer.nome} atacou!\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTotal} (Ataque Total)${stageInfo} = ${totalDamage} de dano`
+
+                                    setChatMessages(prevMessages => [...prevMessages, {
+                                      username: 'Mestre',
+                                      text: message,
+                                      timestamp,
+                                      isDiceRoll: true,
+                                      diceResult: totalDamage
+                                    }])
+                                  }}
+                                  className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg font-semibold text-sm ${darkMode ? 'bg-orange-700 hover:bg-orange-600' : 'bg-orange-500 hover:bg-orange-600'} text-white`}
+                                  title="Rolar Dano"
+                                >
+                                  <Sword size={14} />
+                                  Dano
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Checkbox Revelar Nome - só para NPC */}
+                            {trainer.isNpc && (
+                              <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={revealedTrainers[trainer.id] || false}
+                                    onChange={(e) => setRevealedTrainers({
+                                      ...revealedTrainers,
+                                      [trainer.id]: e.target.checked
+                                    })}
+                                    className="w-4 h-4 cursor-pointer"
+                                  />
+                                  <span className={`text-xs font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    Revelar Nome
+                                  </span>
+                                </label>
+                              </div>
+                            )}
 
                             {/* Dropdown e Caixas de Condições */}
                             <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
@@ -8068,79 +8931,147 @@ function App() {
                               </div>
                             </div>
 
-                            {/* Fases */}
-                            <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
-                              <label className={`text-xs font-semibold mb-2 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                Fases (-6 a +6):
-                              </label>
-                              <div className="grid grid-cols-3 gap-2 text-xs">
-                                {/* Ataque */}
-                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ</span>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => adjustTrainerStage(trainer.id, 'ataque', -1)}
-                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-                                    >
-                                      ▼
-                                    </button>
-                                    <span className={`min-w-[24px] text-center font-bold ${stages.ataque > 0 ? 'text-green-500' : stages.ataque < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                      {stages.ataque > 0 ? `+${stages.ataque}` : stages.ataque}
-                                    </span>
-                                    <button
-                                      onClick={() => adjustTrainerStage(trainer.id, 'ataque', 1)}
-                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-                                    >
-                                      ▲
-                                    </button>
+                            {/* Fases - só para treinadores NPC */}
+                            {trainer.isNpc && (
+                              <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                                <label className={`text-xs font-semibold mb-2 block ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  Fases (-6 a +6):
+                                </label>
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  {/* Ataque */}
+                                  <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'ataque', -1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▼
+                                      </button>
+                                      <span className={`min-w-[24px] text-center font-bold ${stages.ataque > 0 ? 'text-green-500' : stages.ataque < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        {stages.ataque > 0 ? `+${stages.ataque}` : stages.ataque}
+                                      </span>
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'ataque', 1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▲
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
 
-                                {/* Defesa */}
-                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF</span>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => adjustTrainerStage(trainer.id, 'defesa', -1)}
-                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-                                    >
-                                      ▼
-                                    </button>
-                                    <span className={`min-w-[24px] text-center font-bold ${stages.defesa > 0 ? 'text-green-500' : stages.defesa < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                      {stages.defesa > 0 ? `+${stages.defesa}` : stages.defesa}
-                                    </span>
-                                    <button
-                                      onClick={() => adjustTrainerStage(trainer.id, 'defesa', 1)}
-                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-                                    >
-                                      ▲
-                                    </button>
+                                  {/* Ataque Especial */}
+                                  <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATE</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'ataqueEspecial', -1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▼
+                                      </button>
+                                      <span className={`min-w-[24px] text-center font-bold ${stages.ataqueEspecial > 0 ? 'text-green-500' : stages.ataqueEspecial < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        {stages.ataqueEspecial > 0 ? `+${stages.ataqueEspecial}` : stages.ataqueEspecial}
+                                      </span>
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'ataqueEspecial', 1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▲
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
 
-                                {/* Velocidade */}
-                                <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                                  <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>VEL</span>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={() => adjustTrainerStage(trainer.id, 'velocidade', -1)}
-                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-                                    >
-                                      ▼
-                                    </button>
-                                    <span className={`min-w-[24px] text-center font-bold ${stages.velocidade > 0 ? 'text-green-500' : stages.velocidade < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                                      {stages.velocidade > 0 ? `+${stages.velocidade}` : stages.velocidade}
-                                    </span>
-                                    <button
-                                      onClick={() => adjustTrainerStage(trainer.id, 'velocidade', 1)}
-                                      className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
-                                    >
-                                      ▲
-                                    </button>
+                                  {/* Defesa */}
+                                  <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'defesa', -1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▼
+                                      </button>
+                                      <span className={`min-w-[24px] text-center font-bold ${stages.defesa > 0 ? 'text-green-500' : stages.defesa < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        {stages.defesa > 0 ? `+${stages.defesa}` : stages.defesa}
+                                      </span>
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'defesa', 1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▲
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Defesa Especial */}
+                                  <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEE</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'defesaEspecial', -1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▼
+                                      </button>
+                                      <span className={`min-w-[24px] text-center font-bold ${stages.defesaEspecial > 0 ? 'text-green-500' : stages.defesaEspecial < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        {stages.defesaEspecial > 0 ? `+${stages.defesaEspecial}` : stages.defesaEspecial}
+                                      </span>
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'defesaEspecial', 1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▲
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Velocidade */}
+                                  <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>VEL</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'velocidade', -1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▼
+                                      </button>
+                                      <span className={`min-w-[24px] text-center font-bold ${stages.velocidade > 0 ? 'text-green-500' : stages.velocidade < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        {stages.velocidade > 0 ? `+${stages.velocidade}` : stages.velocidade}
+                                      </span>
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'velocidade', 1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▲
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Precisão */}
+                                  <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                    <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>PREC</span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'precisao', -1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▼
+                                      </button>
+                                      <span className={`min-w-[24px] text-center font-bold ${stages.precisao > 0 ? 'text-green-500' : stages.precisao < 0 ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        {stages.precisao > 0 ? `+${stages.precisao}` : stages.precisao}
+                                      </span>
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainer.id, 'precisao', 1)}
+                                        className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'}`}
+                                      >
+                                        ▲
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         )
                       })}
@@ -8299,6 +9230,21 @@ function App() {
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                               Evasões - F: {evasaoFisicaAdjusted} | E: {evasaoEspecialAdjusted} | V: {evasaoVelozAdjusted}
                             </div>
+
+                            {/* Botão Dano/Cura NPC Pokémon */}
+                            {pokemon.isNpc && (
+                              <button
+                                onClick={() => {
+                                  setSelectedNpcPokemonForDamage(pokemon)
+                                  setShowNpcPokemonBattleDamageModal(true)
+                                }}
+                                className={`w-full mt-2 flex items-center justify-center gap-1 py-2 rounded-lg font-semibold text-sm ${darkMode ? 'bg-gradient-to-r from-red-700 to-green-700 hover:from-red-600 hover:to-green-600' : 'bg-gradient-to-r from-red-500 to-green-500 hover:from-red-600 hover:to-green-600'} text-white`}
+                              >
+                                <Sword size={14} />
+                                Dano/Cura
+                                <Heart size={14} />
+                              </button>
+                            )}
 
                             {/* Checkbox Nome/Tipo - Apenas para NPCs */}
                             {pokemon.id.startsWith('npc-pokemon-') && (
@@ -8716,7 +9662,7 @@ function App() {
                                     {moveName}
                                   </button>
                                   <button
-                                    onClick={() => handleRollAccuracy(moveName)}
+                                    onClick={() => handleRollAccuracy(moveName, selectedMasterNpcPokemon?.id)}
                                     className={`p-1.5 rounded transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-blue-400' : 'bg-gray-200 hover:bg-gray-300 text-blue-600'}`}
                                     title="Teste de Acurácia"
                                   >
@@ -8962,6 +9908,132 @@ function App() {
                   </div>
                 )
               })()}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Dano/Cura Treinador NPC em Batalha */}
+        {showNpcTrainerBattleDamageModal && selectedNpcTrainerForDamage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowNpcTrainerBattleDamageModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-md w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Dano/Cura - {selectedNpcTrainerForDamage.nome}
+                  </h3>
+                  <button onClick={() => setShowNpcTrainerBattleDamageModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                {/* Informação de HP Atual */}
+                <div className={`mb-6 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>HP Atual</p>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {selectedNpcTrainerForDamage.hp} / {selectedNpcTrainerForDamage.maxHP}
+                  </p>
+                </div>
+
+                {/* Input de Quantidade */}
+                <div className="mb-6">
+                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Quantidade
+                  </label>
+                  <input
+                    type="number"
+                    value={npcTrainerBattleDamageAmount}
+                    onChange={(e) => setNpcTrainerBattleDamageAmount(e.target.value)}
+                    placeholder="Digite a quantidade..."
+                    className={`w-full px-4 py-3 border-2 rounded-lg text-lg ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 placeholder-gray-400'
+                    }`}
+                    min="1"
+                  />
+                </div>
+
+                {/* Botões de Ação */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => applyNpcTrainerBattleDamage(true)}
+                    disabled={!npcTrainerBattleDamageAmount || parseInt(npcTrainerBattleDamageAmount) <= 0}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-lg hover:from-red-700 hover:to-red-800 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sword size={18} />
+                    Aplicar Dano
+                  </button>
+                  <button
+                    onClick={() => applyNpcTrainerBattleDamage(false)}
+                    disabled={!npcTrainerBattleDamageAmount || parseInt(npcTrainerBattleDamageAmount) <= 0}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 rounded-lg hover:from-green-700 hover:to-green-800 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Heart size={18} />
+                    Curar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Dano/Cura Pokémon NPC em Batalha */}
+        {showNpcPokemonBattleDamageModal && selectedNpcPokemonForDamage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowNpcPokemonBattleDamageModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-md w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Dano/Cura - {selectedNpcPokemonForDamage.nome}
+                  </h3>
+                  <button onClick={() => setShowNpcPokemonBattleDamageModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                {/* Informação de HP Atual */}
+                <div className={`mb-6 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>HP Atual</p>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {selectedNpcPokemonForDamage.hp} / {selectedNpcPokemonForDamage.maxHP}
+                  </p>
+                </div>
+
+                {/* Input de Quantidade */}
+                <div className="mb-6">
+                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Quantidade
+                  </label>
+                  <input
+                    type="number"
+                    value={npcPokemonBattleDamageAmount}
+                    onChange={(e) => setNpcPokemonBattleDamageAmount(e.target.value)}
+                    placeholder="Digite a quantidade..."
+                    className={`w-full px-4 py-3 border-2 rounded-lg text-lg ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 placeholder-gray-400'
+                    }`}
+                    min="1"
+                  />
+                </div>
+
+                {/* Botões de Ação */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => applyNpcPokemonBattleDamage(true)}
+                    disabled={!npcPokemonBattleDamageAmount || parseInt(npcPokemonBattleDamageAmount) <= 0}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-lg hover:from-red-700 hover:to-red-800 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sword size={18} />
+                    Aplicar Dano
+                  </button>
+                  <button
+                    onClick={() => applyNpcPokemonBattleDamage(false)}
+                    disabled={!npcPokemonBattleDamageAmount || parseInt(npcPokemonBattleDamageAmount) <= 0}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 rounded-lg hover:from-green-700 hover:to-green-800 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Heart size={18} />
+                    Curar
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -12334,8 +13406,8 @@ function App() {
             </div>
             <input type="number" min="1" max="1000" value={hpValue} onChange={e => setHpValue(e.target.value)} placeholder="Valor (1-1000)" className={`w-full px-4 py-3 border-2 rounded-lg mb-4 text-center text-xl ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`} />
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => { const v = parseInt(hpValue) || 0; setCurrentHP(Math.min(currentHP + v, maxHP)); setHpValue(''); setShowHPModal(false) }} className="bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-semibold flex items-center justify-center gap-2"><Heart size={20} />Curar</button>
-              <button onClick={() => { const v = parseInt(hpValue) || 0; setCurrentHP(currentHP - v); setHpValue(''); setShowHPModal(false) }} className="bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 font-semibold flex items-center justify-center gap-2"><Sword size={20} />Dano</button>
+              <button onClick={() => { const v = parseInt(hpValue) || 0; const newHP = Math.min(currentHP + v, maxHP); setCurrentHP(newHP); setBattleTrainersList(prev => prev.map(t => t.nome === currentUser?.username ? { ...t, hp: newHP } : t)); setHpValue(''); setShowHPModal(false) }} className="bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 font-semibold flex items-center justify-center gap-2"><Heart size={20} />Curar</button>
+              <button onClick={() => { const v = parseInt(hpValue) || 0; const newHP = Math.max(0, currentHP - v); setCurrentHP(newHP); setBattleTrainersList(prev => prev.map(t => t.nome === currentUser?.username ? { ...t, hp: newHP } : t)); setHpValue(''); setShowHPModal(false) }} className="bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 font-semibold flex items-center justify-center gap-2"><Sword size={20} />Dano</button>
             </div>
           </div>
         </div>}
@@ -14219,13 +15291,69 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
             <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-6`}>Pokémon Armazenados</h3>
+
+            {pcPokemon.length > 0 && (
+              <div className="mb-6 space-y-4">
+                {/* Barra de Pesquisa */}
+                <div className="relative">
+                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={20} />
+                  <input
+                    type="text"
+                    value={pcSearchQuery}
+                    onChange={e => setPcSearchQuery(e.target.value)}
+                    placeholder="Pesquisar por nome ou espécie..."
+                    className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 placeholder-gray-500'}`}
+                  />
+                </div>
+
+                {/* Filtro de Tipo */}
+                <div className="flex items-center gap-2">
+                  <label className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Filtrar por tipo:
+                  </label>
+                  <select
+                    value={pcTypeFilter}
+                    onChange={e => setPcTypeFilter(e.target.value)}
+                    className={`px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                  >
+                    <option value="">Todos os tipos</option>
+                    {Object.keys(TYPE_COLORS).map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  {(pcSearchQuery || pcTypeFilter) && (
+                    <button
+                      onClick={() => {
+                        setPcSearchQuery('')
+                        setPcTypeFilter('')
+                      }}
+                      className={`px-3 py-2 rounded-lg ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
+                    >
+                      Limpar Filtros
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {pcPokemon.length === 0 ? (
               <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 <p className="text-lg">Nenhum Pokémon armazenado no PC</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pcPokemon.map((pokemon, idx) => (
+                {pcPokemon.filter(pokemon => {
+                  // Filtro de pesquisa por nome ou espécie
+                  const matchesSearch = !pcSearchQuery ||
+                    pokemon.nickname.toLowerCase().includes(pcSearchQuery.toLowerCase()) ||
+                    pokemon.species.toLowerCase().includes(pcSearchQuery.toLowerCase())
+
+                  // Filtro de tipo
+                  const pokemonTypes = getPokemonTypes(pokemon)
+                  const matchesType = !pcTypeFilter || pokemonTypes.includes(pcTypeFilter)
+
+                  return matchesSearch && matchesType
+                }).map((pokemon, idx) => (
                   <div
                     key={pokemon.id || idx}
                     className={`p-4 rounded-lg border-2 ${pokemon.shiny ? 'border-yellow-500' : darkMode ? 'bg-gray-700 border-purple-500' : 'bg-purple-50 border-purple-300'}`}
@@ -14334,6 +15462,13 @@ function App() {
 
                         <div className="flex gap-2 flex-wrap">
                           <button
+                            onClick={() => openImagePCModal(pokemon)}
+                            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+                            title="Adicionar Imagem PC"
+                          >
+                            <Camera size={16} />
+                          </button>
+                          <button
                             onClick={() => {
                               setNameRaterPCIndex(idx)
                               setNameRaterPCNickname(pokemon.nickname)
@@ -14388,6 +15523,94 @@ function App() {
             )}
           </div>
         </div>
+
+        {/* Modal de Adicionar Imagem PC */}
+        {showImagePCModal && selectedPokemonForImage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowImagePCModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-md w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Adicionar Imagem PC - {selectedPokemonForImage.nickname}
+                </h3>
+                <button onClick={() => setShowImagePCModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Seletor de tipo de upload */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => setImageUploadType('link')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
+                      imageUploadType === 'link'
+                        ? 'bg-blue-500 text-white'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Link/URL
+                  </button>
+                  <button
+                    onClick={() => setImageUploadType('file')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all ${
+                      imageUploadType === 'file'
+                        ? 'bg-blue-500 text-white'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Arquivo Local
+                  </button>
+                </div>
+
+                {imageUploadType === 'link' ? (
+                  <div>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                      URL da Imagem
+                    </label>
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="https://exemplo.com/imagem.jpg"
+                      className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500' : 'border-gray-300'}`}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                      Selecionar Arquivo
+                    </label>
+                    <input
+                      id="pokemon-image-file-pc"
+                      type="file"
+                      accept="image/*"
+                      className={`w-full px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowImagePCModal(false)
+                      setImageUrl('')
+                      setSelectedPokemonForImage(null)
+                    }}
+                    className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleSaveImage(true)}
+                    className="flex-1 bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 font-semibold"
+                  >
+                    Salvar Imagem
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de Visualização de Informações do Pokémon */}
         {showPokemonInfoModal && viewingPokemon && (
@@ -15720,6 +16943,51 @@ function App() {
                 </div>
               </div>
             </div>
+
+            {pokedex.length > 0 && (
+              <div className="mb-6 space-y-4">
+                {/* Barra de Pesquisa */}
+                <div className="relative">
+                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} size={20} />
+                  <input
+                    type="text"
+                    value={pokedexSearchQuery}
+                    onChange={e => setPokedexSearchQuery(e.target.value)}
+                    placeholder="Pesquisar por espécie..."
+                    className={`w-full pl-10 pr-4 py-3 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 placeholder-gray-500'}`}
+                  />
+                </div>
+
+                {/* Filtro de Tipo */}
+                <div className="flex items-center gap-2">
+                  <label className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Filtrar por tipo:
+                  </label>
+                  <select
+                    value={pokedexTypeFilter}
+                    onChange={e => setPokedexTypeFilter(e.target.value)}
+                    className={`px-4 py-2 border-2 rounded-lg ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                  >
+                    <option value="">Todos os tipos</option>
+                    {Object.keys(TYPE_COLORS).map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  {(pokedexSearchQuery || pokedexTypeFilter) && (
+                    <button
+                      onClick={() => {
+                        setPokedexSearchQuery('')
+                        setPokedexTypeFilter('')
+                      }}
+                      className={`px-3 py-2 rounded-lg ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
+                    >
+                      Limpar Filtros
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {pokedex.length === 0 ? (
               <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 <p className="text-lg">Nenhum Pokémon registrado ainda</p>
@@ -15727,7 +16995,22 @@ function App() {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {pokedex.sort((a, b) => a.species.localeCompare(b.species)).map((entry, idx) => {
+                {pokedex.filter(entry => {
+                  // Filtro de pesquisa por espécie
+                  const matchesSearch = !pokedexSearchQuery ||
+                    entry.species.toLowerCase().includes(pokedexSearchQuery.toLowerCase())
+
+                  // Filtro de tipo
+                  if (!pokedexTypeFilter) return matchesSearch
+
+                  const fullData = entry.isExotic ? entry.exoticData : fullPokedexData.find(p => p.nome === entry.species)
+                  if (!fullData) return matchesSearch
+
+                  const pokemonTypes = fullData.tipos || []
+                  const matchesType = pokemonTypes.includes(pokedexTypeFilter)
+
+                  return matchesSearch && matchesType
+                }).sort((a, b) => a.species.localeCompare(b.species)).map((entry, idx) => {
                   const fullData = entry.isExotic ? entry.exoticData : fullPokedexData.find(p => p.nome === entry.species)
                   return (
                     <div key={idx} className={`p-3 rounded-lg border-2 transition-all hover:shadow-lg relative ${entry.isCaptured ? (darkMode ? 'bg-green-900/30 border-green-500' : 'bg-green-50 border-green-400') : (darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300')}`}>
@@ -17501,7 +18784,7 @@ function App() {
                                 setExpandedCaracteristicas([...newExpanded, idx])
                               }
                             }}
-                            className={`flex-1 p-4 flex items-center justify-between hover:opacity-80 transition-opacity`}
+                            className={`flex-1 p-4 flex items-center justify-between hover:opacity-80 transition-opacity rounded-lg`}
                           >
                             <div className="flex items-center gap-3">
                               {isExpanded ? <ChevronDown size={20} className={darkMode ? 'text-blue-400' : 'text-blue-600'} /> : <ChevronRight size={20} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />}
@@ -17509,29 +18792,6 @@ function App() {
                               <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{carac.className}</span>
                             </div>
                             <span className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{carac.frequencia}</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (isSelected) {
-                                setCaracteristicasSelected(caracteristicasSelected.filter(c => c.nome !== carac.name))
-                              } else {
-                                const caracData = {
-                                  nome: carac.name,
-                                  descricao: carac.efeito,
-                                  frequencia: carac.frequencia,
-                                  referencia: carac.referencia,
-                                  alvo: carac.alvo,
-                                  gatilho: carac.gatilho,
-                                  efeito: carac.efeito,
-                                  classe: carac.className
-                                }
-                                setCaracteristicasSelected([...caracteristicasSelected, caracData])
-                              }
-                            }}
-                            className={`p-4 ${isSelected ? (darkMode ? 'bg-green-600 hover:bg-red-600' : 'bg-green-500 hover:bg-red-500') : (darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600')} text-white transition-colors`}
-                            title={isSelected ? 'Remover seleção' : 'Selecionar característica'}
-                          >
-                            {isSelected ? <Check size={20} /> : <Plus size={20} />}
                           </button>
                         </div>
                         {isExpanded && (
@@ -19489,6 +20749,7 @@ function App() {
           </div>
         )}
         </div>
+
         {accountDataModal}
       </>
     )
@@ -19542,17 +20803,29 @@ function App() {
                         >
                           <div className="flex items-center justify-between">
                             <div className={`font-semibold ${idx === currentTrainerTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              {idx === currentTrainerTurn && '▶ '}{trainer.nome}
+                              {idx === currentTrainerTurn && '▶ '}
+                              {/* Se for NPC e não revelado, mostrar nome falso. Se for o próprio treinador ou revelado, mostrar nome real */}
+                              {trainer.nome === currentUser?.username || !trainer.isNpc || revealedTrainers[trainer.id] ? trainer.nome : (trainer.nomeFalso || 'NPC')}
                             </div>
                             <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
                               Vel: {trainer.velocidade}
                             </span>
                           </div>
                           <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            HP: {trainer.hp}/{trainer.maxHP}
+                            {/* HP visível apenas para o próprio treinador */}
+                            {trainer.nome === currentUser?.username ? (
+                              <span>HP: {trainer.hp}/{trainer.maxHP}</span>
+                            ) : (
+                              <span>HP: ???</span>
+                            )}
                           </div>
                           <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}
+                            {/* Evasões visíveis apenas para o próprio treinador */}
+                            {trainer.nome === currentUser?.username ? (
+                              <span>Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}</span>
+                            ) : (
+                              <span>Evasões - F: ??? | E: ??? | V: ???</span>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -19786,6 +21059,16 @@ function App() {
 
                   {!selectedTeamPokemon && (
                     <div className="mt-4 space-y-3">
+                      {/* Botão Dano/Cura Treinador */}
+                      <button
+                        onClick={() => setShowTrainerBattleDamageModal(true)}
+                        className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gradient-to-r from-red-700 to-green-700 hover:from-red-600 hover:to-green-600' : 'bg-gradient-to-r from-red-500 to-green-500 hover:from-red-600 hover:to-green-600'} text-white`}
+                      >
+                        <Sword size={18} />
+                        Dano/Cura Treinador
+                        <Heart size={18} />
+                      </button>
+
                       {/* Perícias */}
                       <div>
                         <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -19857,14 +21140,28 @@ function App() {
                           onClick={() => {
                             const d20Roll = Math.floor(Math.random() * 20) + 1
                             const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                            const message = `🎲 Ataque Treinador\n1d20 = ${d20Roll}`
+
+                            // Buscar o treinador na lista de batalha para pegar o ID
+                            const trainerInBattle = battleTrainersList.find(t => t.nome === currentUser?.username)
+                            const trainerId = trainerInBattle?.id || currentUser?.username
+                            const stages = trainerStages[trainerId] || { precisao: 0 }
+                            const precisaoStage = stages.precisao || 0
+
+                            // Calcular resultado final com modificador de precisão
+                            const finalResult = d20Roll + precisaoStage
+                            let detailsParts = `1d20 = ${d20Roll}`
+                            if (precisaoStage !== 0) {
+                              detailsParts += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`
+                            }
+
+                            const message = `🎲 Ataque Treinador\n${detailsParts}\nTotal: ${finalResult}`
 
                             setChatMessages(prevMessages => [...prevMessages, {
                               username: currentUser.username,
                               text: message,
                               timestamp,
                               isDiceRoll: true,
-                              diceResult: message
+                              diceResult: finalResult
                             }])
                           }}
                           className={`flex-1 p-3 rounded-lg flex items-center justify-center ${darkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600'} text-white`}
@@ -19874,7 +21171,16 @@ function App() {
                         </button>
                         <button
                           onClick={() => {
-                            const ataqueTrainador = attributes?.ataque || 0
+                            const ataqueBase = attributes?.ataque || 0
+
+                            // Buscar o treinador na lista de batalha para pegar o ID e aplicar fases
+                            const trainerInBattle = battleTrainersList.find(t => t.nome === currentUser?.username)
+                            const trainerId = trainerInBattle?.id || currentUser?.username
+                            const stages = trainerStages[trainerId] || { ataque: 0 }
+                            const ataqueStage = stages.ataque || 0
+                            const ataqueMultiplier = getStageMultiplier(ataqueStage)
+                            const ataqueTotal = Math.floor(ataqueBase * ataqueMultiplier)
+
                             let damageRoll, damageBonus, diceType
 
                             // Determinar dano baseado no nível
@@ -19895,7 +21201,7 @@ function App() {
                             }
 
                             const baseDamage = damageRoll + damageBonus
-                            const totalDamage = baseDamage + ataqueTrainador
+                            const totalDamage = baseDamage + ataqueTotal
 
                             // Mensagens personalizadas por usuário
                             const username = currentUser?.username || 'Treinador'
@@ -19921,8 +21227,13 @@ function App() {
                                 attackMessage = `${username} atacou seu alvo, causou ${totalDamage} de dano`
                             }
 
+                            let stageInfo = ''
+                            if (ataqueStage !== 0) {
+                              stageInfo = ` [Fase ATQ: ${ataqueStage > 0 ? '+' : ''}${ataqueStage} → ${ataqueBase}→${ataqueTotal}]`
+                            }
+
                             const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                            const message = `⚔️ ${attackMessage}\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTrainador} (Ataque) = ${totalDamage}`
+                            const message = `⚔️ ${attackMessage}\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTotal} (Ataque Total)${stageInfo} = ${totalDamage}`
 
                             setChatMessages(prevMessages => [...prevMessages, {
                               username: currentUser.username,
@@ -19938,6 +21249,83 @@ function App() {
                           <Sword size={20} className="text-purple-300" />
                         </button>
                       </div>
+
+                      {/* Fases do Treinador (controles interativos) */}
+                      {(() => {
+                        const trainerInBattle = battleTrainersList.find(t => t.nome === currentUser?.username)
+                        if (!trainerInBattle) return null
+                        const stages = trainerStages[trainerInBattle.id] || { ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0 }
+
+                        const stageConfig = [
+                          { key: 'ataque', label: 'ATQ', color: 'red' },
+                          { key: 'ataqueEspecial', label: 'ATE', color: 'purple' },
+                          { key: 'defesa', label: 'DEF', color: 'blue' },
+                          { key: 'defesaEspecial', label: 'DEE', color: 'teal' },
+                          { key: 'velocidade', label: 'VEL', color: 'yellow' },
+                          { key: 'precisao', label: 'PREC', color: 'pink' }
+                        ]
+
+                        return (
+                          <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                            <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Suas Fases:
+                            </h5>
+                            <div className="grid grid-cols-3 gap-2">
+                              {stageConfig.map(({ key, label, color }) => {
+                                const value = stages[key] || 0
+                                const colorClasses = {
+                                  red: darkMode ? 'bg-red-900/50' : 'bg-red-100',
+                                  purple: darkMode ? 'bg-purple-900/50' : 'bg-purple-100',
+                                  blue: darkMode ? 'bg-blue-900/50' : 'bg-blue-100',
+                                  teal: darkMode ? 'bg-teal-900/50' : 'bg-teal-100',
+                                  yellow: darkMode ? 'bg-yellow-900/50' : 'bg-yellow-100',
+                                  pink: darkMode ? 'bg-pink-900/50' : 'bg-pink-100'
+                                }
+                                return (
+                                  <div key={key} className={`p-2 rounded ${colorClasses[color]}`}>
+                                    <div className={`text-xs font-semibold text-center mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                      {label}
+                                    </div>
+                                    <div className="flex items-center justify-center gap-1">
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainerInBattle.id, key, -1)}
+                                        disabled={value <= -6}
+                                        className={`w-5 h-5 rounded text-xs font-bold ${
+                                          value <= -6
+                                            ? 'bg-gray-500 text-gray-400 cursor-not-allowed'
+                                            : darkMode
+                                              ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                                              : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
+                                        }`}
+                                      >
+                                        ▼
+                                      </button>
+                                      <span className={`text-sm font-bold min-w-[24px] text-center ${
+                                        value > 0 ? 'text-green-500' : value < 0 ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-600'
+                                      }`}>
+                                        {value > 0 ? `+${value}` : value}
+                                      </span>
+                                      <button
+                                        onClick={() => adjustTrainerStage(trainerInBattle.id, key, 1)}
+                                        disabled={value >= 6}
+                                        className={`w-5 h-5 rounded text-xs font-bold ${
+                                          value >= 6
+                                            ? 'bg-gray-500 text-gray-400 cursor-not-allowed'
+                                            : darkMode
+                                              ? 'bg-gray-600 hover:bg-gray-500 text-white'
+                                              : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
+                                        }`}
+                                      >
+                                        ▲
+                                      </button>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>
@@ -21049,7 +22437,7 @@ function App() {
                     <button
                       type="button"
                       onClick={() => {
-                        const newAlvos = [...(talentinhoForm.alvos || []), '']
+                        const newAlvos = [...(talentinhoForm.alvos || []), { operador: '>=', valor: '' }]
                         setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
                       }}
                       className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${darkMode ? 'bg-green-700 hover:bg-green-600' : 'bg-green-500 hover:bg-green-600'} text-white`}
@@ -21060,36 +22448,54 @@ function App() {
                   </div>
                   {talentinhoForm.alvos && talentinhoForm.alvos.length > 0 && (
                     <div className="space-y-2">
-                      {talentinhoForm.alvos.map((alvo, idx) => (
-                        <div key={idx} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={alvo}
-                            onChange={(e) => {
-                              const newAlvos = [...talentinhoForm.alvos]
-                              newAlvos[idx] = e.target.value
-                              setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
-                            }}
-                            className={`flex-1 px-3 py-2 border-2 rounded-lg font-mono text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
-                            placeholder={`Ex: 15 ou 1d10+@MD`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newAlvos = talentinhoForm.alvos.filter((_, i) => i !== idx)
-                              setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
-                            }}
-                            className={`p-2 rounded ${darkMode ? 'bg-red-700 hover:bg-red-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
-                            title="Remover Alvo"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
+                      {talentinhoForm.alvos.map((alvo, idx) => {
+                        // Compatibilidade com formato antigo (string) e novo ({operador, valor})
+                        const alvoObj = typeof alvo === 'object' ? alvo : { operador: '>=', valor: alvo }
+                        return (
+                          <div key={idx} className="flex gap-2">
+                            <select
+                              value={alvoObj.operador || '>='}
+                              onChange={(e) => {
+                                const newAlvos = [...talentinhoForm.alvos]
+                                newAlvos[idx] = { ...alvoObj, operador: e.target.value }
+                                setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
+                              }}
+                              className={`px-2 py-2 border-2 rounded-lg text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                            >
+                              <option value=">=">maior ou igual a</option>
+                              <option value="<=">menor ou igual a</option>
+                              <option value=">">maior que</option>
+                              <option value="<">menor que</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={alvoObj.valor || ''}
+                              onChange={(e) => {
+                                const newAlvos = [...talentinhoForm.alvos]
+                                newAlvos[idx] = { ...alvoObj, valor: e.target.value }
+                                setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
+                              }}
+                              className={`flex-1 px-3 py-2 border-2 rounded-lg font-mono text-sm ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                              placeholder={`Ex: 16 ou 1d10+@MD`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newAlvos = talentinhoForm.alvos.filter((_, i) => i !== idx)
+                                setTalentinhoForm({ ...talentinhoForm, alvos: newAlvos })
+                              }}
+                              className={`p-2 rounded ${darkMode ? 'bg-red-700 hover:bg-red-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                              title="Remover Alvo"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                   <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Defina valores ou expressões para comparar com o resultado. Suporta expressões e comandos @.
+                    Escolha o operador de comparação e defina o valor alvo. Ex: "maior ou igual a 16" significa que a rolagem precisa ser 16 ou mais para ser sucesso.
                   </p>
                 </div>
 
@@ -21157,14 +22563,24 @@ function App() {
                       Alvos
                     </label>
                     <div className="space-y-2">
-                      {selectedTalentinhoDetail.alvos.map((alvo, idx) => (
-                        <div key={idx} className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alvo {idx + 1}:</span>
-                          <code className={`text-sm font-mono block ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
-                            {alvo}
-                          </code>
-                        </div>
-                      ))}
+                      {selectedTalentinhoDetail.alvos.map((alvo, idx) => {
+                        // Compatibilidade com formato antigo (string) e novo ({operador, valor})
+                        const alvoObj = typeof alvo === 'object' ? alvo : { operador: '>=', valor: alvo }
+                        const operadorTexto = {
+                          '>=': 'maior ou igual a',
+                          '<=': 'menor ou igual a',
+                          '>': 'maior que',
+                          '<': 'menor que'
+                        }[alvoObj.operador] || 'maior ou igual a'
+                        return (
+                          <div key={idx} className={`px-4 py-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                            <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alvo {idx + 1}:</span>
+                            <code className={`text-sm font-mono block ${darkMode ? 'text-green-300' : 'text-green-700'}`}>
+                              {operadorTexto} {alvoObj.valor}
+                            </code>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -21394,6 +22810,69 @@ function App() {
           </div>
         )}
 
+        {/* Modal de Dano/Cura Treinador em Batalha */}
+        {showTrainerBattleDamageModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowTrainerBattleDamageModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-md w-full`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Dano/Cura - {currentUser?.username || 'Treinador'}
+                  </h3>
+                  <button onClick={() => setShowTrainerBattleDamageModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                {/* Informação de HP Atual */}
+                <div className={`mb-6 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>HP Atual</p>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {currentHP} / {getMaxHP()}
+                  </p>
+                </div>
+
+                {/* Input de Quantidade */}
+                <div className="mb-6">
+                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Quantidade
+                  </label>
+                  <input
+                    type="number"
+                    value={trainerBattleDamageAmount}
+                    onChange={(e) => setTrainerBattleDamageAmount(e.target.value)}
+                    placeholder="Digite a quantidade..."
+                    className={`w-full px-4 py-3 border-2 rounded-lg text-lg ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 placeholder-gray-400'
+                    }`}
+                    min="1"
+                  />
+                </div>
+
+                {/* Botões de Ação */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => applyTrainerBattleDamage(true)}
+                    disabled={!trainerBattleDamageAmount || parseInt(trainerBattleDamageAmount) <= 0}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-lg hover:from-red-700 hover:to-red-800 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sword size={18} />
+                    Aplicar Dano
+                  </button>
+                  <button
+                    onClick={() => applyTrainerBattleDamage(false)}
+                    disabled={!trainerBattleDamageAmount || parseInt(trainerBattleDamageAmount) <= 0}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-700 text-white py-3 rounded-lg hover:from-green-700 hover:to-green-800 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Heart size={18} />
+                    Curar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {accountDataModal}
       </>
     )
@@ -21548,14 +23027,60 @@ function App() {
               </div>
             </div>
 
-            {/* PARTE 2: Em Desenvolvimento */}
+            {/* PARTE 2: Apps de Interlúdio */}
             <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8 mb-8`}>
               <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                Funcionalidades Futuras
+                Apps de Interlúdio
               </h3>
-              <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'} text-center py-8`}>
-                🚧 Em Desenvolvimento 🚧
-              </p>
+
+              {/* Botões para selecionar o app */}
+              <div className="flex gap-4 mb-6 justify-center">
+                <button
+                  onClick={() => setInterludioApp(interludioApp === 'combate' ? null : 'combate')}
+                  className={`px-6 py-3 rounded-lg font-bold text-lg transition-all ${
+                    interludioApp === 'combate'
+                      ? 'bg-red-600 text-white shadow-lg scale-105'
+                      : darkMode
+                        ? 'bg-gray-700 text-gray-300 hover:bg-red-600 hover:text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-red-500 hover:text-white'
+                  }`}
+                >
+                  Combate
+                </button>
+                <button
+                  onClick={() => setInterludioApp(interludioApp === 'concurso' ? null : 'concurso')}
+                  className={`px-6 py-3 rounded-lg font-bold text-lg transition-all ${
+                    interludioApp === 'concurso'
+                      ? 'bg-purple-600 text-white shadow-lg scale-105'
+                      : darkMode
+                        ? 'bg-gray-700 text-gray-300 hover:bg-purple-600 hover:text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-purple-500 hover:text-white'
+                  }`}
+                >
+                  Concurso
+                </button>
+              </div>
+
+              {/* App de Combate */}
+              {interludioApp === 'combate' && (
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-xl p-6`}>
+                  <CombateInterludioApp darkMode={darkMode} />
+                </div>
+              )}
+
+              {/* App de Concurso */}
+              {interludioApp === 'concurso' && (
+                <div className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-xl p-6`}>
+                  <ConcursoInterludioApp darkMode={darkMode} />
+                </div>
+              )}
+
+              {/* Mensagem quando nenhum app está selecionado */}
+              {!interludioApp && (
+                <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'} text-center py-4`}>
+                  Selecione um app acima para começar
+                </p>
+              )}
             </div>
 
             {/* PARTE 3: Chat com Sistema de Dados */}
