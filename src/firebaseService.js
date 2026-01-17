@@ -136,6 +136,42 @@ export const subscribeToBattle = (callback) => {
   })
 }
 
+// --- STAGES (separado para sincronização em tempo real) ---
+
+// Salvar stages de pokémon
+export const savePokemonStages = async (stages) => {
+  return saveToFirebase('battleStages/pokemon', stages)
+}
+
+// Salvar stages de treinador
+export const saveTrainerStages = async (stages) => {
+  return saveToFirebase('battleStages/trainer', stages)
+}
+
+// Carregar stages de pokémon
+export const loadPokemonStages = async () => {
+  return loadFromFirebase('battleStages/pokemon', {})
+}
+
+// Carregar stages de treinador
+export const loadTrainerStages = async () => {
+  return loadFromFirebase('battleStages/trainer', {})
+}
+
+// Escutar mudanças nos stages de pokémon (tempo real)
+export const subscribeToPokemonStages = (callback) => {
+  return subscribeToFirebase('battleStages/pokemon', (data) => {
+    callback(data || {})
+  })
+}
+
+// Escutar mudanças nos stages de treinador (tempo real)
+export const subscribeToTrainerStages = (callback) => {
+  return subscribeToFirebase('battleStages/trainer', (data) => {
+    callback(data || {})
+  })
+}
+
 // --- CHAT ---
 
 // Salvar mensagens do chat

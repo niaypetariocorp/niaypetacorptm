@@ -14,6 +14,8 @@ import {
   saveNpcTrainers, loadNpcTrainers,
   saveGlobalExoticSpecies, loadGlobalExoticSpecies, subscribeToGlobalExoticSpecies,
   saveBattleData, loadBattleData, subscribeToBattle,
+  savePokemonStages, saveTrainerStages, loadPokemonStages, loadTrainerStages,
+  subscribeToPokemonStages, subscribeToTrainerStages,
   saveChatMessages, loadChatMessages, subscribeToChatMessages,
   saveInterludioData, loadInterludioData, subscribeToInterludio,
   saveHiddenPokelojaItems, loadHiddenPokelojaItems, subscribeToHiddenPokelojaItems
@@ -3480,6 +3482,23 @@ function App() {
     return multipliers[stage.toString()] || 1.00
   }
 
+  // Função para calcular evasões com fases aplicadas
+  const calcularEvasoes = (baseDefesa, baseDefesaEspecial, baseVelocidade, stages) => {
+    const defesaMultiplier = getStageMultiplier(stages?.defesa || 0)
+    const defesaEspecialMultiplier = getStageMultiplier(stages?.defesaEspecial || 0)
+    const velocidadeMultiplier = getStageMultiplier(stages?.velocidade || 0)
+
+    const defesaAdjusted = Math.floor(baseDefesa * defesaMultiplier)
+    const defesaEspecialAdjusted = Math.floor(baseDefesaEspecial * defesaEspecialMultiplier)
+    const velocidadeAdjusted = Math.floor(baseVelocidade * velocidadeMultiplier)
+
+    return {
+      evasaoFisica: Math.floor(defesaAdjusted / 5),
+      evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
+      evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
+    }
+  }
+
   // Função para processar expressões com comandos @
   const processCommandExpression = (expression) => {
     if (!expression || typeof expression !== 'string') return null
@@ -3627,49 +3646,9 @@ function App() {
 
     setTrainerStages(newTrainerStages)
 
-    // Atualizar evasões no battleTrainersList se for defesa, defesaEspecial ou velocidade
-    let newBattleTrainersList = battleTrainersList
-    if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
-      newBattleTrainersList = battleTrainersList.map(trainer => {
-        if (trainer.id === trainerId && trainer.baseAttributes) {
-          const stages = newTrainerStages[trainerId]
-          const defesaMultiplier = getStageMultiplier(stages.defesa)
-          const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
-          const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
-
-          const defesaAdjusted = Math.floor(trainer.baseAttributes.defesa * defesaMultiplier)
-          const defesaEspecialAdjusted = Math.floor(trainer.baseAttributes.defesaEspecial * defesaEspecialMultiplier)
-          const velocidadeAdjusted = Math.floor(trainer.baseAttributes.velocidade * velocidadeMultiplier)
-
-          return {
-            ...trainer,
-            evasaoFisica: Math.floor(defesaAdjusted / 5),
-            evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
-            evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
-          }
-        }
-        return trainer
-      })
-      setBattleTrainersList(newBattleTrainersList)
-    }
-
-    // Salvar no Firebase imediatamente
+    // Salvar APENAS os stages no Firebase (path separado para sincronização em tempo real)
     if (useFirebase) {
-      saveBattleData({
-        battleTrainers,
-        battlePokemon,
-        battleTrainersList: newBattleTrainersList,
-        battlePokemonList,
-        currentTrainerTurn,
-        currentPokemonTurn,
-        trainerRound,
-        pokemonRound,
-        pokemonStages,
-        trainerStages: newTrainerStages,
-        battlePokemonConditions,
-        revealedNpcPokemon,
-        revealedTrainers
-      })
+      saveTrainerStages(newTrainerStages)
     }
   }
 
@@ -3695,49 +3674,9 @@ function App() {
 
     setPokemonStages(newPokemonStages)
 
-    // Atualizar evasões no battlePokemonList se for defesa, defesaEspecial ou velocidade
-    let newBattlePokemonList = battlePokemonList
-    if (attribute === 'defesa' || attribute === 'defesaEspecial' || attribute === 'velocidade') {
-      newBattlePokemonList = battlePokemonList.map(pokemon => {
-        if (pokemon.originalId === pokemonId && pokemon.totalAttributes) {
-          const stages = newPokemonStages[pokemonId]
-          const defesaMultiplier = getStageMultiplier(stages.defesa)
-          const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
-          const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
-
-          const defesaAdjusted = Math.floor(pokemon.totalAttributes.defesa * defesaMultiplier)
-          const defesaEspecialAdjusted = Math.floor(pokemon.totalAttributes.defesaEspecial * defesaEspecialMultiplier)
-          const velocidadeAdjusted = Math.floor(pokemon.totalAttributes.velocidade * velocidadeMultiplier)
-
-          return {
-            ...pokemon,
-            evasaoFisica: Math.floor(defesaAdjusted / 5),
-            evasaoEspecial: Math.floor(defesaEspecialAdjusted / 5),
-            evasaoVeloz: Math.floor(velocidadeAdjusted / 10)
-          }
-        }
-        return pokemon
-      })
-      setBattlePokemonList(newBattlePokemonList)
-    }
-
-    // Salvar no Firebase imediatamente
+    // Salvar APENAS os stages no Firebase (path separado para sincronização em tempo real)
     if (useFirebase) {
-      saveBattleData({
-        battleTrainers,
-        battlePokemon,
-        battleTrainersList,
-        battlePokemonList: newBattlePokemonList,
-        currentTrainerTurn,
-        currentPokemonTurn,
-        trainerRound,
-        pokemonRound,
-        pokemonStages: newPokemonStages,
-        trainerStages,
-        battlePokemonConditions,
-        revealedNpcPokemon,
-        revealedTrainers
-      })
+      savePokemonStages(newPokemonStages)
     }
   }
 
@@ -6095,7 +6034,7 @@ function App() {
     const newBattlePokemon = [...battlePokemon, battleData]
     setBattlePokemon(newBattlePokemon)
 
-    // Salvar no Firebase imediatamente
+    // Salvar no Firebase imediatamente (stages são salvos em paths separados)
     if (useFirebase) {
       saveBattleData({
         battleTrainers,
@@ -6106,8 +6045,6 @@ function App() {
         currentPokemonTurn,
         trainerRound,
         pokemonRound,
-        pokemonStages,
-        trainerStages,
         battlePokemonConditions,
         revealedNpcPokemon,
         revealedTrainers
@@ -6148,7 +6085,7 @@ function App() {
     const newBattleTrainers = [...battleTrainers, battleData]
     setBattleTrainers(newBattleTrainers)
 
-    // Salvar no Firebase imediatamente
+    // Salvar no Firebase imediatamente (stages são salvos em paths separados)
     if (useFirebase) {
       await saveBattleData({
         battleTrainers: newBattleTrainers,
@@ -6159,8 +6096,6 @@ function App() {
         currentPokemonTurn,
         trainerRound,
         pokemonRound,
-        pokemonStages,
-        trainerStages,
         battlePokemonConditions,
         revealedNpcPokemon,
         revealedTrainers
@@ -6257,7 +6192,7 @@ function App() {
     setCurrentTrainerTurn(0)
     setTrainerRound(1)
 
-    // Salvar no Firebase imediatamente
+    // Salvar no Firebase imediatamente (stages são salvos em paths separados)
     if (useFirebase) {
       await saveBattleData({
         battleTrainers: [],
@@ -6268,8 +6203,6 @@ function App() {
         currentPokemonTurn,
         trainerRound: 1,
         pokemonRound,
-        pokemonStages,
-        trainerStages,
         battlePokemonConditions,
         revealedNpcPokemon,
         revealedTrainers
@@ -6288,7 +6221,7 @@ function App() {
     setCurrentPokemonTurn(0)
     setPokemonRound(1)
 
-    // Salvar no Firebase imediatamente
+    // Salvar no Firebase imediatamente (stages são salvos em paths separados)
     if (useFirebase) {
       await saveBattleData({
         battleTrainers,
@@ -6299,8 +6232,6 @@ function App() {
         currentPokemonTurn: 0,
         trainerRound,
         pokemonRound: 1,
-        pokemonStages,
-        trainerStages,
         battlePokemonConditions,
         revealedNpcPokemon,
         revealedTrainers
@@ -6797,12 +6728,17 @@ function App() {
               if (battleData.currentPokemonTurn !== undefined) setCurrentPokemonTurn(battleData.currentPokemonTurn)
               if (battleData.trainerRound !== undefined) setTrainerRound(battleData.trainerRound)
               if (battleData.pokemonRound !== undefined) setPokemonRound(battleData.pokemonRound)
-              if (battleData.pokemonStages) setPokemonStages(battleData.pokemonStages)
-              if (battleData.trainerStages) setTrainerStages(battleData.trainerStages)
+              // NOTA: stages são carregados de path separado
               if (battleData.battlePokemonConditions) setBattlePokemonConditions(battleData.battlePokemonConditions)
               if (battleData.revealedNpcPokemon) setRevealedNpcPokemon(battleData.revealedNpcPokemon)
               if (battleData.revealedTrainers) setRevealedTrainers(battleData.revealedTrainers)
             }
+
+            // Carregar stages de paths separados
+            const pokemonStagesData = await loadPokemonStages()
+            const trainerStagesData = await loadTrainerStages()
+            setPokemonStages(pokemonStagesData || {})
+            setTrainerStages(trainerStagesData || {})
           } else {
             // Fallback para localStorage
             let data = null
@@ -7044,8 +6980,7 @@ function App() {
         if (data.currentPokemonTurn !== undefined) setCurrentPokemonTurn(data.currentPokemonTurn)
         if (data.trainerRound !== undefined) setTrainerRound(data.trainerRound)
         if (data.pokemonRound !== undefined) setPokemonRound(data.pokemonRound)
-        if (data.pokemonStages) setPokemonStages(data.pokemonStages)
-        if (data.trainerStages) setTrainerStages(data.trainerStages)
+        // NOTA: stages agora são carregados de path separado (battleStages/)
         if (data.battlePokemonConditions) setBattlePokemonConditions(data.battlePokemonConditions)
         if (data.revealedNpcPokemon) setRevealedNpcPokemon(data.revealedNpcPokemon)
         if (data.revealedTrainers) setRevealedTrainers(data.revealedTrainers)
@@ -7058,7 +6993,28 @@ function App() {
     }
   }, [currentUser])
 
+  // Sincronizar stages em tempo real (path separado para evitar conflitos)
+  useEffect(() => {
+    if (!useFirebase || !currentUser) return
+
+    // Inscrever para receber atualizações em tempo real dos stages
+    const unsubscribePokemon = subscribeToPokemonStages((data) => {
+      setPokemonStages(data || {})
+    })
+
+    const unsubscribeTrainer = subscribeToTrainerStages((data) => {
+      setTrainerStages(data || {})
+    })
+
+    // Cleanup: cancelar inscrições quando componente desmontar
+    return () => {
+      if (unsubscribePokemon) unsubscribePokemon()
+      if (unsubscribeTrainer) unsubscribeTrainer()
+    }
+  }, [currentUser])
+
   // Salvar dados de batalha no Firebase (apenas mestre pode salvar)
+  // NOTA: stages são salvos em paths separados pelas funções adjust
   const saveBattleToFirebase = useCallback(async () => {
     if (!useFirebase) return
 
@@ -7071,17 +7027,17 @@ function App() {
       currentPokemonTurn,
       trainerRound,
       pokemonRound,
-      pokemonStages,
-      trainerStages,
       battlePokemonConditions,
       revealedNpcPokemon,
       revealedTrainers
     }
 
     await saveBattleData(battleData)
-  }, [battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, pokemonStages, trainerStages, battlePokemonConditions, revealedNpcPokemon, revealedTrainers])
+  }, [battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, battlePokemonConditions, revealedNpcPokemon, revealedTrainers])
 
   // Salvar dados de batalha automaticamente quando mestre faz alterações
+  // NOTA: pokemonStages e trainerStages são salvos APENAS pelas funções adjustPokemonStage/adjustTrainerStage
+  // em paths separados (battleStages/) para evitar conflitos de sincronização
   useEffect(() => {
     if (!useFirebase || !currentUser || currentUser.type !== 'mestre') return
 
@@ -7096,8 +7052,7 @@ function App() {
         currentPokemonTurn,
         trainerRound,
         pokemonRound,
-        pokemonStages,
-        trainerStages,
+        // NOTA: stages NÃO são incluídos aqui - são salvos em paths separados
         battlePokemonConditions,
         revealedNpcPokemon,
         revealedTrainers
@@ -7105,7 +7060,7 @@ function App() {
     }, 500)
 
     return () => clearTimeout(timeoutId)
-  }, [currentUser, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, pokemonStages, trainerStages, battlePokemonConditions, revealedNpcPokemon, revealedTrainers])
+  }, [currentUser, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, battlePokemonConditions, revealedNpcPokemon, revealedTrainers])
 
   // Variável do modal de Account Data (reutilizável em todos os returns)
   const accountDataModal = currentUser ? (
@@ -9033,17 +8988,25 @@ function App() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {safeTrainers.map(trainer => (
-                        <div key={trainer.id} className={`p-3 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-white'} border ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
-                          <div className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{trainer.nome}</div>
-                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            HP: {trainer.hp}/{trainer.maxHP} | Vel: {trainer.velocidade}
+                      {safeTrainers.map(trainer => {
+                        const evasoes = calcularEvasoes(
+                          trainer.baseAttributes?.defesa || 0,
+                          trainer.baseAttributes?.defesaEspecial || 0,
+                          trainer.baseAttributes?.velocidade || trainer.velocidade || 0,
+                          null
+                        )
+                        return (
+                          <div key={trainer.id} className={`p-3 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-white'} border ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                            <div className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{trainer.nome}</div>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              HP: {trainer.hp}/{trainer.maxHP} | Vel: {trainer.velocidade}
+                            </div>
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Evasões - F: {evasoes.evasaoFisica} | E: {evasoes.evasaoEspecial} | V: {evasoes.evasaoVeloz}
+                            </div>
                           </div>
-                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -9122,9 +9085,19 @@ function App() {
                             <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                               HP: {trainer.hp}/{trainer.maxHP}
                             </div>
-                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}
-                            </div>
+                            {(() => {
+                              const evasoes = calcularEvasoes(
+                                trainer.baseAttributes?.defesa || 0,
+                                trainer.baseAttributes?.defesaEspecial || 0,
+                                trainer.baseAttributes?.velocidade || trainer.velocidade || 0,
+                                stages
+                              )
+                              return (
+                                <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  Evasões - F: {evasoes.evasaoFisica} | E: {evasoes.evasaoEspecial} | V: {evasoes.evasaoVeloz}
+                                </div>
+                              )
+                            })()}
 
                             {/* Botão Dano/Cura NPC Treinador */}
                             {trainer.isNpc && (
@@ -9259,8 +9232,6 @@ function App() {
                                           currentPokemonTurn,
                                           trainerRound,
                                           pokemonRound,
-                                          pokemonStages,
-                                          trainerStages,
                                           battlePokemonConditions,
                                           revealedNpcPokemon,
                                           revealedTrainers: newRevealedTrainers
@@ -9556,24 +9527,32 @@ function App() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {safePokemon.map(pokemon => (
-                        <div key={pokemon.id} className={`p-3 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-white'} border ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
-                          <div className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.nome}</div>
-                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {pokemon.especie} | HP: {pokemon.hp}/{pokemon.maxHP} | Vel: {pokemon.velocidade}
+                      {safePokemon.map(pokemon => {
+                        const evasoes = calcularEvasoes(
+                          pokemon.totalAttributes?.defesa || 0,
+                          pokemon.totalAttributes?.defesaEspecial || 0,
+                          pokemon.totalAttributes?.velocidade || pokemon.velocidade || 0,
+                          null
+                        )
+                        return (
+                          <div key={pokemon.id} className={`p-3 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-white'} border ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
+                            <div className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{pokemon.nome}</div>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {pokemon.especie} | HP: {pokemon.hp}/{pokemon.maxHP} | Vel: {pokemon.velocidade}
+                            </div>
+                            <div className={`text-xs flex gap-1 mt-1`}>
+                              {(pokemon.tipos || []).map((tipo, i) => (
+                                <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
+                                  {tipo}
+                                </span>
+                              ))}
+                            </div>
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Evasões - F: {evasoes.evasaoFisica} | E: {evasoes.evasaoEspecial} | V: {evasoes.evasaoVeloz}
+                            </div>
                           </div>
-                          <div className={`text-xs flex gap-1 mt-1`}>
-                            {(pokemon.tipos || []).map((tipo, i) => (
-                              <span key={i} className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: TYPE_COLORS[tipo] || '#777' }}>
-                                {tipo}
-                              </span>
-                            ))}
-                          </div>
-                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -9623,29 +9602,13 @@ function App() {
                         const pokemonConditions = battlePokemonConditions[pokemon.id] || [null, null, null]
                         const stages = pokemonStages[pokemon.id] || { ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0 }
 
-                        // Calcular evasões com multiplicador de fase aplicado aos atributos totais
-                        const defesaMultiplier = getStageMultiplier(stages.defesa)
-                        const defesaEspecialMultiplier = getStageMultiplier(stages.defesaEspecial)
-                        const velocidadeMultiplier = getStageMultiplier(stages.velocidade)
-
-                        // Se temos totalAttributes, usar eles; senão, calcular a partir das evasões
-                        let evasaoFisicaAdjusted, evasaoEspecialAdjusted, evasaoVelozAdjusted
-
-                        if (pokemon.totalAttributes) {
-                          // Aplicar fases aos atributos totais e depois calcular evasões
-                          const defesaAdjusted = Math.floor(pokemon.totalAttributes.defesa * defesaMultiplier)
-                          const defesaEspecialAdjusted = Math.floor(pokemon.totalAttributes.defesaEspecial * defesaEspecialMultiplier)
-                          const velocidadeAdjusted = Math.floor(pokemon.totalAttributes.velocidade * velocidadeMultiplier)
-
-                          evasaoFisicaAdjusted = Math.floor(defesaAdjusted / 5)
-                          evasaoEspecialAdjusted = Math.floor(defesaEspecialAdjusted / 5)
-                          evasaoVelozAdjusted = Math.floor(velocidadeAdjusted / 10)
-                        } else {
-                          // Fallback: aplicar multiplicador diretamente às evasões (Pokémon antigos)
-                          evasaoFisicaAdjusted = Math.floor(pokemon.evasaoFisica * defesaMultiplier)
-                          evasaoEspecialAdjusted = Math.floor(pokemon.evasaoEspecial * defesaEspecialMultiplier)
-                          evasaoVelozAdjusted = Math.floor(pokemon.evasaoVeloz * velocidadeMultiplier)
-                        }
+                        // Calcular evasões com fases
+                        const evasoes = calcularEvasoes(
+                          pokemon.totalAttributes?.defesa || 0,
+                          pokemon.totalAttributes?.defesaEspecial || 0,
+                          pokemon.totalAttributes?.velocidade || pokemon.velocidade || 0,
+                          stages
+                        )
 
                         return (
                           <div
@@ -9685,7 +9648,7 @@ function App() {
                               ))}
                             </div>
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              Evasões - F: {evasaoFisicaAdjusted} | E: {evasaoEspecialAdjusted} | V: {evasaoVelozAdjusted}
+                              Evasões - F: {evasoes.evasaoFisica} | E: {evasoes.evasaoEspecial} | V: {evasoes.evasaoVeloz}
                             </div>
 
                             {/* Botão Dano/Cura NPC Pokémon */}
@@ -9726,8 +9689,6 @@ function App() {
                                           currentPokemonTurn,
                                           trainerRound,
                                           pokemonRound,
-                                          pokemonStages,
-                                          trainerStages,
                                           battlePokemonConditions,
                                           revealedNpcPokemon: newRevealedNpcPokemon,
                                           revealedTrainers
@@ -21452,39 +21413,49 @@ function App() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {battleTrainersList.map((trainer, idx) => (
-                        <div
-                          key={trainer.id}
-                          className={`p-3 rounded-lg border-2 ${
-                            idx === currentTrainerTurn
-                              ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
-                              : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className={`font-semibold ${idx === currentTrainerTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
-                              {idx === currentTrainerTurn && '▶ '}
-                              {/* Se for NPC e não revelado, mostrar nome falso. Se for o próprio treinador ou revelado, mostrar nome real */}
-                              {trainer.nome === currentUser?.username || !trainer.isNpc || revealedTrainers[trainer.id] ? trainer.nome : (trainer.nomeFalso || 'NPC')}
+                      {battleTrainersList.map((trainer, idx) => {
+                        const stages = trainerStages[trainer.id] || { defesa: 0, defesaEspecial: 0, velocidade: 0 }
+                        const evasoes = calcularEvasoes(
+                          trainer.baseAttributes?.defesa || 0,
+                          trainer.baseAttributes?.defesaEspecial || 0,
+                          trainer.baseAttributes?.velocidade || trainer.velocidade || 0,
+                          stages
+                        )
+
+                        return (
+                          <div
+                            key={trainer.id}
+                            className={`p-3 rounded-lg border-2 ${
+                              idx === currentTrainerTurn
+                                ? darkMode ? 'bg-yellow-900 border-yellow-500' : 'bg-yellow-100 border-yellow-500'
+                                : darkMode ? 'bg-gray-600 border-gray-500' : 'bg-white border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className={`font-semibold ${idx === currentTrainerTurn ? 'text-yellow-600' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                {idx === currentTrainerTurn && '▶ '}
+                                {/* Se for NPC e não revelado, mostrar nome falso. Se for o próprio treinador ou revelado, mostrar nome real */}
+                                {trainer.nome === currentUser?.username || !trainer.isNpc || revealedTrainers[trainer.id] ? trainer.nome : (trainer.nomeFalso || 'NPC')}
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
+                                Vel: {trainer.velocidade}
+                              </span>
                             </div>
-                            <span className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>
-                              Vel: {trainer.velocidade}
-                            </span>
+                            <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {/* HP visível apenas para o próprio treinador */}
+                              {trainer.nome === currentUser?.username ? (
+                                <span>HP: {trainer.hp}/{trainer.maxHP}</span>
+                              ) : (
+                                <span>HP: ???</span>
+                              )}
+                            </div>
+                            <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {/* Evasões visíveis para todos, calculadas com fases */}
+                              <span>Evasões - F: {evasoes.evasaoFisica} | E: {evasoes.evasaoEspecial} | V: {evasoes.evasaoVeloz}</span>
+                            </div>
                           </div>
-                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {/* HP visível apenas para o próprio treinador */}
-                            {trainer.nome === currentUser?.username ? (
-                              <span>HP: {trainer.hp}/{trainer.maxHP}</span>
-                            ) : (
-                              <span>HP: ???</span>
-                            )}
-                          </div>
-                          <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {/* Evasões visíveis para todos */}
-                            <span>Evasões - F: {trainer.evasaoFisica} | E: {trainer.evasaoEspecial} | V: {trainer.evasaoVeloz}</span>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -21502,6 +21473,14 @@ function App() {
                     <div className="space-y-2">
                       {battlePokemonList.map((pokemon, idx) => {
                         const pokemonConditions = battlePokemonConditions[pokemon.id] || [null, null, null]
+                        const stages = pokemonStages[pokemon.id] || { defesa: 0, defesaEspecial: 0, velocidade: 0 }
+                        const evasoes = calcularEvasoes(
+                          pokemon.totalAttributes?.defesa || 0,
+                          pokemon.totalAttributes?.defesaEspecial || 0,
+                          pokemon.totalAttributes?.velocidade || pokemon.velocidade || 0,
+                          stages
+                        )
+
                         return (
                           <div
                             key={pokemon.id}
@@ -21543,9 +21522,9 @@ function App() {
                                 </span>
                               )}
                             </div>
-                            {/* Evasões - visíveis para todos */}
+                            {/* Evasões - visíveis para todos, calculadas com fases */}
                             <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                              Evasões - F: {pokemon.evasaoFisica} | E: {pokemon.evasaoEspecial} | V: {pokemon.evasaoVeloz}
+                              Evasões - F: {evasoes.evasaoFisica} | E: {evasoes.evasaoEspecial} | V: {evasoes.evasaoVeloz}
                             </div>
 
                             {/* Condições - Editable se for o dono, read-only se não for */}
@@ -22172,186 +22151,179 @@ function App() {
                       </div>
 
                       {/* Fases */}
-                      <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
-                        <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          Fases (-6 a +6):
-                        </h5>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          {/* Ataque */}
-                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataque', -1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▼
-                              </button>
-                              <span className={`min-w-[24px] text-center font-bold ${
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0) > 0 ? 'text-green-500' :
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0) < 0 ? 'text-red-500' :
-                                darkMode ? 'text-white' : 'text-gray-800'
-                              }`}>
-                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0) > 0 ?
-                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0}` :
-                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataque || 0)
-                                }
-                              </span>
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataque', 1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▲
-                              </button>
-                            </div>
-                          </div>
+                      {(() => {
+                        // Buscar o Pokémon na batalha pelo originalId para usar o ID correto
+                        const teamPokemonId = selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`
+                        const pokemonInBattle = battlePokemonList.find(p => p.originalId === teamPokemonId)
+                        // Se o Pokémon está em batalha, usar o ID de batalha; senão, usar o ID do time
+                        const battleId = pokemonInBattle ? pokemonInBattle.id : teamPokemonId
+                        const currentStages = pokemonStages[battleId] || { ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0 }
 
-                          {/* Ataque Especial */}
-                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ ESP</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataqueEspecial', -1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▼
-                              </button>
-                              <span className={`min-w-[24px] text-center font-bold ${
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0) > 0 ? 'text-green-500' :
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0) < 0 ? 'text-red-500' :
-                                darkMode ? 'text-white' : 'text-gray-800'
-                              }`}>
-                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0) > 0 ?
-                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0}` :
-                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.ataqueEspecial || 0)
-                                }
-                              </span>
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'ataqueEspecial', 1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▲
-                              </button>
-                            </div>
-                          </div>
+                        return (
+                          <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-gray-700' : 'border-gray-300'}`}>
+                            <h5 className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Fases (-6 a +6):{pokemonInBattle ? '' : ' (Pokémon não está em batalha)'}
+                            </h5>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {/* Ataque */}
+                              <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'ataque', -1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▼
+                                  </button>
+                                  <span className={`min-w-[24px] text-center font-bold ${
+                                    currentStages.ataque > 0 ? 'text-green-500' :
+                                    currentStages.ataque < 0 ? 'text-red-500' :
+                                    darkMode ? 'text-white' : 'text-gray-800'
+                                  }`}>
+                                    {currentStages.ataque > 0 ? `+${currentStages.ataque}` : currentStages.ataque}
+                                  </span>
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'ataque', 1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▲
+                                  </button>
+                                </div>
+                              </div>
 
-                          {/* Defesa */}
-                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesa', -1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▼
-                              </button>
-                              <span className={`min-w-[24px] text-center font-bold ${
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0) > 0 ? 'text-green-500' :
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0) < 0 ? 'text-red-500' :
-                                darkMode ? 'text-white' : 'text-gray-800'
-                              }`}>
-                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0) > 0 ?
-                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0}` :
-                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesa || 0)
-                                }
-                              </span>
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesa', 1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▲
-                              </button>
-                            </div>
-                          </div>
+                              {/* Ataque Especial */}
+                              <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>ATQ ESP</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'ataqueEspecial', -1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▼
+                                  </button>
+                                  <span className={`min-w-[24px] text-center font-bold ${
+                                    currentStages.ataqueEspecial > 0 ? 'text-green-500' :
+                                    currentStages.ataqueEspecial < 0 ? 'text-red-500' :
+                                    darkMode ? 'text-white' : 'text-gray-800'
+                                  }`}>
+                                    {currentStages.ataqueEspecial > 0 ? `+${currentStages.ataqueEspecial}` : currentStages.ataqueEspecial}
+                                  </span>
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'ataqueEspecial', 1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▲
+                                  </button>
+                                </div>
+                              </div>
 
-                          {/* Defesa Especial */}
-                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF ESP</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesaEspecial', -1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▼
-                              </button>
-                              <span className={`min-w-[24px] text-center font-bold ${
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0) > 0 ? 'text-green-500' :
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0) < 0 ? 'text-red-500' :
-                                darkMode ? 'text-white' : 'text-gray-800'
-                              }`}>
-                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0) > 0 ?
-                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0}` :
-                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.defesaEspecial || 0)
-                                }
-                              </span>
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'defesaEspecial', 1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▲
-                              </button>
-                            </div>
-                          </div>
+                              {/* Defesa */}
+                              <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'defesa', -1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▼
+                                  </button>
+                                  <span className={`min-w-[24px] text-center font-bold ${
+                                    currentStages.defesa > 0 ? 'text-green-500' :
+                                    currentStages.defesa < 0 ? 'text-red-500' :
+                                    darkMode ? 'text-white' : 'text-gray-800'
+                                  }`}>
+                                    {currentStages.defesa > 0 ? `+${currentStages.defesa}` : currentStages.defesa}
+                                  </span>
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'defesa', 1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▲
+                                  </button>
+                                </div>
+                              </div>
 
-                          {/* Velocidade */}
-                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>VEL</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'velocidade', -1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▼
-                              </button>
-                              <span className={`min-w-[24px] text-center font-bold ${
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0) > 0 ? 'text-green-500' :
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0) < 0 ? 'text-red-500' :
-                                darkMode ? 'text-white' : 'text-gray-800'
-                              }`}>
-                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0) > 0 ?
-                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0}` :
-                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.velocidade || 0)
-                                }
-                              </span>
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'velocidade', 1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▲
-                              </button>
-                            </div>
-                          </div>
+                              {/* Defesa Especial */}
+                              <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>DEF ESP</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'defesaEspecial', -1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▼
+                                  </button>
+                                  <span className={`min-w-[24px] text-center font-bold ${
+                                    currentStages.defesaEspecial > 0 ? 'text-green-500' :
+                                    currentStages.defesaEspecial < 0 ? 'text-red-500' :
+                                    darkMode ? 'text-white' : 'text-gray-800'
+                                  }`}>
+                                    {currentStages.defesaEspecial > 0 ? `+${currentStages.defesaEspecial}` : currentStages.defesaEspecial}
+                                  </span>
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'defesaEspecial', 1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▲
+                                  </button>
+                                </div>
+                              </div>
 
-                          {/* Precisão */}
-                          <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                            <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>PREC</span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'precisao', -1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▼
-                              </button>
-                              <span className={`min-w-[24px] text-center font-bold ${
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0) > 0 ? 'text-green-500' :
-                                (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0) < 0 ? 'text-red-500' :
-                                darkMode ? 'text-white' : 'text-gray-800'
-                              }`}>
-                                {(pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0) > 0 ?
-                                  `+${pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0}` :
-                                  (pokemonStages[selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`]?.precisao || 0)
-                                }
-                              </span>
-                              <button
-                                onClick={() => adjustPokemonStage(selectedTeamPokemon.id || `team-${selectedTeamPokemon.species}`, 'precisao', 1)}
-                                className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                              >
-                                ▲
-                              </button>
+                              {/* Velocidade */}
+                              <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>VEL</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'velocidade', -1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▼
+                                  </button>
+                                  <span className={`min-w-[24px] text-center font-bold ${
+                                    currentStages.velocidade > 0 ? 'text-green-500' :
+                                    currentStages.velocidade < 0 ? 'text-red-500' :
+                                    darkMode ? 'text-white' : 'text-gray-800'
+                                  }`}>
+                                    {currentStages.velocidade > 0 ? `+${currentStages.velocidade}` : currentStages.velocidade}
+                                  </span>
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'velocidade', 1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▲
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Precisão */}
+                              <div className={`flex items-center justify-between p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                                <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>PREC</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'precisao', -1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▼
+                                  </button>
+                                  <span className={`min-w-[24px] text-center font-bold ${
+                                    currentStages.precisao > 0 ? 'text-green-500' :
+                                    currentStages.precisao < 0 ? 'text-red-500' :
+                                    darkMode ? 'text-white' : 'text-gray-800'
+                                  }`}>
+                                    {currentStages.precisao > 0 ? `+${currentStages.precisao}` : currentStages.precisao}
+                                  </span>
+                                  <button
+                                    onClick={() => adjustPokemonStage(battleId, 'precisao', 1)}
+                                    className={`w-6 h-6 rounded flex items-center justify-center ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                                  >
+                                    ▲
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
+                        )
+                      })()}
                     </div>
                   )}
                 </div>
