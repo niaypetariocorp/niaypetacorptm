@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, RotateCw, Settings2, Hand, Sigma, Dices, Check, Send } from 'lucide-react'
+import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, RotateCw, Settings2, Hand, Sigma, Dices, Check, Send, BookType } from 'lucide-react'
 import AccountDataModal from './AccountDataModal'
 import pokedexData from './pokemonData'
 import GOLPES_DATA_IMPORTED from './golpesData'
@@ -736,6 +736,7 @@ const NO_HELD_ITEM_PHRASES = [
 // Itens Chave disponíveis
 const KEY_ITEMS_LIST = [
   ...POKEBALLS_LIST,
+  'Pokeovo',
   'Potion',
   'Superpotion',
   'Hiperpotion',
@@ -755,6 +756,20 @@ const KEY_ITEMS_LIST = [
   'Carburante',
   'PP-up',
   'Rare Candy'
+]
+
+// Lista de imagens de Pokeovo (será randomizada quando adicionar)
+const POKEOVO_IMAGES = [
+  '/pokeovo a.png',
+  '/pokeovo b.png',
+  '/pokeovo c.png',
+  '/pokeovo d.png',
+  '/pokeovo e.png',
+  '/pokeovo f.png',
+  '/pokeovo g.png',
+  '/pokeovo h.png',
+  '/pokeovo i.png',
+  '/pokeovo j.png'
 ]
 
 // Estrutura da PokéLoja
@@ -1607,6 +1622,16 @@ function App() {
   const [showPokemonedasModal, setShowPokemonedasModal] = useState(false)
   const [pokemonedasValue, setPokemonedasValue] = useState('')
 
+  // States para Pokeovo
+  const [pokeovoList, setPokeovoList] = useState([]) // Array de {id, species, imageIndex}
+  const [showPokeovoSpeciesModal, setShowPokeovoSpeciesModal] = useState(false)
+  const [selectedPokeovoSpecies, setSelectedPokeovoSpecies] = useState('Misterioso')
+  const [pokeovoSpeciesSearch, setPokeovoSpeciesSearch] = useState('')
+  const [showHatchMysteryEggModal, setShowHatchMysteryEggModal] = useState(false)
+  const [selectedPokeovoToHatch, setSelectedPokeovoToHatch] = useState(null)
+  const [hatchSpeciesSearch, setHatchSpeciesSearch] = useState('')
+  const [selectedHatchSpecies, setSelectedHatchSpecies] = useState('')
+
   // States para PokéLoja
   const [expandedCorredores, setExpandedCorredores] = useState({}) // {corredor: boolean}
   const [showItemDescriptionModal, setShowItemDescriptionModal] = useState(false)
@@ -1771,7 +1796,11 @@ function App() {
   const [expandedCondicoesM, setExpandedCondicoesM] = useState([]) // Array de nomes de condições expandidas
 
   // Estados para Progressão (Treinador)
-  const [progressaoSection, setProgressaoSection] = useState('Vivências') // 'Vivências', 'Diário da Jornada'
+  const [progressaoSection, setProgressaoSection] = useState('Vivências') // 'Vivências', 'Diário da Jornada', 'Background'
+  const [background, setBackground] = useState('') // Texto do background do personagem (máx 2000 caracteres)
+  const [showBackgroundModal, setShowBackgroundModal] = useState(false) // Modal para editar background
+  const [selectedBackgroundTrainer, setSelectedBackgroundTrainer] = useState('') // Treinador selecionado para ver o background
+  const [selectedBackgroundData, setSelectedBackgroundData] = useState(null) // Dados do treinador selecionado para ver background
   const [vivencias, setVivencias] = useState([]) // Lista de vivências
   const [showNovaVivenciaModal, setShowNovaVivenciaModal] = useState(false)
   const [novaVivenciaNome, setNovaVivenciaNome] = useState('')
@@ -4361,6 +4390,15 @@ function App() {
       return
     }
 
+    // Se for Pokeovo, abrir modal de seleção de espécie
+    if (selectedKeyItem === 'Pokeovo') {
+      setShowAddKeyItemModal(false)
+      setShowPokeovoSpeciesModal(true)
+      setSelectedPokeovoSpecies('Misterioso')
+      setPokeovoSpeciesSearch('')
+      return
+    }
+
     const existingItem = keyItems.find(item => item.name === selectedKeyItem)
     if (existingItem) {
       setKeyItems(keyItems.map(item =>
@@ -4375,6 +4413,134 @@ function App() {
     setShowAddKeyItemModal(false)
     setSelectedKeyItem('')
     setKeyItemQuantity(1)
+  }
+
+  // Função para adicionar Pokeovo com espécie selecionada
+  const handleAddPokeovo = () => {
+    const speciesName = selectedPokeovoSpecies === 'Misterioso' ? '?!?!' : selectedPokeovoSpecies
+    const randomImageIndex = Math.floor(Math.random() * POKEOVO_IMAGES.length)
+
+    const newPokeovo = {
+      id: `pokeovo-${Date.now()}-${Math.random()}`,
+      species: selectedPokeovoSpecies,
+      displayName: `Pokeovo de ${speciesName}`,
+      imageIndex: randomImageIndex
+    }
+
+    setPokeovoList([...pokeovoList, newPokeovo])
+    setShowPokeovoSpeciesModal(false)
+    setSelectedKeyItem('')
+    setKeyItemQuantity(1)
+  }
+
+  // Função para chocar ovo
+  const handleHatchEgg = (pokeovo) => {
+    // Se for ovo misterioso, abrir modal para escolher espécie
+    if (pokeovo.species === 'Misterioso') {
+      setSelectedPokeovoToHatch(pokeovo)
+      setSelectedHatchSpecies('')
+      setHatchSpeciesSearch('')
+      setShowHatchMysteryEggModal(true)
+      return
+    }
+
+    // Chocar ovo com espécie já definida
+    hatchEggWithSpecies(pokeovo, pokeovo.species)
+  }
+
+  // Função para chocar ovo com espécie específica
+  const hatchEggWithSpecies = (pokeovo, species) => {
+    // Buscar dados da espécie
+    const speciesData = pokedexData.find(p => p.nome.toLowerCase() === species.toLowerCase())
+
+    // Gerar golpes para level 1 - passar o NOME da espécie (string), não o objeto
+    const golpesAprendidos = generatePokemonMoves(species, 1)
+
+    // Buscar habilidades da espécie e sortear uma
+    const speciesAbilities = POKEMON_ABILITIES[species] || { habilidades: [], altasHabilidades: [] }
+    const allAbilities = [...(speciesAbilities.habilidades || []), ...(speciesAbilities.altasHabilidades || [])]
+    const habilidade1 = allAbilities.length > 0 ? allAbilities[Math.floor(Math.random() * allAbilities.length)] : null
+
+    // Sortear natureza
+    const randomNature = natures[Math.floor(Math.random() * natures.length)]
+
+    // Sortear gênero baseado na distribuição da espécie
+    let gender = null
+    if (speciesData && speciesData.genero) {
+      const genderParts = speciesData.genero.split('_')
+      const malePercent = parseFloat(genderParts[0])
+      const femalePercent = parseFloat(genderParts[1])
+
+      if (malePercent === 0 && femalePercent === 0) {
+        // Pokémon sem gênero (ex: Magnemite)
+        gender = null
+      } else if (malePercent === 100) {
+        gender = 'Macho'
+      } else if (femalePercent === 100) {
+        gender = 'Fêmea'
+      } else {
+        // Sortear baseado na porcentagem
+        const roll = Math.random() * 100
+        gender = roll < malePercent ? 'Macho' : 'Fêmea'
+      }
+    }
+
+    // Obter peso e altura da espécie (usar weight e height para compatibilidade com o formulário de edição)
+    const weight = speciesData ? speciesData.peso : ''
+    const height = speciesData ? speciesData.altura : ''
+
+    // Criar novo pokémon level 1
+    const newPokemon = {
+      id: Date.now(),
+      nickname: species,
+      species: species,
+      level: 1,
+      totalXP: 0,
+      isCaptured: true,
+      isExotic: false,
+      golpes: golpesAprendidos,
+      habilidade1: habilidade1,
+      habilidade2: null,
+      habilidades: habilidade1 ? [habilidade1] : [], // Array para compatibilidade com modal de habilidades
+      hatchedFromEgg: true,
+      nature: randomNature.nome,
+      gender: gender,
+      weight: weight,
+      height: height
+    }
+
+    // Adicionar à Pokédex como escaneado E capturado
+    const existingEntry = pokedex.find(p => p.species === species)
+    if (!existingEntry) {
+      // Não existe na Pokédex, criar nova entrada como escaneado e capturado
+      setPokedex([...pokedex, { species, isScanned: true, isCaptured: true }])
+    } else {
+      // Existe, marcar como escaneado e capturado
+      setPokedex(pokedex.map(p => p.species === species ? { ...p, isScanned: true, isCaptured: true } : p))
+    }
+
+    // Adicionar ao time ou PC
+    if (mainTeam.length < 6) {
+      setMainTeam([...mainTeam, newPokemon])
+      alert(`${species} nasceu do ovo e foi adicionado ao seu time!`)
+    } else {
+      setPcPokemon([...pcPokemon, newPokemon])
+      alert(`${species} nasceu do ovo e foi enviado para o PC (time cheio)!`)
+    }
+
+    // Remover o pokeovo da lista
+    setPokeovoList(pokeovoList.filter(p => p.id !== pokeovo.id))
+    setShowHatchMysteryEggModal(false)
+    setSelectedPokeovoToHatch(null)
+  }
+
+  // Função para confirmar chocar ovo misterioso
+  const handleConfirmHatchMysteryEgg = () => {
+    if (!selectedHatchSpecies) {
+      alert('Selecione uma espécie!')
+      return
+    }
+    hatchEggWithSpecies(selectedPokeovoToHatch, selectedHatchSpecies)
   }
 
   // Incrementar quantidade de item chave
@@ -5320,10 +5486,28 @@ function App() {
       }
     }
 
+    // Buscar peso e altura da espécie se não existirem no pokémon
+    let weightFromData = ''
+    let heightFromData = ''
+    if (pokemon.isExotic) {
+      const exoticData = globalExoticSpecies.find(e => e.nome === pokemonSpecies)
+      if (exoticData) {
+        weightFromData = exoticData.peso || ''
+        heightFromData = exoticData.altura || ''
+      }
+    } else {
+      const foundPokemon = pokedexData.find(p => p.nome.toLowerCase() === pokemonSpecies.toLowerCase())
+      if (foundPokemon) {
+        weightFromData = foundPokemon.peso || ''
+        heightFromData = foundPokemon.altura || ''
+      }
+    }
+
     // Preencher formulário com dados existentes ou buscar do pokemonData
     setPokemonEditForm({
       shiny: pokemon.shiny || false,
       nature: pokemon.nature || '',
+      gender: pokemon.gender || '',
       baseAttributes: pokemon.baseAttributes || baseAttributesFromData,
       levelPoints: pokemon.levelPoints || {
         saude: '',
@@ -5340,8 +5524,8 @@ function App() {
         cavar: '',
         submerso: ''
       },
-      weight: pokemon.weight || '',
-      height: pokemon.height || '',
+      weight: pokemon.weight || weightFromData,
+      height: pokemon.height || heightFromData,
       loyalty: pokemon.loyalty || '',
       capacities: pokemon.capacities || {
         forca: '',
@@ -5399,10 +5583,28 @@ function App() {
       }
     }
 
+    // Buscar peso e altura da espécie se não existirem no pokémon
+    let weightFromData = ''
+    let heightFromData = ''
+    if (pokemon.isExotic) {
+      const exoticData = globalExoticSpecies.find(e => e.nome === pokemonSpecies)
+      if (exoticData) {
+        weightFromData = exoticData.peso || ''
+        heightFromData = exoticData.altura || ''
+      }
+    } else {
+      const foundPokemon = pokedexData.find(p => p.nome.toLowerCase() === pokemonSpecies.toLowerCase())
+      if (foundPokemon) {
+        weightFromData = foundPokemon.peso || ''
+        heightFromData = foundPokemon.altura || ''
+      }
+    }
+
     // Preencher formulário com dados existentes ou buscar do pokemonData
     setPokemonEditForm({
       shiny: pokemon.shiny || false,
       nature: pokemon.nature || '',
+      gender: pokemon.gender || '',
       baseAttributes: pokemon.baseAttributes || baseAttributesFromData,
       levelPoints: pokemon.levelPoints || {
         saude: '',
@@ -5419,8 +5621,8 @@ function App() {
         cavar: '',
         submerso: ''
       },
-      weight: pokemon.weight || '',
-      height: pokemon.height || '',
+      weight: pokemon.weight || weightFromData,
+      height: pokemon.height || heightFromData,
       loyalty: pokemon.loyalty || '',
       capacities: pokemon.capacities || {
         forca: '',
@@ -6258,90 +6460,114 @@ function App() {
     }
   }
 
-  const removeTrainerFromBattle = (trainerId) => {
+  const removeTrainerFromBattle = async (trainerId) => {
     // Remover o treinador da lista de batalha e ajustar o turno
-    setBattleTrainersList(prev => {
-      const newList = prev.filter(t => t.id !== trainerId)
+    const newList = battleTrainersList.filter(t => t.id !== trainerId)
+    let newTurn = currentTrainerTurn
 
-      // Ajustar o turno atual se necessário
-      if (currentTrainerTurn >= newList.length && newList.length > 0) {
-        setCurrentTrainerTurn(newList.length - 1)
-      } else if (newList.length === 0) {
-        setCurrentTrainerTurn(0)
-      }
+    // Ajustar o turno atual se necessário
+    if (currentTrainerTurn >= newList.length && newList.length > 0) {
+      newTurn = newList.length - 1
+      setCurrentTrainerTurn(newTurn)
+    } else if (newList.length === 0) {
+      newTurn = 0
+      setCurrentTrainerTurn(0)
+    }
 
-      return newList
-    })
+    setBattleTrainersList(newList)
 
     // Limpar condições desse treinador
-    setBattleTrainerConditions(prev => {
-      const newConditions = { ...prev }
-      delete newConditions[trainerId]
-      return newConditions
-    })
+    const newConditions = { ...battleTrainerConditions }
+    delete newConditions[trainerId]
+    setBattleTrainerConditions(newConditions)
 
     // Limpar estágios desse treinador
-    setTrainerStages(prev => {
-      const newStages = { ...prev }
-      delete newStages[trainerId]
-      // Salvar no Firebase
-      if (useFirebase) {
-        saveTrainerStages(newStages)
-      }
-      return newStages
-    })
+    const newStages = { ...trainerStages }
+    delete newStages[trainerId]
+    setTrainerStages(newStages)
+    if (useFirebase) {
+      saveTrainerStages(newStages)
+    }
 
     // Limpar estado revelado
-    setRevealedTrainers(prev => {
-      const newRevealed = { ...prev }
-      delete newRevealed[trainerId]
-      return newRevealed
-    })
+    const newRevealed = { ...revealedTrainers }
+    delete newRevealed[trainerId]
+    setRevealedTrainers(newRevealed)
+
+    // Salvar no Firebase para sincronizar em tempo real
+    if (useFirebase) {
+      await saveBattleData({
+        battleTrainers,
+        battlePokemon,
+        battleTrainersList: newList,
+        battlePokemonList,
+        currentTrainerTurn: newTurn,
+        currentPokemonTurn,
+        trainerRound,
+        pokemonRound,
+        battlePokemonConditions,
+        battleTrainerConditions: newConditions,
+        revealedNpcPokemon,
+        revealedTrainers: newRevealed
+      })
+    }
   }
 
-  const removePokemonFromBattle = (pokemonId) => {
+  const removePokemonFromBattle = async (pokemonId) => {
     // Remover o pokémon da lista de batalha e ajustar o turno
-    setBattlePokemonList(prev => {
-      const newList = prev.filter(p => p.id !== pokemonId)
+    const newList = battlePokemonList.filter(p => p.id !== pokemonId)
+    let newTurn = currentPokemonTurn
 
-      // Ajustar o turno atual se necessário
-      if (currentPokemonTurn >= newList.length && newList.length > 0) {
-        setCurrentPokemonTurn(newList.length - 1)
-      } else if (newList.length === 0) {
-        setCurrentPokemonTurn(0)
-      }
+    // Ajustar o turno atual se necessário
+    if (currentPokemonTurn >= newList.length && newList.length > 0) {
+      newTurn = newList.length - 1
+      setCurrentPokemonTurn(newTurn)
+    } else if (newList.length === 0) {
+      newTurn = 0
+      setCurrentPokemonTurn(0)
+    }
 
-      return newList
-    })
+    setBattlePokemonList(newList)
 
     // Limpar condições desse pokémon
-    setBattlePokemonConditions(prev => {
-      const newConditions = { ...prev }
-      delete newConditions[pokemonId]
-      return newConditions
-    })
+    const newConditions = { ...battlePokemonConditions }
+    delete newConditions[pokemonId]
+    setBattlePokemonConditions(newConditions)
 
     // Limpar estágios desse pokémon
-    setPokemonStages(prev => {
-      const newStages = { ...prev }
-      delete newStages[pokemonId]
-      // Salvar no Firebase
-      if (useFirebase) {
-        savePokemonStages(newStages)
-      }
-      return newStages
-    })
+    const newStages = { ...pokemonStages }
+    delete newStages[pokemonId]
+    setPokemonStages(newStages)
+    if (useFirebase) {
+      savePokemonStages(newStages)
+    }
 
     // Limpar estado revelado se for NPC
-    setRevealedNpcPokemon(prev => {
-      const newRevealed = { ...prev }
-      delete newRevealed[pokemonId]
-      return newRevealed
-    })
+    const newRevealed = { ...revealedNpcPokemon }
+    delete newRevealed[pokemonId]
+    setRevealedNpcPokemon(newRevealed)
 
     // Se era o pokémon selecionado, limpar seleção
     if (selectedMasterNpcPokemon?.id === pokemonId) {
       setSelectedMasterNpcPokemon(null)
+    }
+
+    // Salvar no Firebase para sincronizar em tempo real
+    if (useFirebase) {
+      await saveBattleData({
+        battleTrainers,
+        battlePokemon,
+        battleTrainersList,
+        battlePokemonList: newList,
+        currentTrainerTurn,
+        currentPokemonTurn: newTurn,
+        trainerRound,
+        pokemonRound,
+        battlePokemonConditions: newConditions,
+        battleTrainerConditions,
+        revealedNpcPokemon: newRevealed,
+        revealedTrainers
+      })
     }
   }
 
@@ -6527,6 +6753,7 @@ function App() {
             setPokemonedas(data.pokemonedas || 0)
             setKeyItems(data.keyItems || [])
             setCustomItems(data.customItems || [])
+            setPokeovoList(data.pokeovoList || [])
             // Migração: converter talentos antigos (strings) para objetos
             const migratedTalentos = (data.talentosSelected || []).map(tal => {
               if (typeof tal === 'string') {
@@ -6563,6 +6790,7 @@ function App() {
             setUserBattleModifiers(data.userBattleModifiers || {})
             setUserActiveModifiers(data.userActiveModifiers || {})
             setTalentinhos(data.talentinhos || [])
+            setBackground(data.background || '')
           }
         } catch (e) {
           console.error('Erro ao carregar dados do treinador:', e)
@@ -6645,14 +6873,15 @@ function App() {
         const data = {
           level, image, classes, attributes, skills, currentHP,
           mainTeam, pcPokemon, pokedex,
-          pokemonedas, keyItems, customItems,
+          pokemonedas, keyItems, customItems, pokeovoList,
           caracteristicasSelected, talentosSelected,
           pokemonImages, badges,
           estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive,
           bolsaTalento, otherCapacities,
           vivencias, conquistas, ciclos,
           userBattleModifiers, userActiveModifiers,
-          talentinhos
+          talentinhos,
+          background
         }
         try {
           if (useFirebase) {
@@ -6704,7 +6933,7 @@ function App() {
     // Debounce para evitar muitas escritas
     const timeoutId = setTimeout(saveData, 500)
     return () => clearTimeout(timeoutId)
-  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, pokemonImages, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, ciclos, userBattleModifiers, userActiveModifiers, talentinhos, hiddenPokelojaItems, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, battlePokemonConditions, battleTrainerConditions, currentUser])
+  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, keyItems, customItems, caracteristicasSelected, talentosSelected, pokemonImages, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, ciclos, userBattleModifiers, userActiveModifiers, talentinhos, background, hiddenPokelojaItems, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, battlePokemonConditions, battleTrainerConditions, currentUser])
 
   // Salvar dados de batalha no mestre_config mesmo quando for treinador
   useEffect(() => {
@@ -6929,6 +7158,26 @@ function App() {
     loadDiarioTrainerData()
   }, [selectedDiarioTrainer])
 
+  // Carregar dados do treinador selecionado para visualizar background
+  useEffect(() => {
+    const loadBackgroundTrainerData = async () => {
+      if (selectedBackgroundTrainer) {
+        try {
+          const data = useFirebase
+            ? await loadTrainerData(selectedBackgroundTrainer)
+            : JSON.parse(localStorage.getItem(`trainer_${selectedBackgroundTrainer}`) || 'null')
+          setSelectedBackgroundData(data)
+        } catch (e) {
+          console.error('Erro ao carregar dados do treinador para background:', e)
+          setSelectedBackgroundData(null)
+        }
+      } else {
+        setSelectedBackgroundData(null)
+      }
+    }
+    loadBackgroundTrainerData()
+  }, [selectedBackgroundTrainer])
+
   // Carregar dados do treinador selecionado para Visão do Mestre
   useEffect(() => {
     const fetchSelectedTrainerData = async () => {
@@ -7008,19 +7257,35 @@ function App() {
     // Inscrever para receber atualizações em tempo real da batalha
     const unsubscribe = subscribeToBattle((data) => {
       if (data) {
-        // Atualizar estados de batalha (usar Array.isArray para arrays vazios)
-        if (Array.isArray(data.battleTrainers)) setBattleTrainers(data.battleTrainers)
-        if (Array.isArray(data.battlePokemon)) setBattlePokemon(data.battlePokemon)
-        if (Array.isArray(data.battleTrainersList)) setBattleTrainersList(data.battleTrainersList)
-        if (Array.isArray(data.battlePokemonList)) setBattlePokemonList(data.battlePokemonList)
-        if (data.currentTrainerTurn !== undefined) setCurrentTrainerTurn(data.currentTrainerTurn)
-        if (data.currentPokemonTurn !== undefined) setCurrentPokemonTurn(data.currentPokemonTurn)
-        if (data.trainerRound !== undefined) setTrainerRound(data.trainerRound)
-        if (data.pokemonRound !== undefined) setPokemonRound(data.pokemonRound)
+        // Atualizar estados de batalha
+        // Usar || [] para garantir que arrays vazios sejam aplicados quando o campo não existe no Firebase
+        setBattleTrainers(Array.isArray(data.battleTrainers) ? data.battleTrainers : [])
+        setBattlePokemon(Array.isArray(data.battlePokemon) ? data.battlePokemon : [])
+        setBattleTrainersList(Array.isArray(data.battleTrainersList) ? data.battleTrainersList : [])
+        setBattlePokemonList(Array.isArray(data.battlePokemonList) ? data.battlePokemonList : [])
+        setCurrentTrainerTurn(data.currentTrainerTurn !== undefined ? data.currentTrainerTurn : 0)
+        setCurrentPokemonTurn(data.currentPokemonTurn !== undefined ? data.currentPokemonTurn : 0)
+        setTrainerRound(data.trainerRound !== undefined ? data.trainerRound : 1)
+        setPokemonRound(data.pokemonRound !== undefined ? data.pokemonRound : 1)
         // NOTA: stages agora são carregados de path separado (battleStages/)
-        if (data.battlePokemonConditions) setBattlePokemonConditions(data.battlePokemonConditions)
-        if (data.revealedNpcPokemon) setRevealedNpcPokemon(data.revealedNpcPokemon)
-        if (data.revealedTrainers) setRevealedTrainers(data.revealedTrainers)
+        setBattlePokemonConditions(data.battlePokemonConditions || {})
+        setBattleTrainerConditions(data.battleTrainerConditions || {})
+        setRevealedNpcPokemon(data.revealedNpcPokemon || {})
+        setRevealedTrainers(data.revealedTrainers || {})
+      } else {
+        // Se data é null/undefined, significa que os dados foram limpos - resetar tudo
+        setBattleTrainers([])
+        setBattlePokemon([])
+        setBattleTrainersList([])
+        setBattlePokemonList([])
+        setCurrentTrainerTurn(0)
+        setCurrentPokemonTurn(0)
+        setTrainerRound(1)
+        setPokemonRound(1)
+        setBattlePokemonConditions({})
+        setBattleTrainerConditions({})
+        setRevealedNpcPokemon({})
+        setRevealedTrainers({})
       }
     })
 
@@ -9015,6 +9280,7 @@ function App() {
                     trainerRound: 1,
                     pokemonRound: 1,
                     battlePokemonConditions: {},
+                    battleTrainerConditions: {},
                     revealedNpcPokemon: {},
                     revealedTrainers: {}
                   })
@@ -18156,7 +18422,7 @@ function App() {
           {/* Itens Chave */}
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6 mb-6`}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Itens Chave ({keyItems.length})</h3>
+              <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Itens Chave ({keyItems.length + pokeovoList.length})</h3>
               <button
                 onClick={() => setShowAddKeyItemModal(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-700 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-800 font-semibold flex items-center gap-2"
@@ -18166,12 +18432,55 @@ function App() {
               </button>
             </div>
 
-            {keyItems.length === 0 ? (
+            {keyItems.length === 0 && pokeovoList.length === 0 ? (
               <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 <p>Nenhum item chave na mochila</p>
               </div>
             ) : (
               <div className="flex flex-wrap gap-3">
+                {/* Renderizar Pokevos */}
+                {pokeovoList.map((pokeovo) => (
+                  <div
+                    key={pokeovo.id}
+                    className={`inline-flex flex-col items-center p-3 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-pink-500' : 'bg-pink-50 border-pink-400'} relative group`}
+                  >
+                    {/* Botão de excluir */}
+                    <button
+                      onClick={() => setPokeovoList(pokeovoList.filter(p => p.id !== pokeovo.id))}
+                      className="absolute top-1 right-1 text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Excluir Pokeovo"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+
+                    {/* Imagem do Pokeovo */}
+                    <div className="w-16 h-16 mb-2 flex items-center justify-center">
+                      <img
+                        src={POKEOVO_IMAGES[pokeovo.imageIndex]}
+                        alt={pokeovo.displayName}
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                        }}
+                      />
+                    </div>
+
+                    {/* Nome do Pokeovo */}
+                    <h4 className={`font-bold text-sm text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-800'} max-w-[120px]`}>
+                      {pokeovo.displayName}
+                    </h4>
+
+                    {/* Botão Chocar */}
+                    <button
+                      onClick={() => handleHatchEgg(pokeovo)}
+                      className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-4 py-1 rounded-lg hover:from-yellow-600 hover:to-orange-700 font-semibold text-sm"
+                    >
+                      Chocar
+                    </button>
+                  </div>
+                ))}
+
+                {/* Renderizar Itens Chave normais */}
                 {keyItems.map((item, idx) => (
                   <div
                     key={idx}
@@ -18458,6 +18767,130 @@ function App() {
                   className="flex-1 bg-gradient-to-r from-green-600 to-teal-700 text-white py-3 rounded-lg hover:from-green-700 hover:to-teal-800 font-semibold"
                 >
                   Criar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Selecionar Espécie do Pokeovo */}
+        {showPokeovoSpeciesModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowPokeovoSpeciesModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Selecionar Espécie do Pokeovo</h3>
+
+              <input
+                type="text"
+                placeholder="Buscar espécie..."
+                value={pokeovoSpeciesSearch}
+                onChange={(e) => setPokeovoSpeciesSearch(e.target.value)}
+                className={`w-full p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-800'}`}
+              />
+
+              <div className="mb-4 max-h-60 overflow-y-auto">
+                {/* Opção Misterioso sempre primeiro */}
+                <button
+                  onClick={() => setSelectedPokeovoSpecies('Misterioso')}
+                  className={`w-full p-3 rounded-lg mb-2 text-left ${
+                    selectedPokeovoSpecies === 'Misterioso'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-700 text-white'
+                      : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                >
+                  🥚 Misterioso
+                </button>
+
+                {/* Lista de espécies filtradas */}
+                {POKEMON_SPECIES.filter(species =>
+                  species.toLowerCase().includes(pokeovoSpeciesSearch.toLowerCase())
+                ).slice(0, 50).map((species, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedPokeovoSpecies(species)}
+                    className={`w-full p-3 rounded-lg mb-2 text-left ${
+                      selectedPokeovoSpecies === species
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-700 text-white'
+                        : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    }`}
+                  >
+                    {species}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowPokeovoSpeciesModal(false)
+                    setSelectedKeyItem('')
+                  }}
+                  className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddPokeovo}
+                  className="flex-1 bg-gradient-to-r from-pink-600 to-purple-700 text-white py-3 rounded-lg hover:from-pink-700 hover:to-purple-800 font-semibold"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Chocar Ovo Misterioso */}
+        {showHatchMysteryEggModal && selectedPokeovoToHatch && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowHatchMysteryEggModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <h3 className={`text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Qual Pokémon está no ovo?</h3>
+
+              <input
+                type="text"
+                placeholder="Buscar espécie..."
+                value={hatchSpeciesSearch}
+                onChange={(e) => setHatchSpeciesSearch(e.target.value)}
+                className={`w-full p-3 rounded-lg mb-4 ${darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-800'}`}
+              />
+
+              <div className="mb-4 max-h-60 overflow-y-auto">
+                {POKEMON_SPECIES.filter(species =>
+                  species.toLowerCase().includes(hatchSpeciesSearch.toLowerCase())
+                ).slice(0, 50).map((species, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedHatchSpecies(species)}
+                    className={`w-full p-3 rounded-lg mb-2 text-left ${
+                      selectedHatchSpecies === species
+                        ? 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white'
+                        : darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                    }`}
+                  >
+                    {species}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowHatchMysteryEggModal(false)
+                    setSelectedPokeovoToHatch(null)
+                  }}
+                  className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmHatchMysteryEgg}
+                  disabled={!selectedHatchSpecies}
+                  className={`flex-1 py-3 rounded-lg font-semibold ${
+                    selectedHatchSpecies
+                      ? 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white hover:from-yellow-600 hover:to-orange-700'
+                      : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  }`}
+                >
+                  Chocar
                 </button>
               </div>
             </div>
@@ -20709,6 +21142,66 @@ function App() {
               >
                 Diário da Jornada
               </button>
+              <button
+                onClick={() => setProgressaoSection('Background')}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  progressaoSection === 'Background'
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
+                    : darkMode
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Background
+              </button>
+              <button
+                onClick={() => {
+                  // Gerar conteúdo do arquivo TXT
+                  let content = `=== HISTÓRIA DE ${currentUser.username.toUpperCase()} ===\n\n`
+
+                  if (background && background.trim()) {
+                    content += background + '\n\n'
+                  } else {
+                    content += '(Nenhuma história escrita ainda)\n\n'
+                  }
+
+                  content += '\n' + '='.repeat(50) + '\n'
+                  content += 'CONQUISTAS\n'
+                  content += '='.repeat(50) + '\n\n'
+
+                  // Apenas conquistas da linha do tempo atual (não as arquivadas em ciclos)
+                  if (conquistas.length > 0) {
+                    conquistas.forEach((conquista, index) => {
+                      content += `${index + 1}. ${conquista.nome}\n`
+                      if (conquista.descricao && conquista.descricao.trim()) {
+                        content += `   ${conquista.descricao}\n`
+                      }
+                      content += '\n'
+                    })
+                  } else {
+                    content += '(Nenhuma conquista registrada ainda)\n'
+                  }
+
+                  // Criar blob e fazer download
+                  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+                  const url = URL.createObjectURL(blob)
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.download = `${currentUser.username}_historia.txt`
+                  document.body.appendChild(link)
+                  link.click()
+                  document.body.removeChild(link)
+                  URL.revokeObjectURL(url)
+                }}
+                className={`p-2 rounded-lg transition-all ${
+                  darkMode
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+                title="Download História"
+              >
+                <BookType size={20} />
+              </button>
             </div>
           </div>
         </div>
@@ -21028,6 +21521,65 @@ function App() {
                     )
                   })()}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* BACKGROUND */}
+          {progressaoSection === 'Background' && (
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-8`}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Background
+                </h3>
+                <button
+                  onClick={() => setShowBackgroundModal(true)}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 font-semibold flex items-center gap-2 shadow-lg"
+                >
+                  <Edit size={20} />
+                  Conte sua história
+                </button>
+              </div>
+
+              {/* Dropdown para selecionar treinador */}
+              <div className="mb-6">
+                <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Ver Background de:
+                </label>
+                <select
+                  value={selectedBackgroundTrainer}
+                  onChange={(e) => setSelectedBackgroundTrainer(e.target.value)}
+                  className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-800'}`}
+                >
+                  <option value="">Meu Background</option>
+                  {users.filter(u => u.type === 'treinador' && u.username !== currentUser.username).map(trainer => (
+                    <option key={trainer.username} value={trainer.username}>{trainer.username}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Conteúdo do Background */}
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg p-6 min-h-[400px]`}>
+                <h4 className={`text-xl font-bold mb-4 ${darkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                  {selectedBackgroundTrainer || currentUser.username}
+                </h4>
+                {(() => {
+                  const displayBackground = selectedBackgroundTrainer && selectedBackgroundData
+                    ? selectedBackgroundData.background || ''
+                    : background
+
+                  return displayBackground ? (
+                    <p className={`whitespace-pre-wrap ${darkMode ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>
+                      {displayBackground}
+                    </p>
+                  ) : (
+                    <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} italic`}>
+                      {selectedBackgroundTrainer
+                        ? 'Este treinador ainda não escreveu sua história.'
+                        : 'Você ainda não escreveu sua história. Clique em "Conte sua história" para começar.'}
+                    </p>
+                  )
+                })()}
               </div>
             </div>
           )}
@@ -21426,6 +21978,61 @@ function App() {
                     className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-lg hover:from-purple-700 hover:to-pink-700 font-semibold"
                   >
                     Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Background */}
+        {showBackgroundModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowBackgroundModal(false)}>
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Conte sua história
+                  </h3>
+                  <button onClick={() => setShowBackgroundModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="mb-6">
+                  <label className={`block text-sm font-bold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    História do seu personagem
+                  </label>
+                  <textarea
+                    value={background}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 2000) {
+                        setBackground(e.target.value)
+                      }
+                    }}
+                    className={`w-full px-4 py-2 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'}`}
+                    placeholder="Escreva a história do seu personagem..."
+                    rows={12}
+                  />
+                  <p className={`text-xs mt-2 ${background.length > 1900 ? 'text-red-500' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {background.length}/2000 caracteres
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowBackgroundModal(false)}
+                    className={`flex-1 py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowBackgroundModal(false)
+                    }}
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 font-semibold"
+                  >
+                    Salvar
                   </button>
                 </div>
               </div>
