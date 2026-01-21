@@ -2922,7 +2922,8 @@ function App() {
     // Para Pokémon NPC (id começa com npc-pokemon-), usar o ID diretamente
     // Para Pokémon do time, buscar pelo originalId na batalha
     let battleId = activePokemon.id
-    if (activePokemon.id && !activePokemon.id.startsWith('npc-pokemon-')) {
+    const idString = String(activePokemon.id || '')
+    if (activePokemon.id && !idString.startsWith('npc-pokemon-')) {
       const teamPokemonId = activePokemon.id || `team-${activePokemon.species}`
       const pokemonInBattle = battlePokemonList.find(p => p.originalId === teamPokemonId)
       if (pokemonInBattle) {
@@ -7222,11 +7223,12 @@ function App() {
 
     if (useFirebase) {
       // Adicionar ao Firebase (que vai disparar o listener e atualizar o state)
-      const updatedMessages = [...chatMessages, newMessage]
+      // Manter apenas as últimas 10 mensagens para economizar espaço
+      const updatedMessages = [...chatMessages, newMessage].slice(-10)
       await saveChatMessages(updatedMessages)
     } else {
-      // Fallback para state local
-      setChatMessages(prev => [...prev, newMessage])
+      // Fallback para state local - também limitar a 10 mensagens
+      setChatMessages(prev => [...prev, newMessage].slice(-10))
     }
   }
 
@@ -9995,7 +9997,7 @@ function App() {
                             )}
 
                             {/* Checkbox Nome/Tipo - Apenas para NPCs */}
-                            {pokemon.id.startsWith('npc-pokemon-') && (
+                            {String(pokemon.id).startsWith('npc-pokemon-') && (
                               <div className={`mt-2 pt-2 border-t ${darkMode ? 'border-gray-500' : 'border-gray-300'}`}>
                                 <label className="flex items-center gap-2 cursor-pointer mb-2">
                                   <input
@@ -10317,7 +10319,7 @@ function App() {
                     </p>
                   ) : (
                     <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                      {safePokemonList.filter(pkmn => pkmn.id.startsWith('npc-pokemon-')).map((pkmn, idx) => (
+                      {safePokemonList.filter(pkmn => String(pkmn.id).startsWith('npc-pokemon-')).map((pkmn, idx) => (
                         <button
                           key={pkmn.id || idx}
                           onClick={() => setSelectedMasterNpcPokemon(pkmn)}
@@ -13743,7 +13745,8 @@ function App() {
                     <th className={`border p-2 ${darkMode ? 'border-gray-500 text-white' : 'border-gray-300'}`}>Perícias</th>
                   </tr></thead>
                   <tbody>
-                    {Object.entries(attributes).map(([key, value]) => {
+                    {['saude', 'ataque', 'defesa', 'ataqueEspecial', 'defesaEspecial', 'velocidade'].map((key) => {
+                      const value = attributes[key]
                       const mod = getModifier(value)
                       const names = { saude: 'Saúde', ataque: 'Ataque', defesa: 'Defesa', ataqueEspecial: 'Ataque Especial', defesaEspecial: 'Defesa Especial', velocidade: 'Velocidade' }
                       return <tr key={key}>
