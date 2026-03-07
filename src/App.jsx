@@ -6611,7 +6611,8 @@ function App() {
       text: message,
       timestamp,
       isDiceRoll: true,
-      diceResult: finalResult
+      diceResult: finalResult,
+      gmOnly: true
     })
 
     setShowCaptureModal(false)
@@ -16973,6 +16974,10 @@ function App() {
 
   // ===== POKEZAP =====
   const pokezapOtherUsers = currentUser ? users.filter(u => u.username !== currentUser.username) : []
+  const visibleChatMessages = currentUser
+    ? chatMessages.filter(msg => !msg.gmOnly || currentUser.type === 'mestre')
+    : chatMessages
+
   const pokezapVisibleMessages = currentUser ? pokezapMessages.filter(msg =>
     msg.sender === currentUser.username ||
     (msg.recipients || []).includes(currentUser.username) ||
@@ -17059,10 +17064,10 @@ function App() {
       </div>
       {/* Mensagens */}
       <div ref={el => { batalhaChatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-        {chatMessages.length === 0 ? (
+        {visibleChatMessages.length === 0 ? (
           <p className={`text-xs text-center mt-8 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Nenhuma mensagem ainda...</p>
         ) : (
-          chatMessages.map((msg, idx) => (
+          visibleChatMessages.map((msg, idx) => (
             <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-2.5 border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <div className="flex justify-between items-start mb-1">
                 <span className={`font-bold text-xs ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{msg.username}</span>
@@ -22636,13 +22641,13 @@ function App() {
 
               {/* Área de Mensagens */}
               <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                {chatMessages.length === 0 ? (
+                {visibleChatMessages.length === 0 ? (
                   <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                     Nenhuma mensagem ainda. Seja o primeiro a falar!
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {chatMessages.map((msg, idx) => (
+                    {visibleChatMessages.map((msg, idx) => (
                       <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                         <div className="flex justify-between items-start mb-1">
                           <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -27263,13 +27268,13 @@ function App() {
 
               {/* Área de Mensagens */}
               <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                {chatMessages.length === 0 ? (
+                {visibleChatMessages.length === 0 ? (
                   <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                     Nenhuma mensagem ainda. Seja o primeiro a falar!
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {chatMessages.map((msg, idx) => (
+                    {visibleChatMessages.map((msg, idx) => (
                       <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                         <div className="flex justify-between items-start mb-1">
                           <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -41717,13 +41722,13 @@ function App() {
 
                 {/* Área de Mensagens */}
                 <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-3 sm:p-4 h-64 sm:h-80 md:h-96 overflow-y-auto mb-3 sm:mb-4`}>
-                  {chatMessages.length === 0 ? (
+                  {visibleChatMessages.length === 0 ? (
                     <p className={`text-center text-xs sm:text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-8 sm:py-12`}>
                       Nenhuma mensagem ainda. Seja o primeiro a falar!
                     </p>
                   ) : (
                     <div className="space-y-2 sm:space-y-3">
-                      {chatMessages.map((msg, idx) => (
+                      {visibleChatMessages.map((msg, idx) => (
                         <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-2 sm:p-3`}>
                           <div className="flex justify-between items-start mb-1">
                             <span className={`font-bold text-xs sm:text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -44869,13 +44874,13 @@ function App() {
 
               {/* Área de Mensagens */}
               <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                {chatMessages.length === 0 ? (
+                {visibleChatMessages.length === 0 ? (
                   <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                     Nenhuma mensagem ainda. Seja o primeiro a falar!
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {chatMessages.map((msg, idx) => (
+                    {visibleChatMessages.map((msg, idx) => (
                       <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                         <div className="flex justify-between items-start mb-1">
                           <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -46469,13 +46474,13 @@ function App() {
 
                       {/* Área de Mensagens */}
                       <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                        {chatMessages.length === 0 ? (
+                        {visibleChatMessages.length === 0 ? (
                           <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                             Nenhuma mensagem ainda. Seja o primeiro a falar!
                           </p>
                         ) : (
                           <div className="space-y-3">
-                            {chatMessages.map((msg, idx) => (
+                            {visibleChatMessages.map((msg, idx) => (
                               <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                                 <div className="flex justify-between items-start mb-1">
                                   <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{msg.username}</span>
@@ -46794,13 +46799,13 @@ function App() {
 
                   {/* Área de Mensagens */}
                   <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                    {chatMessages.length === 0 ? (
+                    {visibleChatMessages.length === 0 ? (
                       <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                         Nenhuma mensagem ainda. Seja o primeiro a falar!
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {chatMessages.map((msg, idx) => (
+                        {visibleChatMessages.map((msg, idx) => (
                           <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                             <div className="flex justify-between items-start mb-1">
                               <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{msg.username}</span>
@@ -47042,13 +47047,13 @@ function App() {
 
                   {/* Área de Mensagens */}
                   <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                    {chatMessages.length === 0 ? (
+                    {visibleChatMessages.length === 0 ? (
                       <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                         Nenhuma mensagem ainda. Seja o primeiro a falar!
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {chatMessages.map((msg, idx) => (
+                        {visibleChatMessages.map((msg, idx) => (
                           <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                             <div className="flex justify-between items-start mb-1">
                               <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -48561,13 +48566,13 @@ function App() {
 
               {/* Área de Mensagens */}
               <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                {chatMessages.length === 0 ? (
+                {visibleChatMessages.length === 0 ? (
                   <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                     Nenhuma mensagem ainda. Seja o primeiro a falar!
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {chatMessages.map((msg, idx) => (
+                    {visibleChatMessages.map((msg, idx) => (
                       <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                         <div className="flex justify-between items-start mb-1">
                           <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
@@ -49808,11 +49813,11 @@ function App() {
                     <p>Use /r ou /roll para rolar dados. Ex: /r 1d20+5</p>
                   </div>
                   <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                    {chatMessages.length === 0 ? (
+                    {visibleChatMessages.length === 0 ? (
                       <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>Nenhuma mensagem ainda.</p>
                     ) : (
                       <div className="space-y-3">
-                        {chatMessages.map((msg, idx) => (
+                        {visibleChatMessages.map((msg, idx) => (
                           <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                             <div className="flex justify-between items-start mb-1">
                               <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{msg.username}</span>
@@ -50240,11 +50245,11 @@ function App() {
                     <p>Use /r ou /roll para rolar dados. Ex: /r 1d20+5</p>
                   </div>
                   <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                    {chatMessages.length === 0 ? (
+                    {visibleChatMessages.length === 0 ? (
                       <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>Nenhuma mensagem ainda.</p>
                     ) : (
                       <div className="space-y-3">
-                        {chatMessages.map((msg, idx) => (
+                        {visibleChatMessages.map((msg, idx) => (
                           <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                             <div className="flex justify-between items-start mb-1">
                               <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{msg.username}</span>
@@ -51183,13 +51188,13 @@ function App() {
 
               {/* Área de Mensagens */}
               <div ref={el => { chatContainerRef.current = el; if (el) el.scrollTop = el.scrollHeight; }} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-50'} rounded-lg p-4 h-96 overflow-y-auto mb-4`}>
-                {chatMessages.length === 0 ? (
+                {visibleChatMessages.length === 0 ? (
                   <p className={`text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-3 sm:py-5 md:py-8`}>
                     Nenhuma mensagem ainda. Seja o primeiro a falar!
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {chatMessages.map((msg, idx) => (
+                    {visibleChatMessages.map((msg, idx) => (
                       <div key={idx} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3`}>
                         <div className="flex justify-between items-start mb-1">
                           <span className={`font-bold text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
