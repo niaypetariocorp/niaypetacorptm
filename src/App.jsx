@@ -179,6 +179,13 @@ const TYPE_COLORS = {
 const TYPE_ALIASES = { 'Aço': 'Metal', 'Terra': 'Terrestre', 'Veneno': 'Venenoso' }
 const normalizeType = (type) => TYPE_ALIASES[type] || type
 
+// Imagens customizadas por espécie (substituem o fallback do PokeAPI)
+const SPECIES_CUSTOM_IMAGES = {
+  'Oricorio Pompa': '/orico/pompa.png',
+  "Oricorio Pa'u": '/orico/pau.png',
+  'Oricorio Sensu': '/orico/sensu.png',
+}
+
 // Tabela de efetividade de tipos para cálculo de dano
 // strong = tipos contra os quais o golpe causa 2x de dano
 // weak = tipos contra os quais o golpe causa 0.5x de dano
@@ -3243,6 +3250,27 @@ function App() {
     saude: [], ataque: [], defesa: [], ataqueEspecial: [], defesaEspecial: [], velocidade: []
   })
   const [currentHP, setCurrentHP] = useState(44)
+  const [pokemonsCanalizados, setPokemonsCanalizados] = useState([]) // Pokémons canalizados pelo Místico
+  const [golpesCanalizar, setGolpesCanalizar] = useState([]) // Golpes canalizados selecionados
+  const [showCanalizePopup, setShowCanalizePopup] = useState(false)
+  const [canalizeSlotIndex, setCanalizeSlotIndex] = useState(0)
+  const [canalizePopupOtherTrainers, setCanalizePopupOtherTrainers] = useState({})
+  const [canalizeLoadingTrainers, setCanalizeLoadingTrainers] = useState(false)
+  const [canalizeSelectedPkm, setCanalizeSelectedPkm] = useState(null)
+  const [golpeSlotOpen, setGolpeSlotOpen] = useState(null)
+  const [acoesEspeciaisExpanded, setAcoesEspeciaisExpanded] = useState(false)
+  const [golpesCanalizadosExpanded, setGolpesCanalizadosExpanded] = useState(true)
+  const [pendingSaraivadaSlots, setPendingSaraivadaSlots] = useState({})
+  // Pokémons Prestativos (Ranger)
+  const [pokemonsPrestativos, setPokemonsPrestativos] = useState([]) // slots: null = vazio, objeto = NPC
+  const [parceiroPkmIdx, setParceiroPkmIdx] = useState(null) // índice do slot marcado como parceiro
+  const [prestativosExpanded, setPrestativosExpanded] = useState(true)
+  const [showContencaoSelectModal, setShowContencaoSelectModal] = useState(false)
+  const [showContencaoPokeballModal, setShowContencaoPokeballModal] = useState(false)
+  const [contencaoPokeballSlotIdx, setContencaoPokeballSlotIdx] = useState(null)
+  const [contencaoPokeballSearch, setContencaoPokeballSearch] = useState('')
+  const [contencaoSelectedPokeball, setContencaoSelectedPokeball] = useState(null)
+  const [contencaoSelectedModifier, setContencaoSelectedModifier] = useState('')
   
   // Estado dos Pokémon
   const [mainTeam, setMainTeam] = useState([])
@@ -3712,6 +3740,8 @@ function App() {
   const [tutoriaSelectedGolpes, setTutoriaSelectedGolpes] = useState([])
   const [showGolpeDetailModal, setShowGolpeDetailModal] = useState(false)
   const [selectedGolpeForDetail, setSelectedGolpeForDetail] = useState(null)
+  const [showPrestativoCardModal, setShowPrestativoCardModal] = useState(false)
+  const [prestativoCardPokemon, setPrestativoCardPokemon] = useState(null)
   const [showPCGolpesModal, setShowPCGolpesModal] = useState(false)
   const [selectedPokemonForPCGolpes, setSelectedPokemonForPCGolpes] = useState(null)
   const [expandedGolpeInPC, setExpandedGolpeInPC] = useState(null)
@@ -4022,6 +4052,9 @@ function App() {
   const safariPaidRunsRef = useRef(new Set())
   const locallyRemovedFromPcRef = useRef(new Set())   // IDs removidos do PC localmente (evita race condition Firebase)
   const locallyRemovedFromTeamRef = useRef(new Set()) // IDs removidos do Time localmente
+  const locallyAddedToTeamRef = useRef(new Set())     // IDs adicionados ao Time localmente (evita re-adição pela subscription)
+  const locallyAddedToPcRef = useRef(new Set())       // IDs adicionados ao PC localmente (evita re-adição pela subscription)
+  const swapInProgressRef = useRef(false)             // Flag: swap entre Time e PC em andamento (pausa subscription)
 
   // Apricorn Trees
   const [generatedApricornTrees, setGeneratedApricornTrees] = useState([])
@@ -4189,6 +4222,7 @@ function App() {
   const [vttMapTokens, setVttMapTokens] = useState([]) // Array de tokens na camada mapa (visível para todos, embaixo de tudo)
   const [vttCurrentLayer, setVttCurrentLayer] = useState('players') // Camada atual do mestre: 'map', 'gm', 'players'
   const [selectedToken, setSelectedToken] = useState(null) // Token selecionado (id)
+  const [vttContextMenuToken, setVttContextMenuToken] = useState(null) // Token com minimenu de contexto aberto (clique direito)
   const [draggingToken, setDraggingToken] = useState(null) // Token sendo arrastado
   const [vttGridSize, setVttGridSize] = useState(50) // Tamanho da grid em pixels
   const [vttShowGrid, setVttShowGrid] = useState(true) // Mostrar/ocultar grid
@@ -4807,7 +4841,11 @@ function App() {
   const ataqueEspecialEfetivo = attributes.ataqueEspecial + (rotinaEstudosValues.ataqueEspecial || 0)
   const defesaEspecialEfetiva = attributes.defesaEspecial + (rotinaEstudosValues.defesaEspecial || 0)
 
-  const getMaxHP = () => (level + saudeEfetiva) * 4
+  const getMaxHP = () => {
+    const base = (level + saudeEfetiva) * 4
+    const misticismoBonus = talentosSelected.some(t => t.nome === 'Misticismo') ? 3 * getModifier(defesaEfetiva) : 0
+    return base + misticismoBonus
+  }
 
   const ataqueEfetivo = (classes.includes('Engenheiro') ? attributes.ataque + 2 : attributes.ataque) + (rotinaExercicioValues.ataque || 0)
 
@@ -5983,6 +6021,90 @@ function App() {
       diceDetails: detailsParts,
       ...(metronomoMove ? { metronomoMove } : { battleMove: moveName })
     })
+  }
+
+  // Função para rolar acurácia + dano de golpe canalizado (usa stats do TREINADOR, não do Pokémon)
+  // Ambas as mensagens são salvas numa única escrita no Firebase para evitar condição de corrida
+  const handleRollCanalizedMove = async (moveName, slotIdx) => {
+    const moveData = GOLPES_DATA[moveName]
+    if (!moveData) return
+
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const trainerName = currentUser.username
+
+    // Obter trainerId e stages do treinador no tracker de batalha
+    const battleEntry = battleTrainersList.find(t => t.nome === currentUser.username)
+    const trainerId = battleEntry?.id || currentUser.username
+    const stages = trainerStages[trainerId] || {}
+    const precisaoStage = stages.precisao || 0
+    const ataqueStage = stages.ataque || 0
+    const ataqueEspecialStage = stages.ataqueEspecial || 0
+
+    const msgsToAdd = []
+
+    // --- Rolagem de Acurácia ---
+    if (moveData.acuracia === 'Automático' || moveData.acuracia === 'Automática' || moveData.acuracia === '—' || moveData.acuracia === '-') {
+      msgsToAdd.push({ id: `${Date.now()}-${Math.random()}`, username: currentUser.username, text: `🎯 ${trainerName} - ${moveName}: Acerto Automático`, timestamp, isDiceRoll: false, battleMove: moveName })
+    } else {
+      const d20Roll = Math.floor(Math.random() * 20) + 1
+      const finalAcu = d20Roll + precisaoStage
+      let acuDetails = `1d20 = ${d20Roll}`
+      if (precisaoStage !== 0) acuDetails += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`
+      acuDetails += ` | Acurácia do Golpe: ${moveData.acuracia}`
+      msgsToAdd.push({ id: `${Date.now()}-${Math.random()}`, username: currentUser.username, text: `🎯 ${trainerName} - Teste de Acurácia: ${moveName}`, timestamp, isDiceRoll: true, diceResult: finalAcu, diceDetails: acuDetails, battleMove: moveName })
+    }
+
+    // --- Rolagem de Dano ---
+    const danoBasal = moveData.danoBasal
+    if (danoBasal && danoBasal !== '-' && danoBasal !== '') {
+      const isFisico = danoBasal.includes('Físico')
+      const trainerAtkRaw = isFisico ? (attributes.ataque || 0) : (attributes.ataqueEspecial || 0)
+      const atkStage = isFisico ? ataqueStage : ataqueEspecialStage
+      const atkMultiplier = getStageMultiplier(atkStage)
+      const atkTotal = Math.floor(trainerAtkRaw * atkMultiplier)
+
+      const diceMatch = danoBasal.match(/(\d+)d(\d+)(?:\+(\d+))?/)
+      if (diceMatch) {
+        const [, numDice, diceSides, bonus] = diceMatch
+        const rolls = []
+        let diceTotal = 0
+        for (let i = 0; i < parseInt(numDice); i++) {
+          const roll = Math.floor(Math.random() * parseInt(diceSides)) + 1
+          rolls.push(roll)
+          diceTotal += roll
+        }
+        if (bonus) diceTotal += parseInt(bonus)
+
+        const finalDamage = diceTotal + atkTotal
+        const danoBasalText = `Dano Basal: ${danoBasal} = ${rolls.join('+')}${bonus ? `+${bonus}` : ''} = ${diceTotal}`
+        let atkText = isFisico ? `@At: +${atkTotal}` : `@AEt: +${atkTotal}`
+        if (atkStage !== 0) {
+          const pct = Math.round(atkMultiplier * 100)
+          atkText += ` [Fase ${atkStage > 0 ? '+' : ''}${atkStage} = ${pct}% de ${trainerAtkRaw}]`
+        }
+        msgsToAdd.push({ id: `${Date.now() + 1}-${Math.random()}`, username: currentUser.username, text: `🎲 ${trainerName} - Dano de ${moveName}`, timestamp, isDiceRoll: true, diceResult: finalDamage, diceDetails: [danoBasalText, atkText].join(' | '), battleMove: moveName })
+      }
+    }
+
+    // Salvar ambas as mensagens numa única escrita para evitar sobrescrita por condição de corrida
+    if (msgsToAdd.length > 0 && useFirebase) {
+      await saveChatMessages([...chatMessages, ...msgsToAdd].slice(-10))
+    } else {
+      msgsToAdd.forEach(msg => setChatMessages(prev => [...prev, msg].slice(-10)))
+    }
+
+    // Golpes com Saraivada permanecem no slot até que outra mensagem que não seja
+    // uma rolagem deste mesmo golpe apareça no chat
+    const isSaraivada = moveData.descritores && /saraivada\s+\d+/i.test(moveData.descritores)
+    if (isSaraivada) {
+      setPendingSaraivadaSlots(prev => ({ ...prev, [slotIdx]: moveName }))
+    } else {
+      setGolpesCanalizar(prev => {
+        const u = [...prev]
+        u[slotIdx] = null
+        return u
+      })
+    }
   }
 
   // Funções do Metrônomo — sorteia golpe aleatório e delega para handlers normais
@@ -9322,6 +9444,7 @@ function App() {
     }
     const pokemon = pcPokemon[index]
     locallyRemovedFromPcRef.current.add(pokemon.id)
+    locallyAddedToTeamRef.current.add(pokemon.id)
     const newPc = pcPokemon.filter((_, i) => i !== index)
     const newTeam = [...mainTeam, pokemon]
     setPcPokemon(newPc)
@@ -10703,6 +10826,17 @@ function App() {
     }
   }
 
+  // Selecionar Pokémon para canalizar (Místico) — deduz 10 HP puro
+  const handleCanalizeSelect = (pkm) => {
+    const updated = [...pokemonsCanalizados]
+    updated[canalizeSlotIndex] = pkm
+    setPokemonsCanalizados(updated)
+    const newHP = Math.max(0, currentHP - 10)
+    setCurrentHP(newHP)
+    setBattleTrainersList(prev => prev.map(t => t.nome === currentUser?.username ? { ...t, hp: newHP } : t))
+    setShowCanalizePopup(false)
+  }
+
   // Função para remover Pokémon da lista de gerados recentemente
   const removeFromGeneratedList = (pokemonId) => {
     setNpcPokemonList(prev => prev.filter(p => p.id !== pokemonId))
@@ -11255,6 +11389,159 @@ function App() {
     }
 
     return total
+  }
+
+  // ===== SISTEMA DE CONTENÇÃO (RANGER) =====
+
+  // Calcula max slots prestativos com base nos talentos e parceiro
+  const calcMaxPrestativosSlots = (trainerTalentos, trainerParceiroPkmIdx) => {
+    const hasPP = trainerTalentos.some(t => (t.nome || t) === 'Contenção Aprimorada ++')
+    const hasP  = trainerTalentos.some(t => (t.nome || t) === 'Contenção Aprimorada +')
+    const has   = trainerTalentos.some(t => (t.nome || t) === 'Contenção Aprimorada')
+    let base = hasPP ? 7 : hasP ? 5 : has ? 2 : 1
+    return base + (trainerParceiroPkmIdx !== null && trainerParceiroPkmIdx !== undefined ? 1 : 0)
+  }
+
+  // Rolagem de Contenção (trainer → gmOnly chat)
+  const handleContencao = async (targetPokemon) => {
+    const hasPP = talentosSelected.some(t => t.nome === 'Contenção Aprimorada ++')
+    const hasP  = talentosSelected.some(t => t.nome === 'Contenção Aprimorada +')
+    const has   = talentosSelected.some(t => t.nome === 'Contenção Aprimorada')
+    const modifier = (hasPP || hasP) ? 40 : has ? 30 : 20
+    const d100 = Math.floor(Math.random() * 100) + 1
+    const result = d100 - modifier
+    const captureVal = calculateCaptureValue(targetPokemon)
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const text = `🎯 Contenção\n1d100 = ${d100} | -${modifier}\nTotal: ${result}\n\nCaptura atual de ${targetPokemon.species || targetPokemon.name}: ${captureVal >= 0 ? '+' : ''}${captureVal}`
+    await addChatMessage({
+      username: currentUser.username,
+      text,
+      timestamp,
+      isDiceRoll: true,
+      diceResult: result,
+      gmOnly: true,
+      isContencaoResult: true,
+      contencaoTrainerUsername: currentUser.username,
+      contencaoPokemon: { ...targetPokemon },
+      contencaoCaptureValue: captureVal,
+    })
+    setShowContencaoSelectModal(false)
+  }
+
+  // Mestre confirma Contido → adiciona ao slot prestativo + Pokédex como catalogado
+  const handleContido = async (msg) => {
+    const { contencaoTrainerUsername, contencaoPokemon } = msg
+    const trainerData = useFirebase
+      ? await loadTrainerData(contencaoTrainerUsername)
+      : JSON.parse(localStorage.getItem(`trainer_${contencaoTrainerUsername}`) || 'null')
+    if (!trainerData) return
+
+    const tTalentos = trainerData.talentosSelected || []
+    const tParceiro = trainerData.parceiroPkmIdx !== undefined ? trainerData.parceiroPkmIdx : null
+    const tMaxSlots = calcMaxPrestativosSlots(tTalentos, tParceiro)
+
+    const currentPrestativos = trainerData.pokemonsPrestativos || []
+    const newPrestativos = [...currentPrestativos]
+    let added = false
+    for (let i = 0; i < newPrestativos.length; i++) {
+      if (!newPrestativos[i]) { newPrestativos[i] = contencaoPokemon; added = true; break }
+    }
+    if (!added && newPrestativos.length < tMaxSlots) {
+      newPrestativos.push(contencaoPokemon); added = true
+    }
+    if (!added) { alert('Nenhum slot vazio disponível para este treinador.'); return }
+
+    // Pokédex: catalogado
+    const species = contencaoPokemon.species || contencaoPokemon.name
+    const pokedex = trainerData.pokedex || []
+    const existing = pokedex.find(p => p.species === species)
+    if (!existing) {
+      trainerData.pokedex = [...pokedex, { species, isCatalogued: true }]
+    } else if (!existing.isCatalogued) {
+      trainerData.pokedex = pokedex.map(p => p.species === species ? { ...p, isCatalogued: true } : p)
+    }
+    trainerData.pokemonsPrestativos = newPrestativos
+
+    if (useFirebase) { await saveTrainerData(contencaoTrainerUsername, trainerData) }
+    else { localStorage.setItem(`trainer_${contencaoTrainerUsername}`, JSON.stringify(trainerData)) }
+
+    // Remove mensagem do chat
+    const updated = chatMessages.filter(m => m.id !== msg.id)
+    setChatMessages(updated)
+    if (useFirebase) saveChatMessages(updated)
+  }
+
+  // Rolagem de Captura Prestativa (trainer → gmOnly chat)
+  const handleCapturarPrestativoRoll = async () => {
+    if (!contencaoSelectedPokeball || contencaoPokeballSlotIdx === null) return
+    const pokemon = pokemonsPrestativos[contencaoPokeballSlotIdx]
+    if (!pokemon) return
+
+    const pokeballName = contencaoSelectedPokeball
+    const modifierText = contencaoSelectedModifier || ''
+    const modifierNum = (() => {
+      const n = parseInt(modifierText.replace(/[^\-\d]/g, ''))
+      return isNaN(n) ? 0 : n
+    })()
+
+    // Consome pokébola da mochila
+    const updatedKeyItems = keyItems
+      .map(item => item.name === pokeballName ? { ...item, quantity: item.quantity - 1 } : item)
+      .filter(item => item.quantity === undefined || item.quantity > 0)
+    setKeyItems(updatedKeyItems)
+    if (useFirebase) saveToFirebase(`trainers/${currentUser.username}/keyItems`, updatedKeyItems)
+
+    const d100 = Math.floor(Math.random() * 100) + 1
+    const captureVal = calculateCaptureValue(pokemon)
+    const finalResult = d100 + modifierNum
+    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const text = `🎱 Captura Prestativa\n${pokeballName}${modifierText ? ` [${modifierText}]` : ''}\n1d100 = ${d100} | Mod = ${modifierNum >= 0 ? '+' : ''}${modifierNum}\nTotal: ${finalResult}\n\nCaptura de ${pokemon.species || pokemon.name}: ${captureVal >= 0 ? '+' : ''}${captureVal}`
+    await addChatMessage({
+      username: currentUser.username,
+      text,
+      timestamp,
+      isDiceRoll: true,
+      diceResult: finalResult,
+      gmOnly: true,
+      isCapturaPrestativaResult: true,
+      capturaPrestativaTrainerUsername: currentUser.username,
+      capturaPrestativaPokemon: { ...pokemon },
+      capturaPrestativaSlotIdx: contencaoPokeballSlotIdx,
+      capturaPrestativaCaptureValue: captureVal,
+      capturaPrestativaPokeballName: pokeballName,
+    })
+    setShowContencaoPokeballModal(false)
+    setContencaoSelectedPokeball(null)
+    setContencaoSelectedModifier('')
+    setContencaoPokeballSlotIdx(null)
+  }
+
+  // Mestre confirma Capturar Pokémon Prestativo → sendPokemonToTrainer + remove do slot
+  const handleCapturarPrestativo = async (msg) => {
+    const { capturaPrestativaTrainerUsername, capturaPrestativaPokemon, capturaPrestativaSlotIdx } = msg
+    const pkm = capturaPrestativaPokemon
+    const species = pkm.species || pkm.name || ''
+    const nature = pkm.nature || null
+    if (!species || !nature) { alert('Dados do Pokémon incompletos para captura.'); return }
+
+    await sendPokemonToTrainer(capturaPrestativaTrainerUsername, pkm, species, nature)
+
+    // Remove do slot prestativo no Firebase do treinador
+    const trainerData = useFirebase
+      ? await loadTrainerData(capturaPrestativaTrainerUsername)
+      : JSON.parse(localStorage.getItem(`trainer_${capturaPrestativaTrainerUsername}`) || 'null')
+    if (trainerData && trainerData.pokemonsPrestativos) {
+      trainerData.pokemonsPrestativos = trainerData.pokemonsPrestativos.map((p, i) =>
+        i === capturaPrestativaSlotIdx ? null : p
+      )
+      if (useFirebase) { await saveTrainerData(capturaPrestativaTrainerUsername, trainerData) }
+      else { localStorage.setItem(`trainer_${capturaPrestativaTrainerUsername}`, JSON.stringify(trainerData)) }
+    }
+
+    // Remove mensagem
+    const updated = chatMessages.filter(m => m.id !== msg.id)
+    setChatMessages(updated)
+    if (useFirebase) saveChatMessages(updated)
   }
 
   // Função para enviar pokémon NPC para treinador
@@ -12443,6 +12730,8 @@ function App() {
               velocidade: data.skills?.velocidade || []
             })
             setCurrentHP(data.currentHP || 44)
+            setPokemonsCanalizados(data.pokemonsCanalizados || [])
+            setGolpesCanalizar(data.golpesCanalizar || [])
             setMainTeam(data.mainTeam || [])
             setPcPokemon(data.pcPokemon || [])
             setPokedex(data.pokedex || [])
@@ -12496,6 +12785,8 @@ function App() {
             setTalentoContadores(data.talentoContadores || {})
             setRotinaExercicioValues(data.rotinaExercicioValues || { saude: 0, ataque: 0, defesa: 0, velocidade: 0 })
             setRotinaEstudosValues(data.rotinaEstudosValues || { ataqueEspecial: 0, defesaEspecial: 0 })
+            setPokemonsPrestativos(data.pokemonsPrestativos || [])
+            setParceiroPkmIdx(data.parceiroPkmIdx !== undefined ? data.parceiroPkmIdx : null)
           }
           // Marcar dados como carregados após carregar tudo
           setDataLoaded(true)
@@ -12618,20 +12909,31 @@ function App() {
 
     const unsubscribe = subscribeToTrainer(currentUser.username, (data) => {
       if (!data) return
+      // Se um swap Time↔PC está em andamento, ignorar esta atualização para evitar duplicação
+      if (swapInProgressRef.current) return
 
       // Atualizar mainTeam se houver novos Pokémon
       if (data.mainTeam) {
         setMainTeam(prevTeam => {
+          const prevIds = new Set(prevTeam.map(p => p.id))
           // Limpar IDs do ref quando Firebase confirmou a remoção
           for (const id of locallyRemovedFromTeamRef.current) {
             if (!data.mainTeam.some(p => p.id === id)) {
               locallyRemovedFromTeamRef.current.delete(id)
             }
           }
-          const prevIds = new Set(prevTeam.map(p => p.id))
-          // Ignorar IDs que foram removidos localmente (evita re-adição por dados stale do Firebase)
+          // Limpar IDs do ref de adição local SOMENTE quando o item já está no estado local
+          // (evita limpar o ref antes que o React processe o batch de estado, causando duplicação)
+          for (const id of locallyAddedToTeamRef.current) {
+            if (prevIds.has(id)) {
+              locallyAddedToTeamRef.current.delete(id)
+            }
+          }
+          // Ignorar IDs que foram removidos ou adicionados localmente (evita re-adição por dados stale do Firebase)
           const newPokemon = data.mainTeam.filter(p =>
-            !prevIds.has(p.id) && !locallyRemovedFromTeamRef.current.has(p.id)
+            !prevIds.has(p.id) &&
+            !locallyRemovedFromTeamRef.current.has(p.id) &&
+            !locallyAddedToTeamRef.current.has(p.id)
           )
           if (newPokemon.length > 0) {
             console.log('[Sync] Novos Pokémon recebidos no time:', newPokemon)
@@ -12644,16 +12946,23 @@ function App() {
       // Atualizar pcPokemon se houver novos Pokémon
       if (data.pcPokemon) {
         setPcPokemon(prevPc => {
+          const prevIds = new Set(prevPc.map(p => p.id))
           // Limpar IDs do ref quando Firebase confirmou a remoção
           for (const id of locallyRemovedFromPcRef.current) {
             if (!data.pcPokemon.some(p => p.id === id)) {
               locallyRemovedFromPcRef.current.delete(id)
             }
           }
-          const prevIds = new Set(prevPc.map(p => p.id))
-          // Ignorar IDs que foram removidos localmente (evita re-adição por dados stale do Firebase)
+          // Limpar IDs do ref de adição local SOMENTE quando o item já está no estado local
+          for (const id of locallyAddedToPcRef.current) {
+            if (prevIds.has(id)) {
+              locallyAddedToPcRef.current.delete(id)
+            }
+          }
           const newPokemon = data.pcPokemon.filter(p =>
-            !prevIds.has(p.id) && !locallyRemovedFromPcRef.current.has(p.id)
+            !prevIds.has(p.id) &&
+            !locallyRemovedFromPcRef.current.has(p.id) &&
+            !locallyAddedToPcRef.current.has(p.id)
           )
           if (newPokemon.length > 0) {
             console.log('[Sync] Novos Pokémon recebidos no PC:', newPokemon)
@@ -12661,6 +12970,14 @@ function App() {
           }
           return prevPc
         })
+      }
+
+      // Atualizar pokemonsPrestativos se o mestre adicionou/removeu
+      if (data.pokemonsPrestativos !== undefined) {
+        setPokemonsPrestativos(data.pokemonsPrestativos || [])
+      }
+      if (data.parceiroPkmIdx !== undefined) {
+        setParceiroPkmIdx(data.parceiroPkmIdx !== null ? data.parceiroPkmIdx : null)
       }
 
       // Atualizar pokédex se houver novos registros
@@ -12817,7 +13134,7 @@ function App() {
         const filteredPcPokemon = pcPokemon.map(filterPokeballBase64)
 
         const data = {
-          level, image: imageToSave, classes, attributes, skills, currentHP,
+          level, image: imageToSave, classes, attributes, skills, currentHP, pokemonsCanalizados, golpesCanalizar,
           mainTeam: filteredMainTeam, pcPokemon: filteredPcPokemon, pokedex,
           pokemonedas, pokecaixinha, keyItems, customItems, pokeovoList,
           caracteristicasSelected, talentosSelected,
@@ -12836,7 +13153,9 @@ function App() {
           fotografias,
           talentoContadores,
           rotinaExercicioValues,
-          rotinaEstudosValues
+          rotinaEstudosValues,
+          pokemonsPrestativos,
+          parceiroPkmIdx
         }
         try {
           if (useFirebase) {
@@ -12907,7 +13226,7 @@ function App() {
     // Debounce para evitar muitas escritas
     const timeoutId = setTimeout(saveData, 500)
     return () => clearTimeout(timeoutId)
-  }, [level, image, classes, attributes, skills, currentHP, mainTeam, pcPokemon, pokedex, pokemonedas, pokecaixinha, keyItems, customItems, pokeovoList, caracteristicasSelected, talentosSelected, pokemonImages, pokemonExtraImages, pokemonImageIndex, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, ciclos, userBattleModifiers, userActiveModifiers, talentinhos, background, limitesUsoPersonalizados, limitesUsoPersonalizadosUsosAtuais, fotografias, talentoContadores, hiddenPokelojaItems, customPrices, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, battlePokemonConditions, battleTrainerConditions, archivedNpcTrainers, archivedNpcPokemon, masterItems, masterItemsSent, talentoInfinitoList, currentUser])
+  }, [level, image, classes, attributes, skills, currentHP, pokemonsCanalizados, golpesCanalizar, mainTeam, pcPokemon, pokedex, pokemonedas, pokecaixinha, keyItems, customItems, pokeovoList, caracteristicasSelected, talentosSelected, pokemonImages, pokemonExtraImages, pokemonImageIndex, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, ciclos, userBattleModifiers, userActiveModifiers, talentinhos, background, limitesUsoPersonalizados, limitesUsoPersonalizadosUsosAtuais, fotografias, talentoContadores, hiddenPokelojaItems, customPrices, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, battlePokemonConditions, battleTrainerConditions, archivedNpcTrainers, archivedNpcPokemon, masterItems, masterItemsSent, talentoInfinitoList, currentUser])
 
   // Salvar Hub de Troca separadamente (mestre)
   const tradeHubSaveSkipRef = useRef(true)
@@ -14023,7 +14342,11 @@ function App() {
     const isRecipient =
       (Array.isArray(last.recipients) && last.recipients.includes(currentUser.username)) ||
       (currentUser.type === 'mestre' && last.sender !== currentUser.username)
-    if (!isRecipient) { setLastPokezapMsgId(last.id); return }
+    if (!isRecipient) {
+      setLastPokezapMsgId(last.id)
+      localStorage.setItem(`pokezap_lastId_${currentUser.username}`, last.id)
+      return
+    }
     const senderUser = users.find(u => u.username === last.sender)
     let gif = null
     if (currentUser.type === 'treinador') {
@@ -14033,6 +14356,7 @@ function App() {
     }
     if (gif) setPokezapNotifGif(gif)
     setLastPokezapMsgId(last.id)
+    localStorage.setItem(`pokezap_lastId_${currentUser.username}`, last.id)
   }, [pokezapMessages, currentUser, lastPokezapMsgId])
 
   // Limpar notificação ao abrir PokeZap
@@ -14049,6 +14373,8 @@ function App() {
     setSelectedUser(null)
     setPassword('')
     setIsPrankActive(false)
+    const storedLastId = localStorage.getItem(`pokezap_lastId_${selectedUser.username}`)
+    setLastPokezapMsgId(storedLastId || null)
   }
 
   // Função de logout com backup automático em background
@@ -14203,6 +14529,15 @@ function App() {
     })
     return () => { if (unsubscribe) unsubscribe() }
   }, [useFirebase])
+
+  // Sincronizar npcPokemon do mestre para treinadores (para modal de Contenção)
+  useEffect(() => {
+    if (!useFirebase || !currentUser || currentUser.type === 'mestre') return
+    const unsubscribe = subscribeToFirebase('mestre/config/npcPokemon', (data) => {
+      setNpcPokemon(Array.isArray(data) ? data : [])
+    })
+    return () => { if (unsubscribe) unsubscribe() }
+  }, [useFirebase, currentUser?.type])
 
   // Salvar dados do Safari no Firebase
   const saveSafariToFirebase = async (overrides = {}) => {
@@ -15287,6 +15622,7 @@ function App() {
     if (selectedToken === tokenId) {
       setSelectedToken(null)
       setVttSelectedPokemonToken(null)
+      setVttContextMenuToken(null)
     }
     setVttEditingToken(null)
   }
@@ -15316,10 +15652,40 @@ function App() {
     else setVttTokens(prev => [...prev, newToken])
   }
 
+  // Gerar token de Pokémon Prestativo/Parceiro e colocar na camada de jogadores
+  const handleAddNpcPrestativoToken = (pokemon) => {
+    const image = pokemon.imageUrl || null
+    const cellWidth = vttCanvasWidth / vttGridColumns
+    const cellHeight = vttCanvasHeight / vttGridRows
+    const tokenSize = Math.min(cellWidth, cellHeight)
+    const centerX = (vttCanvasWidth / 2) - (tokenSize / 2)
+    const centerY = (vttCanvasHeight / 2) - (tokenSize / 2)
+    const newToken = {
+      id: `token-prestativo-${pokemon.id}-${Date.now()}`,
+      name: pokemon.species || pokemon.name || 'Pokémon',
+      x: centerX,
+      y: centerY,
+      size: tokenSize,
+      rotation: 0,
+      image,
+      owner: currentUser.username,
+      npcType: 'pokemon',
+      npcId: pokemon.id
+    }
+    setVttTokens(prev => [...prev, newToken])
+  }
+
   // Gerar token de Pokémon do time e colocar na camada de jogadores
   const handleAddPokemonToken = (pokemon, username) => {
     const imageKey = sanitizeFirebaseKey(pokemon.id)
-    const image = getPokemonCurrentImage(pokemon.id) || pokemonImages[imageKey] || null
+    let image = getPokemonCurrentImage(pokemon.id) || pokemonImages[imageKey] || null
+    if (!image) {
+      image = SPECIES_CUSTOM_IMAGES[pokemon.species] || null
+      if (!image) {
+        const dexNum = fullPokedexData.find(p => p.nome === pokemon.species)?.dexNumber
+        if (dexNum) image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dexNum}.png`
+      }
+    }
     const cellWidth = vttCanvasWidth / vttGridColumns
     const cellHeight = vttCanvasHeight / vttGridRows
     const tokenSize = Math.min(cellWidth, cellHeight)
@@ -15343,15 +15709,28 @@ function App() {
   // Selecionar token no canvas e, se for Pokémon, exibir no painel de golpes
   const handleVttTokenClick = (tokenId, layer) => {
     setSelectedToken(tokenId)
+    setVttContextMenuToken(null)
     const tokens = layer === 'gm' ? vttGMTokens : layer === 'map' ? vttMapTokens : vttTokens
     const token = tokens.find(t => t.id === tokenId)
     if (token && token.pokemonId) {
       const pokemon = mainTeam.find(p => p.id === token.pokemonId)
       setVttSelectedPokemonToken(pokemon || null)
     } else if (token && token.npcId) {
-      if (currentUser.type === 'mestre') {
-        const pokemon = npcPokemon.find(p => p.id === token.npcId)
-        setVttSelectedPokemonToken(pokemon || null)
+      const pokemon = npcPokemon.find(p => p.id === token.npcId)
+      if (pokemon) {
+        const alfaBonus = npcAlfaStatus[pokemon.id] ? 8 : 0
+        setVttSelectedPokemonToken({
+          ...pokemon,
+          golpes: pokemon.golpesAprendidos || [],
+          totalAttributes: {
+            ataque: (pokemon.attributes?.ataque || 0) + alfaBonus,
+            ataqueEspecial: (pokemon.attributes?.ataqueEspecial || 0) + alfaBonus,
+            defesa: (pokemon.attributes?.defesa || 0) + alfaBonus,
+            defesaEspecial: (pokemon.attributes?.defesaEspecial || 0) + alfaBonus,
+            velocidade: (pokemon.attributes?.velocidade || 0) + alfaBonus,
+          },
+          tipos: pokemon.types || [],
+        })
       } else {
         setVttSelectedPokemonToken(null)
       }
@@ -15366,6 +15745,7 @@ function App() {
       if (e.key === 'Escape' && selectedToken) {
         setSelectedToken(null)
         setVttSelectedPokemonToken(null)
+        setVttContextMenuToken(null)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -15775,6 +16155,31 @@ function App() {
     }
     if (batalhaChatContainerRef.current) {
       batalhaChatContainerRef.current.scrollTop = batalhaChatContainerRef.current.scrollHeight
+    }
+  }, [chatMessages])
+
+  // Remove golpes Saraivada do slot quando a próxima mensagem do chat não for
+  // uma rolagem daquele mesmo golpe canalizado pelo usuário atual
+  useEffect(() => {
+    if (Object.keys(pendingSaraivadaSlots).length === 0) return
+    if (chatMessages.length === 0) return
+    const lastMsg = chatMessages[chatMessages.length - 1]
+    const slotsToRemove = []
+    Object.entries(pendingSaraivadaSlots).forEach(([slotIdx, moveName]) => {
+      const isRollOfThisMove = lastMsg.battleMove === moveName && lastMsg.username === currentUser?.username
+      if (!isRollOfThisMove) slotsToRemove.push(parseInt(slotIdx))
+    })
+    if (slotsToRemove.length > 0) {
+      setGolpesCanalizar(prev => {
+        const u = [...prev]
+        slotsToRemove.forEach(idx => { u[idx] = null })
+        return u
+      })
+      setPendingSaraivadaSlots(prev => {
+        const u = { ...prev }
+        slotsToRemove.forEach(idx => { delete u[idx] })
+        return u
+      })
     }
   }, [chatMessages])
 
@@ -17115,6 +17520,48 @@ function App() {
               ) : (
                 <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-line`}>{msg.text}</p>
               )}
+              {/* Botões Contenção — só para o mestre */}
+              {msg.isContencaoResult && currentUser.type === 'mestre' && (
+                <div className="flex gap-1.5 mt-2">
+                  <button
+                    onClick={() => handleContido(msg)}
+                    className="flex-1 bg-green-600 hover:bg-green-500 text-white text-[10px] font-semibold py-1.5 rounded"
+                  >
+                    Contido ✅
+                  </button>
+                  <button
+                    onClick={() => {
+                      const updated = chatMessages.filter(m => m.id !== msg.id)
+                      setChatMessages(updated)
+                      if (useFirebase) saveChatMessages(updated)
+                    }}
+                    className={`flex-1 text-[10px] font-semibold py-1.5 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+              {/* Botões Captura Prestativa — só para o mestre */}
+              {msg.isCapturaPrestativaResult && currentUser.type === 'mestre' && (
+                <div className="flex gap-1.5 mt-2">
+                  <button
+                    onClick={() => handleCapturarPrestativo(msg)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-semibold py-1.5 rounded"
+                  >
+                    Capturar Pkm Prestativo 🎱
+                  </button>
+                  <button
+                    onClick={() => {
+                      const updated = chatMessages.filter(m => m.id !== msg.id)
+                      setChatMessages(updated)
+                      if (useFirebase) saveChatMessages(updated)
+                    }}
+                    className={`flex-1 text-[10px] font-semibold py-1.5 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}
@@ -17195,6 +17642,90 @@ function App() {
         )
       })()}
       {/* Perícias (somente treinadores) */}
+      {currentUser.type === 'treinador' && (classes.includes('Ranger') || classes.includes('Policial') || classes.includes('Místico')) && (
+        <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <button
+            onClick={() => setAcoesEspeciaisExpanded(v => !v)}
+            className={`w-full text-left text-[10px] font-semibold flex items-center justify-between ${acoesEspeciaisExpanded ? 'mb-1.5' : ''} ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <span>Ações Especiais</span>
+            <span className="text-[8px]">{acoesEspeciaisExpanded ? '▲' : '▼'}</span>
+          </button>
+          {acoesEspeciaisExpanded && (
+            <div className="flex flex-wrap gap-1 pb-1">
+              {classes.includes('Místico') && (
+                <button
+                  onClick={() => {
+                    const d100 = Math.floor(Math.random() * 100) + 1
+                    const result = d100 - defesaEfetiva
+                    const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    const message = `🔮 Canalizar\n1d100 = ${d100} | @Dt = ${defesaEfetiva}\nTotal: ${result}`
+                    addChatMessage({ username: currentUser.username, text: message, timestamp, isDiceRoll: true, diceResult: result })
+                  }}
+                  className={`flex items-center gap-1 text-[10px] p-1.5 rounded ${darkMode ? 'bg-purple-900 hover:bg-purple-800 text-purple-200' : 'bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-300'}`}
+                  title="Canalizar (1d100 - @Dt)"
+                >
+                  <img src="/lendarioitem/latiassoul.png" alt="Canalizar" className="w-5 h-5 object-contain" />
+                </button>
+              )}
+              {classes.includes('Ranger') && (() => {
+                const hasPP = talentosSelected.some(t => t.nome === 'Contenção Aprimorada ++')
+                const hasP  = talentosSelected.some(t => t.nome === 'Contenção Aprimorada +')
+                const has   = talentosSelected.some(t => t.nome === 'Contenção Aprimorada')
+                const mod   = (hasPP || hasP) ? 40 : has ? 30 : 20
+                const maxSlots = calcMaxPrestativosSlots(talentosSelected, parceiroPkmIdx)
+                const filledSlots = pokemonsPrestativos.filter(Boolean).length
+                const hasEmpty = filledSlots < maxSlots
+                return (
+                  <button
+                    onClick={() => setShowContencaoSelectModal(true)}
+                    disabled={!hasEmpty}
+                    className={`flex items-center gap-1 text-[10px] p-1.5 rounded disabled:opacity-40 disabled:cursor-not-allowed ${darkMode ? 'bg-green-900 hover:bg-green-800 text-green-200' : 'bg-green-100 hover:bg-green-200 text-green-800 border border-green-300'}`}
+                    title={`Contenção (1d100 - ${mod})${!hasEmpty ? ' — sem slots vazios' : ''}`}
+                  >
+                    <img src="/estilizador.png" alt="Contenção" className="w-4 h-4 object-contain" />
+                    <span>Contenção</span>
+                  </button>
+                )
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+      {currentUser.type === 'treinador' && classes.includes('Místico') && golpesCanalizar.filter(Boolean).length > 0 && (
+        <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <button
+            onClick={() => setGolpesCanalizadosExpanded(v => !v)}
+            className={`w-full text-left text-[10px] font-semibold flex items-center justify-between ${golpesCanalizadosExpanded ? 'mb-1.5' : ''} ${darkMode ? 'text-purple-400 hover:text-purple-200' : 'text-purple-600 hover:text-purple-800'}`}
+          >
+            <span>Golpes Canalizados</span>
+            <span className="text-[8px]">{golpesCanalizadosExpanded ? '▲' : '▼'}</span>
+          </button>
+          {golpesCanalizadosExpanded && (
+            <div className="space-y-1 pb-1">
+              {golpesCanalizar.map((move, idx) => {
+                if (!move) return null
+                return (
+                  <div key={idx} className={`flex items-center gap-1 rounded px-1.5 py-1 ${darkMode ? 'bg-gray-800' : 'bg-purple-50'}`}>
+                    <span
+                      className={`text-[10px] flex-1 truncate cursor-pointer hover:underline ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}
+                      onClick={() => handleOpenBattleMove(move)}
+                      title="Ver detalhes do golpe"
+                    >{move}</span>
+                    <button
+                      onClick={() => handleRollCanalizedMove(move, idx)}
+                      title="Rolar Acurácia + Dano"
+                      className={`flex-shrink-0 p-1 rounded ${darkMode ? 'bg-purple-800 hover:bg-purple-600 text-white' : 'bg-purple-200 hover:bg-purple-300 text-purple-900'}`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 8h.01"/><path d="M12 12h.01"/><path d="M8 16h.01"/></svg>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
       {currentUser.type === 'treinador' && Object.values(skills).some(list => list.length > 0) && (
         <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <button
@@ -17614,6 +18145,362 @@ function App() {
         </div>
       </div>
     )}
+    {/* Modal Card Prestativo — Read-only */}
+    {showPrestativoCardModal && prestativoCardPokemon && (() => {
+      const pkm = prestativoCardPokemon
+      const alfaBonus = npcAlfaStatus[pkm.id] ? 8 : 0
+      const compatiblePkm = {
+        ...pkm,
+        golpes: pkm.golpesAprendidos || [],
+        totalAttributes: {
+          ataque: (pkm.attributes?.ataque || 0) + alfaBonus,
+          ataqueEspecial: (pkm.attributes?.ataqueEspecial || 0) + alfaBonus,
+          defesa: (pkm.attributes?.defesa || 0) + alfaBonus,
+          defesaEspecial: (pkm.attributes?.defesaEspecial || 0) + alfaBonus,
+          velocidade: (pkm.attributes?.velocidade || 0) + alfaBonus,
+        },
+        tipos: pkm.types || [],
+      }
+      const maxHP = (3 * ((pkm.attributes?.saude || 0) + alfaBonus)) + (pkm.level || 0)
+      const currentHP = pkm.currentHP !== undefined ? pkm.currentHP : maxHP
+      const captureVal = calculateCaptureValue(pkm)
+      const deslocamento = POKEMON_DESLOCAMENTO_MAP[pkm.species || pkm.name]
+      const capacidade = POKEMON_CAPACIDADE_MAP[pkm.species || pkm.name]
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[998] p-3" onClick={() => setShowPrestativoCardModal(false)}>
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} border-2 rounded-2xl shadow-2xl max-w-sm w-full max-h-[90vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+            <div className="p-4">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1 text-center">
+                  {pkm.imageUrl && (
+                    <img src={pkm.imageUrl} alt={pkm.species || pkm.name} className="w-20 h-20 object-contain mx-auto mb-2" />
+                  )}
+                  <p className={`text-base font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {pkm.species || pkm.name} {pkm.shiny && '✨'} {pkm.legendary && '👑'}
+                  </p>
+                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    #{String(pkm.dexNumber || 0).padStart(4, '0')} · Nível {pkm.level}
+                  </p>
+                  {alfaBonus > 0 && (
+                    <span className="text-xs text-red-500 font-semibold">Alfa · ATR +{alfaBonus}</span>
+                  )}
+                </div>
+                <button onClick={() => setShowPrestativoCardModal(false)} className={`ml-2 font-bold text-lg leading-none ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}>×</button>
+              </div>
+
+              {/* Tipos e Habilidades */}
+              <div className="flex flex-wrap gap-1 mb-3 justify-center">
+                {(pkm.types || []).map((type, i) => (
+                  <span key={i} className="px-2 py-0.5 text-xs rounded-lg bg-gradient-to-r from-blue-600 to-purple-700 text-white font-semibold">{type}</span>
+                ))}
+                {pkm.habilidade1 && (
+                  <span
+                    onClick={() => { setSelectedAbility(pkm.habilidade1); setShowAbilityModal(true) }}
+                    className={`px-2 py-0.5 text-xs rounded-lg font-semibold cursor-pointer hover:opacity-80 ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-500 text-white'}`}
+                  >{pkm.habilidade1}</span>
+                )}
+                {pkm.habilidade2 && (
+                  <span
+                    onClick={() => { setSelectedAbility(pkm.habilidade2); setShowAbilityModal(true) }}
+                    className={`px-2 py-0.5 text-xs rounded-lg font-semibold cursor-pointer hover:opacity-80 ${darkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-500 text-white'}`}
+                  >{pkm.habilidade2}</span>
+                )}
+              </div>
+
+              {/* Valor de Captura */}
+              <div className="flex justify-center mb-3">
+                <div className={`px-3 py-1 rounded-lg font-bold text-sm ${captureVal >= 0 ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                  Captura: {captureVal >= 0 ? '+' : ''}{captureVal}
+                </div>
+              </div>
+
+              {/* HP e Evasões */}
+              <div className={`mb-3 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <div className="mb-2">
+                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>HP</p>
+                  <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{currentHP} / {maxHP}</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Ev. Física</p>
+                    <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{Math.floor(((pkm.attributes?.defesa || 0) + alfaBonus) / 5)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Ev. Especial</p>
+                    <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{Math.floor(((pkm.attributes?.defesaEspecial || 0) + alfaBonus) / 5)}</p>
+                  </div>
+                  <div>
+                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Ev. Veloz</p>
+                    <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{Math.floor(((pkm.attributes?.velocidade || 0) + alfaBonus) / 10)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Básica */}
+              <div className={`grid grid-cols-2 gap-2 mb-3 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                {[
+                  { label: 'Gênero', value: pkm.gender },
+                  { label: 'Peso', value: pkm.weight ? `${pkm.weight} kg` : 'N/A' },
+                  { label: 'Altura', value: pkm.height ? `${pkm.height} m` : 'N/A' },
+                  { label: 'Catch Rate', value: pkm.catchRate },
+                  { label: 'Experiência', value: pkm.experience ? `${pkm.experience} XP` : 'N/A' },
+                ].map(({ label, value }) => value ? (
+                  <div key={label}>
+                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{label}</p>
+                    <p className={`text-xs font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{value}</p>
+                  </div>
+                ) : null)}
+              </div>
+
+              {/* Natureza */}
+              {pkm.nature && (
+                <div className="mb-3">
+                  <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Natureza</p>
+                  <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-800'}`}>
+                    {pkm.nature.nome} <span className={`${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                      {pkm.nature.up && `↑${pkm.nature.up}`} {pkm.nature.down && `↓${pkm.nature.down}`}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {/* Atributos */}
+              {pkm.attributes && (
+                <div className="mb-3">
+                  <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Atributos</p>
+                  <div className="space-y-1">
+                    {[
+                      { label: 'Saúde', key: 'saude' },
+                      { label: 'Ataque', key: 'ataque' },
+                      { label: 'Defesa', key: 'defesa' },
+                      { label: 'Ataque Especial', key: 'ataqueEspecial' },
+                      { label: 'Defesa Especial', key: 'defesaEspecial' },
+                      { label: 'Velocidade', key: 'velocidade' },
+                    ].map(attr => {
+                      const isUp = pkm.nature?.up === attr.label
+                      const isDown = pkm.nature?.down === attr.label
+                      return (
+                        <div key={attr.key} className={`flex justify-between items-center p-1 rounded text-xs ${isUp ? (darkMode ? 'bg-green-900/30' : 'bg-green-50') : isDown ? (darkMode ? 'bg-red-900/30' : 'bg-red-50') : (darkMode ? 'bg-gray-700' : 'bg-gray-100')}`}>
+                          <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{attr.label} {isUp && '↑'}{isDown && '↓'}</span>
+                          <div className="flex gap-2">
+                            <span className={`${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>Base: {pkm.baseAttributes?.[attr.key] ?? pkm.attributes[attr.key]}</span>
+                            <span className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                              Total: {(pkm.attributes[attr.key] || 0) + alfaBonus}
+                              {alfaBonus > 0 && <span className="text-red-500 ml-1">(+{alfaBonus})</span>}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Golpes */}
+              {pkm.golpesAprendidos && pkm.golpesAprendidos.length > 0 && (
+                <div className="mb-3">
+                  <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Golpes</p>
+                  <div className="space-y-1">
+                    {pkm.golpesAprendidos.map((golpe, i) => (
+                      <div key={i} className={`flex items-center justify-between p-1.5 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                        <span
+                          onClick={() => { setSelectedGolpeForDetail(golpe); setShowGolpeDetailModal(true) }}
+                          className={`text-xs font-semibold cursor-pointer hover:underline flex-1 ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}
+                          title="Ver detalhes do golpe"
+                        >{golpe}</span>
+                        <div className="flex gap-1 ml-2">
+                          <button
+                            onClick={() => handleRollAccuracy(golpe, null, null, compatiblePkm)}
+                            className={`p-1 rounded text-[10px] font-semibold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-blue-300' : 'bg-white hover:bg-gray-200 text-blue-600 border border-gray-300'}`}
+                            title="Rolar Acurácia"
+                          >Acu</button>
+                          <button
+                            onClick={() => handleRollMoveDamage(golpe, compatiblePkm)}
+                            className={`p-1 rounded text-[10px] font-semibold ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-yellow-300' : 'bg-white hover:bg-gray-200 text-yellow-600 border border-gray-300'}`}
+                            title="Rolar Dano"
+                          >Dano</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Deslocamentos */}
+              {deslocamento && (() => {
+                const LABELS = { terrestre: 'Terrestre', nadar: 'Natação', voar: 'Voo', cavar: 'Escavação', submerso: 'Subaquático' }
+                const parts = Object.entries(LABELS).filter(([k]) => deslocamento[k] !== '' && deslocamento[k] != null).map(([k, l]) => `${l} ${deslocamento[k]}`)
+                if (!parts.length) return null
+                return (
+                  <div className="mb-2">
+                    <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Deslocamentos</p>
+                    <p className={`text-xs ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>{parts.join(' · ')}</p>
+                  </div>
+                )
+              })()}
+
+              {/* Capacidades */}
+              {capacidade && (() => {
+                const parts = [
+                  capacidade.forca !== '' && capacidade.forca != null ? `Força ${capacidade.forca}` : null,
+                  capacidade.inteligencia !== '' && capacidade.inteligencia != null ? `Inteligência ${capacidade.inteligencia}` : null,
+                  capacidade.salto !== '' && capacidade.salto != null ? `Salto ${capacidade.salto}` : null,
+                ].filter(Boolean)
+                if (!parts.length) return null
+                return (
+                  <div className="mb-2">
+                    <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Capacidades</p>
+                    <p className={`text-xs ${darkMode ? 'text-orange-300' : 'text-orange-700'}`}>{parts.join(' · ')}</p>
+                  </div>
+                )
+              })()}
+
+              {/* Botão Enviar para Batalha */}
+              <button
+                onClick={() => { sendNpcPokemonToBattle(pkm); setShowPrestativoCardModal(false) }}
+                className="w-full mt-2 bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+              >
+                <ArrowRightCircle size={16} />
+                Enviar para a Batalha
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    })()}
+
+    {/* Modal Contenção — Seleção de Pokémon em Cena */}
+    {showContencaoSelectModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[998] p-4" onClick={() => setShowContencaoSelectModal(false)}>
+        <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} border-2 rounded-2xl shadow-2xl max-w-sm w-full`} onClick={e => e.stopPropagation()}>
+          <div className="p-4">
+            <h3 className={`text-base font-bold mb-3 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              <img src="/estilizador.png" alt="" className="w-5 h-5 object-contain" />
+              Contenção — Selecionar Pokémon
+            </h3>
+            {npcPokemon.filter(p => p.emCena).length === 0 ? (
+              <p className={`text-sm text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhum Pokémon em cena.</p>
+            ) : (
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {npcPokemon.filter(p => p.emCena).map((pkm, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleContencao(pkm)}
+                    className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-green-50 border border-gray-200 hover:border-green-300'}`}
+                  >
+                    {pkm.imageUrl && <img src={pkm.imageUrl} alt={pkm.species} className="w-8 h-8 object-contain flex-shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${darkMode ? 'text-green-200' : 'text-green-800'}`}>{pkm.species || pkm.name}</p>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Nv.{pkm.level} — Captura: {calculateCaptureValue(pkm) >= 0 ? '+' : ''}{calculateCaptureValue(pkm)}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowContencaoSelectModal(false)}
+              className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal Pokébola Prestativa — Capturar Pkm Prestativo */}
+    {showContencaoPokeballModal && contencaoPokeballSlotIdx !== null && (() => {
+      const targetPkm = pokemonsPrestativos[contencaoPokeballSlotIdx]
+      const availableBalls = keyItems.filter(item => POKEBALLS_LIST.includes(item.name) && item.quantity > 0)
+      const modifiers = contencaoSelectedPokeball ? POKEBALL_MODIFIERS[contencaoSelectedPokeball] : null
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[998] p-4" onClick={() => setShowContencaoPokeballModal(false)}>
+          <div className={`${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} border-2 rounded-2xl shadow-2xl max-w-sm w-full`} onClick={e => e.stopPropagation()}>
+            <div className="p-4">
+              <h3 className={`text-base font-bold mb-1 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                <img src="/pokeball-icon.png" alt="" className="w-5 h-5 object-contain" />
+                Capturar Pkm Prestativo
+              </h3>
+              {targetPkm && (
+                <p className={`text-xs mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Alvo: <span className="font-semibold">{targetPkm.species || targetPkm.name}</span> — Captura: {calculateCaptureValue(targetPkm) >= 0 ? '+' : ''}{calculateCaptureValue(targetPkm)}
+                </p>
+              )}
+              {availableBalls.length === 0 ? (
+                <p className={`text-sm text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Sem pokébolas na mochila.</p>
+              ) : (
+                <>
+                  <p className={`text-xs font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Escolha a pokébola:</p>
+                  <input
+                    type="text"
+                    value={contencaoPokeballSearch}
+                    onChange={e => setContencaoPokeballSearch(e.target.value)}
+                    placeholder="Pesquisar pokébola..."
+                    className={`w-full text-xs px-2 py-1.5 rounded border mb-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500' : 'border-gray-300'}`}
+                  />
+                  <div className="space-y-1 max-h-44 overflow-y-auto mb-3">
+                    {availableBalls
+                      .filter(item => item.name.toLowerCase().includes(contencaoPokeballSearch.toLowerCase()))
+                      .map((item, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setContencaoSelectedPokeball(item.name)
+                            const mods = POKEBALL_MODIFIERS[item.name]
+                            setContencaoSelectedModifier(mods && mods !== 'custom' && mods.length > 0 ? mods[0] : '')
+                          }}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-left ${
+                            contencaoSelectedPokeball === item.name
+                              ? 'bg-blue-500 text-white'
+                              : darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                          }`}
+                        >
+                          <span className="flex-1 font-medium">{item.name}</span>
+                          <span className={`text-[10px] ${contencaoSelectedPokeball === item.name ? 'text-blue-100' : darkMode ? 'text-gray-400' : 'text-gray-500'}`}>x{item.quantity}</span>
+                        </button>
+                      ))}
+                  </div>
+                  {modifiers && modifiers !== 'custom' && modifiers.length > 1 && (
+                    <div className="mb-3">
+                      <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Modificador:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {modifiers.map((mod, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setContencaoSelectedModifier(mod)}
+                            className={`text-xs px-2 py-1 rounded ${contencaoSelectedModifier === mod ? 'bg-blue-500 text-white' : darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border'}`}
+                          >
+                            {mod}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCapturarPrestativoRoll}
+                  disabled={!contencaoSelectedPokeball}
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white py-2 rounded-lg text-sm font-semibold"
+                >
+                  Rolar Captura
+                </button>
+                <button
+                  onClick={() => setShowContencaoPokeballModal(false)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    })()}
     </>
   )
 
@@ -19670,6 +20557,17 @@ function App() {
                     {!isExpanded ? (
                       // Card compacto - apenas imagem
                       <div className="relative group">
+                        <div className="absolute top-1 left-1 z-10" onClick={e => e.stopPropagation()}>
+                          <label className="flex items-center gap-0.5 cursor-pointer" title="Marcar como Em Cena">
+                            <input
+                              type="checkbox"
+                              checked={!!pokemon.emCena}
+                              onChange={() => setNpcPokemon(prev => prev.map(p => p.id === pokemon.id ? { ...p, emCena: !p.emCena } : p))}
+                              className="w-3 h-3 accent-green-500"
+                            />
+                            <span className={`text-[9px] font-semibold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>Cena</span>
+                          </label>
+                        </div>
                         <div
                           onClick={() => toggleNpcCard(pokemon.id)}
                           className="cursor-pointer p-3 sm:p-4 flex flex-col items-center"
@@ -23478,7 +24376,7 @@ function App() {
                     height: `${vttCanvasHeight}px`,
                     cursor: vttIsPanning ? 'grabbing' : vttActiveTool ? 'crosshair' : 'default'
                   }}
-                  onMouseDown={(e) => { if (e.target === e.currentTarget && selectedToken) { setSelectedToken(null); setVttSelectedPokemonToken(null) } if (!handleVttToolMouseDown(e)) handlePanStart(e) }}
+                  onMouseDown={(e) => { if (e.target === e.currentTarget && selectedToken) { setSelectedToken(null); setVttSelectedPokemonToken(null); setVttContextMenuToken(null) } if (!handleVttToolMouseDown(e)) handlePanStart(e) }}
                   onMouseMove={(e) => {
                     handleVttToolMouseMove(e)
                     handlePanMove(e)
@@ -23842,12 +24740,21 @@ function App() {
                           borderRadius: '50%', overflow: 'hidden', position: 'relative'
                         }}
                       >
-                        {token.image ? (
-                          <img src={token.image} alt={token.name} className="w-full h-full object-cover"
-                            style={{ objectPosition: `center ${token.offsetY || (token.npcType === 'trainer' ? 20 : 50)}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
-                        ) : (
-                          <div className="w-full h-full bg-amber-600 flex items-center justify-center text-white font-bold">{token.name?.charAt(0) || 'M'}</div>
-                        )}
+                        {(() => {
+                          const _imgSrc = token.image || (token.pokemonId ? (() => {
+                            const _pkm = mainTeam.find(p => p.id === token.pokemonId)
+                            const _species = _pkm?.species
+                            if (SPECIES_CUSTOM_IMAGES[_species]) return SPECIES_CUSTOM_IMAGES[_species]
+                            const _dexNum = fullPokedexData.find(p => p.nome === _species)?.dexNumber
+                            return _dexNum ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${_dexNum}.png` : null
+                          })() : null)
+                          return _imgSrc ? (
+                            <img src={_imgSrc} alt={token.name} className="w-full h-full object-cover"
+                              style={{ objectPosition: `center ${token.offsetY || (token.npcType === 'trainer' ? 20 : 50)}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
+                          ) : (
+                            <div className="w-full h-full bg-amber-600 flex items-center justify-center text-white font-bold">{token.name?.charAt(0) || 'M'}</div>
+                          )
+                        })()}
                       </div>
                       {selectedToken === token.id && (
                         <div className="absolute -top-2 -right-2 flex gap-0.5" style={{ zIndex: 10 }}>
@@ -23877,6 +24784,7 @@ function App() {
                     >
                       <div
                         onMouseDown={(e) => { if (startToolFromToken(token, e)) return; if (vttCaptureMode && token.npcType === 'pokemon' && token.npcId) { e.stopPropagation(); handleVttCaptureToken(token); return } if (vttCurrentLayer === 'gm') { handleVttTokenClick(token.id, 'gm'); handleTokenMouseDown(token.id, 'gm', e) } }}
+                        onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); if (selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
                         style={{
                           width: '100%', height: '100%',
                           cursor: vttCaptureMode ? 'inherit' : vttCurrentLayer === 'gm' ? 'move' : 'default',
@@ -23884,12 +24792,21 @@ function App() {
                           borderRadius: '50%', overflow: 'hidden', position: 'relative'
                         }}
                       >
-                        {token.image ? (
-                          <img src={token.image} alt={token.name} className="w-full h-full object-cover"
-                            style={{ objectPosition: `center ${token.offsetY || (token.npcType === 'trainer' ? 20 : 50)}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
-                        ) : (
-                          <div className="w-full h-full bg-purple-500 flex items-center justify-center text-white font-bold">{token.name?.charAt(0) || 'G'}</div>
-                        )}
+                        {(() => {
+                          const _imgSrc = token.image || (token.pokemonId ? (() => {
+                            const _pkm = mainTeam.find(p => p.id === token.pokemonId)
+                            const _species = _pkm?.species
+                            if (SPECIES_CUSTOM_IMAGES[_species]) return SPECIES_CUSTOM_IMAGES[_species]
+                            const _dexNum = fullPokedexData.find(p => p.nome === _species)?.dexNumber
+                            return _dexNum ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${_dexNum}.png` : null
+                          })() : null)
+                          return _imgSrc ? (
+                            <img src={_imgSrc} alt={token.name} className="w-full h-full object-cover"
+                              style={{ objectPosition: `center ${token.offsetY || (token.npcType === 'trainer' ? 20 : 50)}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
+                          ) : (
+                            <div className="w-full h-full bg-purple-500 flex items-center justify-center text-white font-bold">{token.name?.charAt(0) || 'G'}</div>
+                          )
+                        })()}
                       </div>
                       {selectedToken === token.id && (
                         <div className="absolute -top-2 -right-2 flex gap-0.5" style={{ zIndex: 10 }}>
@@ -23897,7 +24814,7 @@ function App() {
                           <button onMouseDown={(e) => e.stopPropagation()} onClick={() => handleVttRemoveToken(token.id, 'gm')} className="w-5 h-5 bg-red-600 rounded-full text-white flex items-center justify-center text-xs hover:bg-red-500" title="Remover">×</button>
                         </div>
                       )}
-                      {selectedToken === token.id && token.npcType === 'pokemon' && (() => {
+                      {vttContextMenuToken === token.id && token.npcType === 'pokemon' && (() => {
                         const pkm = token.pokemonId ? mainTeam.find(p => p.id === token.pokemonId) : npcPokemon.find(p => p.id === token.npcId)
                         const moves = (token.pokemonId ? pkm?.golpes : pkm?.golpesAprendidos) || []
                         const validMoves = moves.filter(m => (typeof m === 'string' ? m : (m?.nome || m?.name || '')).trim() !== '')
@@ -23919,7 +24836,7 @@ function App() {
                           </div>
                         )
                       })()}
-                      {selectedToken === token.id && token.npcType === 'pokemon' && (() => {
+                      {vttContextMenuToken === token.id && token.npcType === 'pokemon' && (() => {
                         const pkm = token.pokemonId ? mainTeam.find(p => p.id === token.pokemonId) : npcPokemon.find(p => p.id === token.npcId)
                         if (!pkm) return null
                         let baseDef, baseDefEsp, baseVel
@@ -23952,7 +24869,7 @@ function App() {
                           </div>
                         )
                       })()}
-                      {selectedToken === token.id && (() => {
+                      {vttContextMenuToken === token.id && (() => {
                         const isNpc = token.npcType === 'trainer' && !!token.npcId
                         const isPlayerTrainer = token.npcType === 'trainer' && !token.npcId && !!token.owner
                         if (!isNpc && !isPlayerTrainer) return null
@@ -23977,6 +24894,8 @@ function App() {
                         const ataqueTotal = Math.floor(ataqueBase * getStageMultiplier(ataqueStage))
                         const evasoes = calcularEvasoes(baseDefesa, baseDefEsp, baseVel, stages, true)
                         const chatUser = isNpc ? 'Mestre' : (token.owner || 'Mestre')
+                        const isCurrentUserToken = isPlayerTrainer && token.owner === currentUser.username
+                        const canalizedMovesForVtt = isCurrentUserToken ? golpesCanalizar.filter(Boolean) : []
                         return (
                           <>
                             <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '130px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
@@ -23985,6 +24904,20 @@ function App() {
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { const d20Roll = Math.floor(Math.random() * 20) + 1; const finalResult = d20Roll + precisaoStage; let details = `1d20 = ${d20Roll}`; if (precisaoStage !== 0) details += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`; const message = `🎲 Acurácia ${displayName}\n${details}\nTotal: ${finalResult}`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: finalResult }) }} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Acu</button>
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { let damageRoll, damageBonus, diceType; if (trainerLevel >= 1 && trainerLevel <= 6) { diceType = '1d10+4'; damageRoll = Math.floor(Math.random() * 10) + 1; damageBonus = 4 } else if (trainerLevel >= 7 && trainerLevel <= 14) { diceType = '1d12+6'; damageRoll = Math.floor(Math.random() * 12) + 1; damageBonus = 6 } else { diceType = '2d8+6'; const d1 = Math.floor(Math.random() * 8) + 1; const d2 = Math.floor(Math.random() * 8) + 1; damageRoll = d1 + d2; damageBonus = 6 }; const totalDamage = damageRoll + damageBonus + ataqueTotal; let stageInfo = ataqueStage !== 0 ? ` [Fase ATQ: ${ataqueStage > 0 ? '+' : ''}${ataqueStage} → ${ataqueBase}→${ataqueTotal}]` : ''; const message = `⚔️ ${displayName} atacou!\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTotal} (Ataque Total)${stageInfo} = ${totalDamage} de dano`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: totalDamage }) }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Dano</button>
                               </div>
+                              {canalizedMovesForVtt.length > 0 && (
+                                <div style={{ marginTop: '5px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                                  <div style={{ color: '#c084fc', fontSize: '9px', fontWeight: 'bold', marginBottom: '3px' }}>Golpes Canalizados</div>
+                                  {golpesCanalizar.map((move, idx) => {
+                                    if (!move) return null
+                                    return (
+                                      <div key={idx} onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
+                                        <span style={{ color: '#93c5fd', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleOpenBattleMove(move)}>{move}</span>
+                                        <button onMouseDown={(e) => e.stopPropagation()} onClick={() => handleRollCanalizedMove(move, idx)} title="Rolar Acurácia + Dano" style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 4px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>🎲</button>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </div>
                             <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'absolute', left: '-34px', top: '0px', display: 'flex', flexDirection: 'column', gap: '3px', zIndex: 20 }}>
                               {[
@@ -24023,6 +24956,7 @@ function App() {
                     >
                       <div
                         onMouseDown={(e) => { if (startToolFromToken(token, e)) return; if (vttCaptureMode && token.npcType === 'pokemon' && token.npcId) { e.stopPropagation(); handleVttCaptureToken(token); return } if (vttCurrentLayer === 'players') { handleVttTokenClick(token.id, 'tokens'); handleTokenMouseDown(token.id, 'tokens', e) } }}
+                        onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); if (selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
                         style={{
                           width: '100%', height: '100%',
                           cursor: vttCaptureMode ? 'inherit' : vttCurrentLayer === 'players' ? 'move' : 'default',
@@ -24030,12 +24964,21 @@ function App() {
                           borderRadius: '50%', overflow: 'hidden', position: 'relative'
                         }}
                       >
-                        {token.image ? (
-                          <img src={token.image} alt={token.name} className="w-full h-full object-cover"
-                            style={{ objectPosition: `center ${token.offsetY || (token.npcType === 'trainer' ? 20 : 50)}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
-                        ) : (
-                          <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white font-bold">{token.name?.charAt(0) || 'T'}</div>
-                        )}
+                        {(() => {
+                          const _imgSrc = token.image || (token.pokemonId ? (() => {
+                            const _pkm = mainTeam.find(p => p.id === token.pokemonId)
+                            const _species = _pkm?.species
+                            if (SPECIES_CUSTOM_IMAGES[_species]) return SPECIES_CUSTOM_IMAGES[_species]
+                            const _dexNum = fullPokedexData.find(p => p.nome === _species)?.dexNumber
+                            return _dexNum ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${_dexNum}.png` : null
+                          })() : null)
+                          return _imgSrc ? (
+                            <img src={_imgSrc} alt={token.name} className="w-full h-full object-cover"
+                              style={{ objectPosition: `center ${token.offsetY || (token.npcType === 'trainer' ? 20 : 50)}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
+                          ) : (
+                            <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white font-bold">{token.name?.charAt(0) || 'T'}</div>
+                          )
+                        })()}
                       </div>
                       {selectedToken === token.id && (
                         <div className="absolute -top-2 -right-2 flex gap-0.5" style={{ zIndex: 10 }}>
@@ -24043,7 +24986,7 @@ function App() {
                           <button onMouseDown={(e) => e.stopPropagation()} onClick={() => handleVttRemoveToken(token.id, 'tokens')} className="w-5 h-5 bg-red-600 rounded-full text-white flex items-center justify-center text-xs hover:bg-red-500" title="Remover">×</button>
                         </div>
                       )}
-                      {selectedToken === token.id && token.npcType === 'pokemon' && (() => {
+                      {vttContextMenuToken === token.id && token.npcType === 'pokemon' && (() => {
                         const pkm = token.pokemonId ? mainTeam.find(p => p.id === token.pokemonId) : npcPokemon.find(p => p.id === token.npcId)
                         const moves = (token.pokemonId ? pkm?.golpes : pkm?.golpesAprendidos) || []
                         const validMoves = moves.filter(m => (typeof m === 'string' ? m : (m?.nome || m?.name || '')).trim() !== '')
@@ -24065,7 +25008,7 @@ function App() {
                           </div>
                         )
                       })()}
-                      {selectedToken === token.id && token.npcType === 'pokemon' && (() => {
+                      {vttContextMenuToken === token.id && token.npcType === 'pokemon' && (() => {
                         const pkm = token.pokemonId ? mainTeam.find(p => p.id === token.pokemonId) : npcPokemon.find(p => p.id === token.npcId)
                         if (!pkm) return null
                         let baseDef, baseDefEsp, baseVel
@@ -24098,7 +25041,7 @@ function App() {
                           </div>
                         )
                       })()}
-                      {selectedToken === token.id && (() => {
+                      {vttContextMenuToken === token.id && (() => {
                         const isNpc = token.npcType === 'trainer' && !!token.npcId
                         const isPlayerTrainer = token.npcType === 'trainer' && !token.npcId && !!token.owner
                         if (!isNpc && !isPlayerTrainer) return null
@@ -24123,6 +25066,8 @@ function App() {
                         const ataqueTotal = Math.floor(ataqueBase * getStageMultiplier(ataqueStage))
                         const evasoes = calcularEvasoes(baseDefesa, baseDefEsp, baseVel, stages, true)
                         const chatUser = isNpc ? 'Mestre' : (token.owner || 'Mestre')
+                        const isCurrentUserToken = isPlayerTrainer && token.owner === currentUser.username
+                        const canalizedMovesForVtt = isCurrentUserToken ? golpesCanalizar.filter(Boolean) : []
                         return (
                           <>
                             <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '130px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
@@ -24131,6 +25076,20 @@ function App() {
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { const d20Roll = Math.floor(Math.random() * 20) + 1; const finalResult = d20Roll + precisaoStage; let details = `1d20 = ${d20Roll}`; if (precisaoStage !== 0) details += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`; const message = `🎲 Acurácia ${displayName}\n${details}\nTotal: ${finalResult}`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: finalResult }) }} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Acu</button>
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { let damageRoll, damageBonus, diceType; if (trainerLevel >= 1 && trainerLevel <= 6) { diceType = '1d10+4'; damageRoll = Math.floor(Math.random() * 10) + 1; damageBonus = 4 } else if (trainerLevel >= 7 && trainerLevel <= 14) { diceType = '1d12+6'; damageRoll = Math.floor(Math.random() * 12) + 1; damageBonus = 6 } else { diceType = '2d8+6'; const d1 = Math.floor(Math.random() * 8) + 1; const d2 = Math.floor(Math.random() * 8) + 1; damageRoll = d1 + d2; damageBonus = 6 }; const totalDamage = damageRoll + damageBonus + ataqueTotal; let stageInfo = ataqueStage !== 0 ? ` [Fase ATQ: ${ataqueStage > 0 ? '+' : ''}${ataqueStage} → ${ataqueBase}→${ataqueTotal}]` : ''; const message = `⚔️ ${displayName} atacou!\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTotal} (Ataque Total)${stageInfo} = ${totalDamage} de dano`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: totalDamage }) }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Dano</button>
                               </div>
+                              {canalizedMovesForVtt.length > 0 && (
+                                <div style={{ marginTop: '5px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
+                                  <div style={{ color: '#c084fc', fontSize: '9px', fontWeight: 'bold', marginBottom: '3px' }}>Golpes Canalizados</div>
+                                  {golpesCanalizar.map((move, idx) => {
+                                    if (!move) return null
+                                    return (
+                                      <div key={idx} onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
+                                        <span style={{ color: '#93c5fd', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => handleOpenBattleMove(move)}>{move}</span>
+                                        <button onMouseDown={(e) => e.stopPropagation()} onClick={() => handleRollCanalizedMove(move, idx)} title="Rolar Acurácia + Dano" style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 4px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>🎲</button>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </div>
                             <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'absolute', left: '-34px', top: '0px', display: 'flex', flexDirection: 'column', gap: '3px', zIndex: 20 }}>
                               {[
@@ -24399,7 +25358,7 @@ function App() {
                     {npcPokemon.map(pokemon => {
                       const _allImgs = getPokemonAllImages(pokemon.id)
                       const _hasMultiple = _allImgs.length > 1
-                      const _currentImg = getPokemonCurrentImage(pokemon.id) || pokemon.imageUrl
+                      const _currentImg = getPokemonCurrentImage(pokemon.id) || SPECIES_CUSTOM_IMAGES[pokemon.species] || pokemon.imageUrl
                       return (
                         <div key={pokemon.id} className="flex flex-col items-center gap-0.5">
                           <button
@@ -29263,6 +30222,293 @@ function App() {
                 </div>
               </div>
             </div>
+
+            {/* POKÉMONS CANALIZADOS - Modal (fora do IIFE para evitar problemas de overflow) */}
+            {showCanalizePopup && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60" onClick={() => { setShowCanalizePopup(false); setCanalizeSelectedPkm(null) }}>
+                <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-xl shadow-2xl p-5 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto`} onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-base font-bold">Canalizar Pokémon</h3>
+                    <button onClick={() => { setShowCanalizePopup(false); setCanalizeSelectedPkm(null) }} className="text-gray-400 hover:text-red-400 text-xl font-bold leading-none">×</button>
+                  </div>
+                  <p className={`text-xs mb-4 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>⚠️ Canalizar custa <strong>10 HP</strong>.</p>
+
+                  {/* Dropdown 1: Meu time */}
+                  <div className="mb-3">
+                    <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>Meu Time</p>
+                    <select className={`w-full text-sm rounded-lg p-1.5 border ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-800 border-gray-300'}`}
+                      defaultValue="" onChange={e => { const idx = e.target.value; if (idx === '') return; const p = mainTeam[parseInt(idx)]; const key = sanitizeFirebaseKey(p.id); const allImgs = [pokemonImages[key], ...(pokemonExtraImages[key] || [])].filter(Boolean); const imgIdx = pokemonImageIndex[key] || 0; const imgUrl = allImgs[Math.min(imgIdx, allImgs.length - 1)] || null; setCanalizeSelectedPkm(imgUrl ? { ...p, imageUrl: imgUrl } : p) }}>
+                      <option value="">Selecionar...</option>
+                      {mainTeam.map((pkm, i) => <option key={i} value={i}>{pkm.nickname || pkm.species || pkm.name || 'Pkm'} Nv.{pkm.level || '?'}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Dropdowns 2-5: Outros treinadores (players) */}
+                  {SAFARI_TRAINERS.filter(u => u !== currentUser.username).map(username => (
+                    <div key={username} className="mb-3">
+                      <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{username}</p>
+                      <select className={`w-full text-sm rounded-lg p-1.5 border ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-800 border-gray-300'}`}
+                        defaultValue="" onChange={e => { const idx = e.target.value; if (idx === '') return; const td = canalizePopupOtherTrainers[username] || {}; const team = td.mainTeam || []; const p = team[parseInt(idx)]; const imgs = td.pokemonImages || {}; const imgIndex = td.pokemonImageIndex || {}; const key = sanitizeFirebaseKey(p.id); const imgUrl = imgs[key] || null; setCanalizeSelectedPkm(imgUrl ? { ...p, imageUrl: imgUrl } : p) }}>
+                        <option value="">{canalizeLoadingTrainers ? 'Carregando...' : 'Selecionar...'}</option>
+                        {(canalizePopupOtherTrainers[username]?.mainTeam || []).map((pkm, i) => <option key={i} value={i}>{pkm.nickname || pkm.species || pkm.name || 'Pkm'} Nv.{pkm.level || '?'}</option>)}
+                      </select>
+                    </div>
+                  ))}
+
+                  {/* Dropdown 6: NPCs em cena */}
+                  <div className="mb-4">
+                    <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-green-400' : 'text-green-600'}`}>NPCs em Cena</p>
+                    <select className={`w-full text-sm rounded-lg p-1.5 border ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-800 border-gray-300'}`}
+                      defaultValue="" onChange={e => { const idx = e.target.value; if (idx === '') return; const emCena = npcPokemon.filter(p => p.emCena); setCanalizeSelectedPkm(emCena[parseInt(idx)]) }}>
+                      <option value="">Selecionar NPC...</option>
+                      {npcPokemon.filter(p => p.emCena).map((pkm, i) => <option key={i} value={i}>{pkm.species || pkm.name || 'NPC'} Nv.{pkm.level || '?'}</option>)}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => { if (canalizeSelectedPkm) { handleCanalizeSelect(canalizeSelectedPkm); setCanalizeSelectedPkm(null) } }}
+                    disabled={!canalizeSelectedPkm}
+                    className={`w-full py-2 rounded-lg text-sm font-semibold mb-2 transition-colors ${canalizeSelectedPkm ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-400 text-gray-200 cursor-not-allowed'}`}
+                  >Canalizar este Pokémon</button>
+                  <button onClick={() => { setShowCanalizePopup(false); setCanalizeSelectedPkm(null) }} className={`w-full py-2 rounded-lg text-sm font-medium ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>Cancelar</button>
+                </div>
+              </div>
+            )}
+
+            {/* POKÉMONS CANALIZADOS - Místico */}
+            {classes.includes('Místico') && (() => {
+              const hasCanalizarAmigo = talentosSelected.some(t => t.nome === 'Canalizar Amigo +')
+              const hasClerig = talentosSelected.some(t => t.nome === 'Clérigo')
+              const hasEsponja = talentosSelected.some(t => t.nome === 'Esponja')
+              const maxPkmSlots = hasClerig ? 3 : hasCanalizarAmigo ? 2 : 1
+              const numCanalizados = pokemonsCanalizados.filter(Boolean).length
+              const maxGolpeSlots = hasEsponja ? (numCanalizados > 1 ? 3 * numCanalizados : 3) : 1
+              const allChanneledMoves = pokemonsCanalizados.filter(Boolean).flatMap(pkm => {
+                const moves = pkm.golpes || pkm.golpesAprendidos || []
+                return moves.map(m => {
+                  const name = typeof m === 'string' ? m : (m?.nome || m?.name || '')
+                  return name ? { name, source: pkm.nickname || pkm.species || pkm.name || '?' } : null
+                }).filter(Boolean)
+              })
+              return (
+                <div className="mb-8 sm:px-5 md:px-8">
+                  <h4 className={`text-lg sm:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4 text-center`}>Pokémons Canalizados</h4>
+
+                  {/* Slots de Pokémon */}
+                  <div className="flex flex-wrap gap-3 mb-4 justify-center">
+                    {Array.from({ length: maxPkmSlots }).map((_, idx) => {
+                      const pkm = pokemonsCanalizados[idx]
+                      return (
+                        <div key={idx} className={`relative flex flex-col items-center justify-center rounded-xl border-2 ${darkMode ? 'bg-gray-700 border-purple-700' : 'bg-purple-50 border-purple-300'}`} style={{ width: '96px', height: '96px' }}>
+                          {pkm ? (
+                            <>
+                              <button onClick={() => { const u = [...pokemonsCanalizados]; u[idx] = null; setPokemonsCanalizados(u) }} className="absolute top-1 right-1 text-red-400 hover:text-red-300 text-sm font-bold leading-none" title="Remover">×</button>
+                              {(() => {
+                                const isNpcPkm = pkm.isNpc || !!pkm.npcId
+                                const _src = isNpcPkm
+                                  ? (getPokemonCurrentImage(pkm.id) || pkm.imageUrl)
+                                  : (pkm.imageUrl || getPokemonCurrentImage(pkm.id))
+                                const _dexNum = fullPokedexData.find(p => p.nome === pkm.species)?.dexNumber
+                                const _fallback = _dexNum ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${_dexNum}.png` : null
+                                const _imgSrc = _src || _fallback
+                                return _imgSrc ? <img src={_imgSrc} onError={_fallback && _imgSrc !== _fallback ? (e) => { e.currentTarget.onerror = null; e.currentTarget.src = _fallback } : undefined} alt={pkm.species || pkm.name} className="w-14 h-14 object-contain" /> : null
+                              })()}
+                              <span className={`text-[10px] font-medium text-center truncate w-full px-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{pkm.nickname || pkm.species || pkm.name || 'Pokémon'}</span>
+                            </>
+                          ) : (
+                            <button
+                              className={`w-full h-full flex items-center justify-center text-2xl font-light ${darkMode ? 'text-purple-400 hover:text-purple-200' : 'text-purple-400 hover:text-purple-600'}`}
+                              onClick={() => {
+                                setCanalizeSlotIndex(idx)
+                                setCanalizeLoadingTrainers(true)
+                                setCanalizePopupOtherTrainers({})
+                                const others = SAFARI_TRAINERS.filter(u => u !== currentUser.username)
+                                Promise.all(others.map(async u => { const d = await loadTrainerData(u); return { username: u, mainTeam: d?.mainTeam || [], pokemonImages: d?.pokemonImages || {}, pokemonImageIndex: d?.pokemonImageIndex || {} } }))
+                                  .then(results => {
+                                    const obj = {}; results.forEach(r => { obj[r.username] = { mainTeam: r.mainTeam, pokemonImages: r.pokemonImages, pokemonImageIndex: r.pokemonImageIndex } })
+                                    setCanalizePopupOtherTrainers(obj); setCanalizeLoadingTrainers(false)
+                                  })
+                                  .catch(() => setCanalizeLoadingTrainers(false))
+                                setShowCanalizePopup(true)
+                              }}
+                            >+</button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Slots de Golpe */}
+                  {numCanalizados > 0 && (
+                    <div className="flex flex-wrap gap-3 justify-center">
+                      {Array.from({ length: maxGolpeSlots }).map((_, idx) => {
+                        const selectedMove = golpesCanalizar[idx]
+                        const isOpen = golpeSlotOpen === idx
+                        return (
+                          <div key={idx} className="relative">
+                            <div className={`flex items-center justify-center rounded-xl border-2 ${darkMode ? 'bg-gray-700 border-blue-700' : 'bg-blue-50 border-blue-300'}`} style={{ width: '96px', height: '96px' }}>
+                              {selectedMove ? (
+                                <>
+                                  <button onClick={() => { const u = [...golpesCanalizar]; u[idx] = null; setGolpesCanalizar(u) }} className="absolute top-1 right-1 text-red-400 hover:text-red-300 text-sm font-bold leading-none" title="Remover">×</button>
+                                  <span className={`text-[10px] font-medium text-center px-1 cursor-pointer hover:underline ${darkMode ? 'text-blue-300' : 'text-blue-700'}`} onClick={() => handleOpenBattleMove(selectedMove)} title="Ver detalhes do golpe">{selectedMove}</span>
+                                </>
+                              ) : (
+                                <button
+                                  className={`w-full h-full flex items-center justify-center text-2xl font-light ${darkMode ? 'text-blue-400 hover:text-blue-200' : 'text-blue-400 hover:text-blue-600'}`}
+                                  onClick={() => setGolpeSlotOpen(isOpen ? null : idx)}
+                                >+</button>
+                              )}
+                            </div>
+                            {/* Dropdown de golpes */}
+                            {!selectedMove && isOpen && (
+                              <div className={`absolute z-50 top-full mt-1 left-0 rounded-xl shadow-xl border p-2 ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`} style={{ minWidth: '200px' }}>
+                                {pokemonsCanalizados.filter(Boolean).map((pkmC, pkmIdx) => {
+                                  const moves = (pkmC.golpes || pkmC.golpesAprendidos || []).map(m => typeof m === 'string' ? m : (m?.nome || m?.name || '')).filter(Boolean)
+                                  if (!moves.length) return null
+                                  return (
+                                    <div key={pkmIdx} className="mb-2 last:mb-0">
+                                      <p className={`text-[10px] font-bold mb-1 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>{pkmC.nickname || pkmC.species || pkmC.name || 'Pkm'}</p>
+                                      {moves.map((m, mi) => (
+                                        <button key={mi} className={`block w-full text-left text-xs px-2 py-1 rounded hover:bg-blue-100 dark:hover:bg-gray-700 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}
+                                          onClick={() => { const u = [...golpesCanalizar]; u[idx] = m; setGolpesCanalizar(u); setGolpeSlotOpen(null) }}>
+                                          {m}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* POKÉMONS PRESTATIVOS - Ranger */}
+            {classes.includes('Ranger') && (() => {
+              const maxSlots = calcMaxPrestativosSlots(talentosSelected, parceiroPkmIdx)
+              const slots = Array.from({ length: maxSlots }, (_, i) => pokemonsPrestativos[i] || null)
+              const renderPrestativoSlot = (pkm, idx) => (
+                <div
+                  key={idx}
+                  className={`relative flex flex-col items-center rounded-xl border-2 ${
+                    parceiroPkmIdx === idx
+                      ? 'border-blue-400 ' + (darkMode ? 'bg-blue-900/30' : 'bg-blue-50')
+                      : darkMode ? 'bg-gray-700 border-green-700' : 'bg-green-50 border-green-300'
+                  }`}
+                  style={{ width: '96px', minHeight: '96px' }}
+                >
+                  {pkm ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          const newList = pokemonsPrestativos.map((p, i) => i === idx ? null : p)
+                          setPokemonsPrestativos(newList)
+                          const newParceiro = parceiroPkmIdx === idx ? null : parceiroPkmIdx
+                          if (newParceiro !== parceiroPkmIdx) setParceiroPkmIdx(newParceiro)
+                          if (useFirebase) {
+                            saveToFirebase(`trainers/${currentUser.username}/pokemonsPrestativos`, newList)
+                            if (newParceiro !== parceiroPkmIdx) saveToFirebase(`trainers/${currentUser.username}/parceiroPkmIdx`, newParceiro)
+                          }
+                        }}
+                        className="absolute top-1 right-1 text-red-400 hover:text-red-300 text-sm font-bold leading-none"
+                        title="Remover"
+                      >×</button>
+                      <img
+                        src={pkm.imageUrl || ''}
+                        alt={pkm.species || pkm.name}
+                        className="w-12 h-12 object-contain mt-2 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => { setPrestativoCardPokemon(pkm); setShowPrestativoCardModal(true) }}
+                        title="Ver card completo"
+                      />
+                      <span className={`text-[9px] font-medium text-center truncate w-full px-1 mt-0.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        {pkm.species || pkm.name} Nv.{pkm.level}
+                      </span>
+                      <div className="flex gap-1 mt-1 mb-1.5">
+                        <button
+                          onClick={() => sendNpcPokemonToBattle(pkm)}
+                          className={`p-1 rounded ${darkMode ? 'bg-cyan-800 hover:bg-cyan-700' : 'bg-cyan-100 hover:bg-cyan-200 border border-cyan-300'}`}
+                          title="Enviar para a Batalha"
+                        >
+                          <ArrowRightCircle size={12} className="text-cyan-500" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setContencaoPokeballSlotIdx(idx)
+                            setContencaoSelectedPokeball(null)
+                            setContencaoSelectedModifier('')
+                            setContencaoPokeballSearch('')
+                            setShowContencaoPokeballModal(true)
+                          }}
+                          className={`p-1 rounded ${darkMode ? 'bg-blue-800 hover:bg-blue-700' : 'bg-blue-100 hover:bg-blue-200 border border-blue-300'}`}
+                          title="Capturar Pkm Prestativo"
+                        >
+                          <img src="/pokeball-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            const newIdx = parceiroPkmIdx === idx ? null : idx
+                            setParceiroPkmIdx(newIdx)
+                            if (useFirebase) saveToFirebase(`trainers/${currentUser.username}/parceiroPkmIdx`, newIdx)
+                          }}
+                          className={`p-1 rounded ${
+                            parceiroPkmIdx === idx
+                              ? 'bg-blue-500'
+                              : darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-100 hover:bg-gray-200 border border-gray-300'
+                          }`}
+                          title="Pkm Parceiro (+1 slot)"
+                        >
+                          <img src="/parceiroicone.png" alt="" className="w-3.5 h-3.5 object-contain" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <span className={`text-[10px] text-center m-auto ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>— vazio —</span>
+                  )}
+                </div>
+              )
+              let gridContent
+              if (maxSlots === 8) {
+                gridContent = (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex gap-3">{slots.slice(0, 4).map((pkm, i) => renderPrestativoSlot(pkm, i))}</div>
+                    <div className="flex gap-3">{slots.slice(4).map((pkm, i) => renderPrestativoSlot(pkm, i + 4))}</div>
+                  </div>
+                )
+              } else if (maxSlots === 7) {
+                gridContent = (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex gap-3">{slots.slice(0, 4).map((pkm, i) => renderPrestativoSlot(pkm, i))}</div>
+                    <div className="flex gap-3">{slots.slice(4).map((pkm, i) => renderPrestativoSlot(pkm, i + 4))}</div>
+                  </div>
+                )
+              } else if (maxSlots === 6) {
+                gridContent = (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex gap-3">{slots.slice(0, 3).map((pkm, i) => renderPrestativoSlot(pkm, i))}</div>
+                    <div className="flex gap-3">{slots.slice(3).map((pkm, i) => renderPrestativoSlot(pkm, i + 3))}</div>
+                  </div>
+                )
+              } else {
+                gridContent = (
+                  <div className="flex gap-3 justify-center">
+                    {slots.map((pkm, i) => renderPrestativoSlot(pkm, i))}
+                  </div>
+                )
+              }
+              return (
+                <div className="mb-8 sm:px-5 md:px-8">
+                  <h4 className={`text-lg sm:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-4 text-center`}>
+                    Pokémons Prestativos ({pokemonsPrestativos.filter(Boolean).length}/{maxSlots})
+                  </h4>
+                  {gridContent}
+                </div>
+              )
+            })()}
 
             {/* TIME PRINCIPAL - COLUNA ÚNICA */}
             <div className="mb-8">
@@ -34377,26 +35623,45 @@ function App() {
                   </div>
 
                   <button
-                    onClick={() => {
-                      if (selectedSwapMainTeam && selectedSwapPc) {
-                        // Remove do time principal e adiciona no PC
-                        const newMainTeam = mainTeam.filter(p => p.id !== selectedSwapMainTeam.id)
-                        newMainTeam.push(selectedSwapPc)
+                    onClick={async () => {
+                      if (!selectedSwapMainTeam || !selectedSwapPc) return
 
-                        // Remove do PC e adiciona no time principal
-                        const newPcPokemon = pcPokemon.filter(p => p.id !== selectedSwapPc.id)
-                        newPcPokemon.push(selectedSwapMainTeam)
+                      const teamPokemon = selectedSwapMainTeam
+                      const pcPokemonItem = selectedSwapPc
 
-                        setMainTeam(newMainTeam)
-                        setPcPokemon(newPcPokemon)
+                      // Fechar modal imediatamente (UX responsiva)
+                      setShowSwapPokemonModal(false)
+                      setSwapMainTeamSearch('')
+                      setSwapPcSearch('')
+                      setSelectedSwapMainTeam(null)
+                      setSelectedSwapPc(null)
 
-                        // Limpa o modal
-                        setShowSwapPokemonModal(false)
-                        setSwapMainTeamSearch('')
-                        setSwapPcSearch('')
-                        setSelectedSwapMainTeam(null)
-                        setSelectedSwapPc(null)
+                      // Construir novos arrays
+                      const newMainTeam = mainTeam
+                        .filter(p => p.id !== teamPokemon.id)
+                        .concat(pcPokemonItem)
+                      const newPcPokemon = pcPokemon
+                        .filter(p => p.id !== pcPokemonItem.id)
+                        .concat(teamPokemon)
+
+                      // Pausar subscription ANTES de atualizar estado e salvar
+                      // para evitar que o Firebase dispare onValue durante a operação
+                      swapInProgressRef.current = true
+
+                      // Atualizar estado local
+                      setMainTeam(newMainTeam)
+                      setPcPokemon(newPcPokemon)
+
+                      // Salvar no Firebase e aguardar ambas as operações
+                      if (useFirebase && currentUser?.type === 'treinador') {
+                        await Promise.all([
+                          saveToFirebase(`trainers/${currentUser.username}/mainTeam`, newMainTeam),
+                          saveToFirebase(`trainers/${currentUser.username}/pcPokemon`, newPcPokemon),
+                        ])
                       }
+
+                      // Reativar subscription após as saves confirmadas
+                      swapInProgressRef.current = false
                     }}
                     disabled={!selectedSwapMainTeam || !selectedSwapPc}
                     className="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -34408,6 +35673,8 @@ function App() {
             </div>
           </div>
         )}
+
+
 
         {/* Modal Sedex Pkm */}
         {showSedexPkmModal && (
@@ -42726,7 +43993,7 @@ function App() {
                       height: `${vttCanvasHeight}px`,
                       cursor: vttIsPanning ? 'grabbing' : vttActiveTool ? 'crosshair' : 'default'
                     }}
-                    onMouseDown={(e) => { if (e.target === e.currentTarget && selectedToken) { setSelectedToken(null); setVttSelectedPokemonToken(null) } if (!handleVttToolMouseDown(e)) handlePanStart(e) }}
+                    onMouseDown={(e) => { if (e.target === e.currentTarget && selectedToken) { setSelectedToken(null); setVttSelectedPokemonToken(null); setVttContextMenuToken(null) } if (!handleVttToolMouseDown(e)) handlePanStart(e) }}
                     onMouseMove={(e) => {
                       handleVttToolMouseMove(e)
                       handlePanMove(e)
@@ -42978,6 +44245,7 @@ function App() {
                       <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: 3 }}>
                         <div
                           onMouseDown={(e) => { if (startToolFromToken(token, e)) return; if (vttScanMode && (token.pokemonId || token.npcId)) { e.stopPropagation(); handleVttScanToken(token); return } if (vttCaptureMode && token.npcType === 'pokemon' && token.npcId) { e.stopPropagation(); handleVttCaptureToken(token); return } handleVttTokenClick(token.id, 'tokens'); handleTokenMouseDown(token.id, 'tokens', e) }}
+                          onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); if (selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
                           style={{
                             width: '100%', height: '100%',
                             cursor: vttCaptureMode || vttScanMode ? 'inherit' : token.owner === currentUser.username ? 'move' : 'default',
@@ -42998,7 +44266,7 @@ function App() {
                             <button onMouseDown={(e) => e.stopPropagation()} onClick={() => handleVttRemoveToken(token.id, 'tokens')} className="w-5 h-5 bg-red-600 rounded-full text-white flex items-center justify-center text-xs hover:bg-red-500" title="Remover">×</button>
                           </div>
                         )}
-                        {selectedToken === token.id && token.npcType === 'pokemon' && (() => {
+                        {vttContextMenuToken === token.id && token.npcType === 'pokemon' && (() => {
                           const pkm = token.pokemonId ? mainTeam.find(p => p.id === token.pokemonId) : npcPokemon.find(p => p.id === token.npcId)
                           const moves = (token.pokemonId ? pkm?.golpes : pkm?.golpesAprendidos) || []
                           const validMoves = moves.filter(m => (typeof m === 'string' ? m : (m?.nome || m?.name || '')).trim() !== '')
@@ -43020,7 +44288,7 @@ function App() {
                             </div>
                           )
                         })()}
-                        {selectedToken === token.id && token.npcType === 'pokemon' && (() => {
+                        {vttContextMenuToken === token.id && token.npcType === 'pokemon' && (() => {
                           const pkm = token.pokemonId ? mainTeam.find(p => p.id === token.pokemonId) : npcPokemon.find(p => p.id === token.npcId)
                           if (!pkm) return null
                           let baseDef, baseDefEsp, baseVel
@@ -43053,7 +44321,7 @@ function App() {
                             </div>
                           )
                         })()}
-                        {selectedToken === token.id && (() => {
+                        {vttContextMenuToken === token.id && (() => {
                           const isNpc = token.npcType === 'trainer' && !!token.npcId
                           const isPlayerTrainer = token.npcType === 'trainer' && !token.npcId && !!token.owner
                           if (!isNpc && !isPlayerTrainer) return null
@@ -43160,7 +44428,9 @@ function App() {
                           <div className="flex flex-wrap gap-2">
                             {mainTeam.map((pokemon, idx) => {
                               const imageKey = sanitizeFirebaseKey(pokemon.id)
-                              const img = getPokemonCurrentImage(pokemon.id) || pokemonImages[imageKey] || null
+                              const _uploadedImg = getPokemonCurrentImage(pokemon.id) || pokemonImages[imageKey] || null
+                              const _dexNum = !_uploadedImg && !SPECIES_CUSTOM_IMAGES[pokemon.species] ? fullPokedexData.find(p => p.nome === pokemon.species)?.dexNumber : null
+                              const img = _uploadedImg || SPECIES_CUSTOM_IMAGES[pokemon.species] || (_dexNum ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${_dexNum}.png` : null)
                               const _allImgs = getPokemonAllImages(pokemon.id)
                               const _hasMultiple = _allImgs.length > 1
                               return (
@@ -43190,6 +44460,40 @@ function App() {
                                     style={{ visibility: _hasMultiple ? 'visible' : 'hidden' }}
                                     title="Próxima imagem"
                                   >↓</button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tokens dos Pokémons Prestativos/Parceiro */}
+                      {classes.includes('Ranger') && pokemonsPrestativos.filter(Boolean).length > 0 && (
+                        <div>
+                          <p className={`text-xs font-bold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Prestativos/Parceiro ({pokemonsPrestativos.filter(Boolean).length})</p>
+                          <div className="flex flex-wrap gap-2">
+                            {pokemonsPrestativos.map((pkm, idx) => {
+                              if (!pkm) return null
+                              const isParceiro = parceiroPkmIdx === idx
+                              return (
+                                <div key={idx} className="flex flex-col items-center gap-0.5">
+                                  <button
+                                    onClick={() => handleAddNpcPrestativoToken(pkm)}
+                                    className={`w-11 h-11 rounded-full border-2 overflow-hidden transition-all hover:scale-110 ${
+                                      isParceiro
+                                        ? (darkMode ? 'border-blue-500 bg-gray-600' : 'border-blue-400 bg-white')
+                                        : (darkMode ? 'border-green-500 bg-gray-600' : 'border-green-400 bg-white')
+                                    }`}
+                                    title={`Adicionar ${pkm.species || pkm.name}${isParceiro ? ' (Parceiro)' : ''}`}
+                                  >
+                                    {pkm.imageUrl ? (
+                                      <img src={pkm.imageUrl} alt={pkm.species || pkm.name} className="w-full h-full object-contain" />
+                                    ) : (
+                                      <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isParceiro ? (darkMode ? 'bg-blue-700 text-white' : 'bg-blue-200 text-blue-800') : (darkMode ? 'bg-green-700 text-white' : 'bg-green-200 text-green-800')}`}>
+                                        {(pkm.species || pkm.name || '?').charAt(0)}
+                                      </div>
+                                    )}
+                                  </button>
                                 </div>
                               )
                             })}
