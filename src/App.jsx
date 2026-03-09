@@ -12787,6 +12787,7 @@ function App() {
             setRotinaEstudosValues(data.rotinaEstudosValues || { ataqueEspecial: 0, defesaEspecial: 0 })
             setPokemonsPrestativos(data.pokemonsPrestativos || [])
             setParceiroPkmIdx(data.parceiroPkmIdx !== undefined ? data.parceiroPkmIdx : null)
+            setPlantedTrees(data.plantedTrees || [])
           }
           // Marcar dados como carregados após carregar tudo
           setDataLoaded(true)
