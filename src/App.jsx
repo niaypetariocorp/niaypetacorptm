@@ -1246,7 +1246,10 @@ const KEY_ITEMS_LIST = [
   'Peças de Sportball',
   'Peças de Timerball',
   // Corredor de Pokéflautas
-  'Pokéflauta Amarela', 'Pokéflauta Azul', 'Pokéflauta Branca', 'Pokéflauta Preta', 'Pokéflauta Vermelha'
+  'Pokéflauta Amarela', 'Pokéflauta Azul', 'Pokéflauta Branca', 'Pokéflauta Preta', 'Pokéflauta Vermelha',
+  // Pedras de Evolução
+  'Dawnstone', 'Duskstone', 'Everstone', 'Moonstone', 'Leafstone',
+  'Firestone', 'Sunstone', 'Shinystone', 'Waterstone', 'Thunderstone', 'Icestone'
 ]
 
 // Lista de imagens de Pokeovo (será randomizada quando adicionar)
@@ -1735,6 +1738,19 @@ const POKELOJA_DATA = {
     { name: 'Pokéflauta Branca', price: null, description: 'Esta flauta pode ser tocada uma vez semanal tendo como alvo um pokémon selvagem a até 10 metros que não possua Cacofonia. Role 1d20. Se o resultado for 16 ou mais e o Nível do pokémon for menor que o Nível do seu pokémon +10, o pokémon selvagem chama por aliados. O Narrador determinará quantos pokémons selvagens se juntarão ao encontro.', image: '/pokeflautas/pokeflautabranca.png' },
     { name: 'Pokéflauta Preta', price: null, description: 'Esta flauta pode ser tocada uma vez diária tendo como alvo um pokémon selvagem a até 10 metros que não possua Cacofonia. Role 1d20. Se o resultado for 6 ou mais e o Nível do pokémon for menor que o Nível do seu pokémon -10, o pokémon selvagem foge com sucesso instantaneamente.', image: '/pokeflautas/pokeflautapreta.png' },
     { name: 'Pokéflauta Vermelha', price: null, description: 'Uma vez diária, quando tocada, restaura todos os pokémons a até 3 metros de Paixão.', image: '/pokeflautas/pokeflautavermelha.png' }
+  ],
+  'Pedras de Evolução': [
+    { name: 'Dawnstone', description: 'Pedra do amanhecer, evolui certos pokémons.', image: '/pedrasvolutivas/dawnstone.png', noShop: true },
+    { name: 'Duskstone', description: 'Pedra do crepúsculo, evolui certos pokémons.', image: '/pedrasvolutivas/duskstone.png', noShop: true },
+    { name: 'Everstone', description: 'Pedra contínua, evita a evolução dos pokémons.', image: '/pedrasvolutivas/everstone.png', noShop: true },
+    { name: 'Moonstone', description: 'Pedra da lua, evolui certos pokémons.', image: '/pedrasvolutivas/moonstone.png', noShop: true },
+    { name: 'Leafstone', description: 'Pedra da folha, evolui certos pokémons.', image: '/pedrasvolutivas/pedradafolha.png', noShop: true },
+    { name: 'Firestone', description: 'Pedra do fogo, evolui certos pokémons.', image: '/pedrasvolutivas/pedradofogo.png', noShop: true },
+    { name: 'Sunstone', description: 'Pedra do sol, evolui certos pokémons.', image: '/pedrasvolutivas/pedradosol.png', noShop: true },
+    { name: 'Shinystone', description: 'Pedra brilhante, evolui certos pokémons.', image: '/pedrasvolutivas/shinystone.png', noShop: true },
+    { name: 'Waterstone', description: 'Pedra da água, evolui certos pokémons.', image: '/pedrasvolutivas/waterstone.png', noShop: true },
+    { name: 'Thunderstone', description: 'Pedra do trovão, evolui certos pokémons.', image: '/pedra-trovao.png', noShop: true },
+    { name: 'Icestone', description: 'Pedra do gelo, evolui certos pokémons.', image: '/pedrasvolutivas/icestone.png', noShop: true }
   ]
 }
 
@@ -4036,6 +4052,28 @@ function App() {
   const [safariNpcDamageAmount, setSafariNpcDamageAmount] = useState('')
   const [safariNpcDamageRunNumber, setSafariNpcDamageRunNumber] = useState(null)
 
+  // ===== STATES CASSINO =====
+  const [cassinoTab, setCassinoTab] = useState('Tipagem')
+  const [cassinoStaffTab, setCassinoStaffTab] = useState('Tipagem Staff')
+  const [cassinoMenuView, setCassinoMenuView] = useState('main') // 'main' | 'espectador' | 'ranking'
+  const [cassinoPermissions, setCassinoPermissions] = useState({}) // { Alocin: bool, ... }
+  const [cassinoRanking, setCassinoRanking] = useState([]) // [{ username, score }]
+  const [cassinoActiveGames, setCassinoActiveGames] = useState({}) // { username: gameState }
+  // Game states
+  const [cassinoGameActive, setCassinoGameActive] = useState(false)
+  const [cassinoGamePhase, setCassinoGamePhase] = useState('idle') // 'idle'|'choosingCapture'|'captureFlipping'|'battle'|'revealOpponent'|'swapChoice'|'gameOver'|'victory'
+  const [cassinoDeck, setCassinoDeck] = useState([])
+  const [cassinoDiscardPile, setCassinoDiscardPile] = useState([])
+  const [cassinoCaptured, setCassinoCaptured] = useState(null)
+  const [cassinoDrawnCards, setCassinoDrawnCards] = useState([])
+  const [cassinoCurrentOpponent, setCassinoCurrentOpponent] = useState(null)
+  const [cassinoScore, setCassinoScore] = useState(0)
+  const [cassinoStreak, setCassinoStreak] = useState(0)
+  const [cassinoSelectedCardIdx, setCassinoSelectedCardIdx] = useState(null)
+  const [cassinoBattleResult, setCassinoBattleResult] = useState(null) // { correct, playerChoice, correctChoice, bonus, addedPoints }
+  const [cassinoCardsVisible, setCassinoCardsVisible] = useState(false)
+  const [cassinoFlipDone, setCassinoFlipDone] = useState(false)
+
   // ===== STATES SAFARI - TREINADOR =====
   const [safariSubarea, setSafariSubarea] = useState('Mapa Safari')
   const [showMapaSafariCompletoModal, setShowMapaSafariCompletoModal] = useState(false)
@@ -4521,8 +4559,8 @@ function App() {
     { username: 'Pedro', type: 'treinador', gradient: 'linear-gradient(135deg, #0000CD, #4169E1, #00CED1, #32CD32)' }
   ]
 
-  const mestreAreas = ['Gerador Pokémon', 'Árvore de Apricorns M', 'Batalha', 'Batalha Game Boy M', 'Bugigangas do Mestre', 'Cenários da Sessão', 'Central Niaypeta Rio Corp™ M', 'Clima', 'Enciclopédia M', 'Hub de Troca M', 'Interlúdio M', 'Mundo M', 'NPCs Arquivados', 'PokeApp', 'Pokémon NPC', 'Safari Staff', 'Times NPC', 'Treinador NPC', 'Objetivos M', 'Visão do Mestre', 'XP & Capturas M']
-  const treinadorAreas = ['Treinador', 'Árvore de Apricorns', 'Batalha Game Boy', 'Batalha Pkm', 'Características & Talentos', 'Central Niaypeta Rio Corp™', 'Enciclopédia', 'Hub de Troca', 'Insígnias', 'Interlúdio', 'Mochila', 'Mundo', 'PC', 'Pokédex', 'Pokéloja', 'Progressão', 'Safari', 'SmartPokefone']
+  const mestreAreas = ['Gerador Pokémon', 'Árvore de Apricorns M', 'Batalha', 'Batalha Game Boy M', 'Bugigangas do Mestre', 'Cassino Staff', 'Cenários da Sessão', 'Central Niaypeta Rio Corp™ M', 'Clima', 'Enciclopédia M', 'Hub de Troca M', 'Interlúdio M', 'Mundo M', 'NPCs Arquivados', 'PokeApp', 'Pokémon NPC', 'Safari Staff', 'Times NPC', 'Treinador NPC', 'Objetivos M', 'Visão do Mestre', 'XP & Capturas M']
+  const treinadorAreas = ['Treinador', 'Árvore de Apricorns', 'Batalha Game Boy', 'Batalha Pkm', 'Cassino', 'Características & Talentos', 'Central Niaypeta Rio Corp™', 'Enciclopédia', 'Hub de Troca', 'Insígnias', 'Interlúdio', 'Mochila', 'Mundo', 'PC', 'Pokédex', 'Pokéloja', 'Progressão', 'Safari', 'SmartPokefone']
 
   // ===== CONFIGURACOES SAFARI =====
   const SAFARI_TRAINERS = ['Alocin', 'Lila', 'Ludovic', 'Noryat', 'Pedro']
@@ -4535,9 +4573,10 @@ function App() {
     'Área Oeste': ['Área Central', 'Área Noroeste'],
     'Área Nordeste': ['Área Leste', 'Área Norte'],
     'Área Noroeste': ['Área Oeste', 'Área Norte'],
-    'Área Norte': ['Área Nordeste', 'Área Noroeste', 'Caverna 1'],
-    'Caverna 1': ['Área Norte']
-    // Caverna 2 e 3 não têm navegação via botão — apenas via tiles especiais
+    'Área Norte': ['Área Nordeste', 'Área Noroeste', 'Caverna 1', 'Caverna Congelada 1'],
+    'Caverna 1': ['Área Norte'],
+    'Caverna Congelada 1': ['Área Norte']
+    // Caverna 2, 3 e Congeladas 2/3 não têm navegação via botão — apenas via tiles especiais
   }
 
   const SAFARI_AREA_TERRAIN = {
@@ -4549,12 +4588,18 @@ function App() {
     'Área Norte': { grama: 50, agua: 50 },
     'Caverna 1': { cave: 100 },
     'Caverna 2': { cave: 100 },
-    'Caverna 3': { cave: 40, lava: 60 }
+    'Caverna 3': { cave: 40, lava: 60 },
+    'Caverna Congelada 1': { frozenCave: 100 },
+    'Caverna Congelada 2': { frozenCave: 100 },
+    'Caverna Congelada 3': { frozenCave: 100 }
   }
 
   const CAVE_AREAS = ['Caverna 1', 'Caverna 2', 'Caverna 3']
   const CAVE_NEXT_AREA = { 'Caverna 1': 'Caverna 2', 'Caverna 2': 'Caverna 3' }
   const CAVE_PREVIOUS_AREA = { 'Caverna 2': 'Caverna 1', 'Caverna 3': 'Caverna 2' }
+  const FROZEN_CAVE_AREAS = ['Caverna Congelada 1', 'Caverna Congelada 2', 'Caverna Congelada 3']
+  const FROZEN_CAVE_NEXT_AREA = { 'Caverna Congelada 1': 'Caverna Congelada 2', 'Caverna Congelada 2': 'Caverna Congelada 3' }
+  const FROZEN_CAVE_PREVIOUS_AREA = { 'Caverna Congelada 2': 'Caverna Congelada 1', 'Caverna Congelada 3': 'Caverna Congelada 2' }
 
   const SAFARI_SOLO_SPECIES = [
     'Scyther', 'Pinsir', 'Golduck', 'Lapras', 'Octillery', 'Froakie', 'Wobbuffet', 'Tympole', 'Tauros', 'Girafarig', 'Gligar', 'Quagsire', 'Miltank',
@@ -4694,7 +4739,29 @@ function App() {
     { pokemon: 'Magmar', chance: 1, level: '28-38', area: 'Caverna 3', terrain: 'Cave', isSkittish: true },
     { pokemon: 'Litwick', chance: 1, level: '10-20', area: 'Caverna 3', terrain: 'Cave', isSkittish: true },
     { pokemon: 'Cyndaquil', chance: 1, level: '10-20', area: 'Caverna 3', terrain: 'Cave', isSkittish: true },
-    { pokemon: null, chance: 10, level: '-', area: 'Caverna 3', terrain: 'Cave', isSkittish: false }
+    { pokemon: null, chance: 10, level: '-', area: 'Caverna 3', terrain: 'Cave', isSkittish: false },
+    // Caverna Congelada 1 - TerraNeivada
+    { pokemon: 'Snorunt', chance: 45, level: '15-20', area: 'Caverna Congelada 1', terrain: 'TerraNeivada', isSkittish: false },
+    { pokemon: 'Swinub', chance: 35, level: '15-20', area: 'Caverna Congelada 1', terrain: 'TerraNeivada', isSkittish: false },
+    { pokemon: 'Delibird', chance: 5, level: '18-22', area: 'Caverna Congelada 1', terrain: 'TerraNeivada', isSkittish: true },
+    { pokemon: null, chance: 15, level: '-', area: 'Caverna Congelada 1', terrain: 'TerraNeivada', isSkittish: false },
+    // Caverna Congelada 1 - Neve
+    { pokemon: 'Snorunt', chance: 45, level: '15-20', area: 'Caverna Congelada 1', terrain: 'Neve', isSkittish: false },
+    { pokemon: 'Swinub', chance: 35, level: '15-20', area: 'Caverna Congelada 1', terrain: 'Neve', isSkittish: false },
+    { pokemon: 'Delibird', chance: 5, level: '18-22', area: 'Caverna Congelada 1', terrain: 'Neve', isSkittish: true },
+    { pokemon: null, chance: 15, level: '-', area: 'Caverna Congelada 1', terrain: 'Neve', isSkittish: false },
+    // Caverna Congelada 2 - Neve
+    { pokemon: 'Swinub', chance: 40, level: '20-25', area: 'Caverna Congelada 2', terrain: 'Neve', isSkittish: false },
+    { pokemon: 'Piloswine', chance: 10, level: '28-33', area: 'Caverna Congelada 2', terrain: 'Neve', isSkittish: false },
+    { pokemon: 'Dewgong', chance: 15, level: '22-27', area: 'Caverna Congelada 2', terrain: 'Neve', isSkittish: false },
+    { pokemon: 'Jynx', chance: 10, level: '22-27', area: 'Caverna Congelada 2', terrain: 'Neve', isSkittish: true },
+    { pokemon: null, chance: 25, level: '-', area: 'Caverna Congelada 2', terrain: 'Neve', isSkittish: false },
+    // Caverna Congelada 3 - Neve
+    { pokemon: 'Piloswine', chance: 25, level: '30-38', area: 'Caverna Congelada 3', terrain: 'Neve', isSkittish: false },
+    { pokemon: 'Jynx', chance: 20, level: '30-35', area: 'Caverna Congelada 3', terrain: 'Neve', isSkittish: true },
+    { pokemon: 'Lapras', chance: 5, level: '30-38', area: 'Caverna Congelada 3', terrain: 'Neve', isSkittish: true },
+    { pokemon: 'Froslass', chance: 5, level: '35-40', area: 'Caverna Congelada 3', terrain: 'Neve', isSkittish: true },
+    { pokemon: null, chance: 45, level: '-', area: 'Caverna Congelada 3', terrain: 'Neve', isSkittish: false }
   ]
 
   const allClasses = [
@@ -8021,6 +8088,158 @@ function App() {
     setShowRepairPokeballModal(false)
     setSelectedPokeballToRepair('')
     setRepairPokeballSearch('')
+  }
+
+  // ===== FUNÇÕES DO CASSINO - TIPAGEM =====
+
+  const calcCassinoStreakBonus = (streak) => {
+    if (streak % 10 === 0) return 12
+    if (streak % 9 === 0) return 8
+    if (streak % 3 === 0) return 4
+    return 0
+  }
+
+  const generateCassinoDeck = () => {
+    const shuffled = [...pokedexData].sort(() => Math.random() - 0.5)
+    const selected = shuffled.slice(0, 33)
+    return selected.map(p => ({
+      dexNumber: p.dexNumber,
+      nome: p.nome,
+      tipos: p.tipos,
+      selectedType: p.tipos[Math.floor(Math.random() * p.tipos.length)],
+      imageUrl: SPECIES_CUSTOM_IMAGES[p.nome] || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.dexNumber}.png`
+    }))
+  }
+
+  const handleStartTipagemGame = () => {
+    const deck = generateCassinoDeck()
+    setCassinoDeck(deck)
+    setCassinoDiscardPile([])
+    setCassinoCaptured(null)
+    setCassinoDrawnCards([])
+    setCassinoCurrentOpponent(null)
+    setCassinoScore(0)
+    setCassinoStreak(0)
+    setCassinoSelectedCardIdx(null)
+    setCassinoBattleResult(null)
+    setCassinoCardsVisible(false)
+    setCassinoFlipDone(false)
+    setCassinoGamePhase('idle')
+    setCassinoGameActive(true)
+    saveCassinoActiveGame({ player: currentUser.username, phase: 'idle', score: 0, streak: 0, deckSize: deck.length })
+  }
+
+  const handleCapturarCarta = () => {
+    const drawn = cassinoDeck.slice(0, 3)
+    const remaining = cassinoDeck.slice(3)
+    setCassinoDrawnCards(drawn)
+    setCassinoDeck(remaining)
+    setCassinoCardsVisible(false)
+    setCassinoGamePhase('choosingCapture')
+    setTimeout(() => setCassinoCardsVisible(true), 50)
+  }
+
+  const handleChooseCard = (idx) => {
+    if (cassinoGamePhase !== 'choosingCapture') return
+    setCassinoSelectedCardIdx(idx)
+    setCassinoFlipDone(false)
+    setCassinoGamePhase('captureFlipping')
+    setTimeout(() => {
+      setCassinoFlipDone(true)
+      setTimeout(() => {
+        const chosen = cassinoDrawnCards[idx]
+        const notChosen = cassinoDrawnCards.filter((_, i) => i !== idx)
+        const newDeck = [...cassinoDeck, ...notChosen].sort(() => Math.random() - 0.5)
+        setCassinoCaptured(chosen)
+        setCassinoDeck(newDeck)
+        setCassinoDrawnCards([])
+        setCassinoSelectedCardIdx(null)
+        setCassinoFlipDone(false)
+        setCassinoGamePhase('battle')
+        saveCassinoActiveGame({ player: currentUser.username, phase: 'battle', captured: chosen, score: cassinoScore, streak: cassinoStreak, deckSize: newDeck.length })
+      }, 400)
+    }, 600)
+  }
+
+  const handleChooseAnswer = (playerChoice) => {
+    if (cassinoGamePhase !== 'battle' || cassinoDeck.length === 0) return
+    const opponent = cassinoDeck[0]
+    const newDeck = cassinoDeck.slice(1)
+    setCassinoCurrentOpponent(opponent)
+    setCassinoDeck(newDeck)
+    setCassinoGamePhase('revealOpponent')
+    setTimeout(async () => {
+      const mult = calcTypeMultiplier(cassinoCaptured.selectedType, [opponent.selectedType])
+      let correctChoice
+      if (mult === 0) correctChoice = 'Imune'
+      else if (mult === 1) correctChoice = 'Neutro'
+      else if (mult < 1) correctChoice = 'Desvantagem'
+      else correctChoice = 'Vantagem'
+      const isCorrect = playerChoice === correctChoice
+      if (isCorrect) {
+        const newStreak = cassinoStreak + 1
+        const bonus = calcCassinoStreakBonus(newStreak)
+        const addedPoints = 1 + bonus
+        const newScore = cassinoScore + addedPoints
+        setCassinoStreak(newStreak)
+        setCassinoScore(newScore)
+        setCassinoBattleResult({ correct: true, playerChoice, correctChoice, bonus, addedPoints })
+        if (newDeck.length === 0) {
+          setCassinoGamePhase('victory')
+          await internalSaveCassinoScore(currentUser.username, newScore)
+          await clearCassinoActiveGame()
+        } else {
+          setCassinoGamePhase('swapChoice')
+          saveCassinoActiveGame({ player: currentUser.username, phase: 'swapChoice', captured: cassinoCaptured, opponent, score: newScore, streak: newStreak, deckSize: newDeck.length })
+        }
+      } else {
+        setCassinoBattleResult({ correct: false, playerChoice, correctChoice, bonus: 0, addedPoints: 0 })
+        setCassinoGamePhase('gameOver')
+        await internalSaveCassinoScore(currentUser.username, cassinoScore)
+        await clearCassinoActiveGame()
+        const newPerms = { ...cassinoPermissions, [currentUser.username]: false }
+        setCassinoPermissions(newPerms)
+        await saveCassinoPermissions(newPerms)
+      }
+    }, 800)
+  }
+
+  const handleSwapChoice = async (swap) => {
+    const newCaptured = swap ? cassinoCurrentOpponent : cassinoCaptured
+    const toDiscard = swap ? cassinoCaptured : cassinoCurrentOpponent
+    setCassinoCaptured(newCaptured)
+    setCassinoDiscardPile(prev => [...prev, toDiscard])
+    setCassinoCurrentOpponent(null)
+    setCassinoBattleResult(null)
+    if (cassinoDeck.length === 0) {
+      setCassinoGamePhase('victory')
+      await internalSaveCassinoScore(currentUser.username, cassinoScore)
+      await clearCassinoActiveGame()
+    } else {
+      setCassinoGamePhase('battle')
+      saveCassinoActiveGame({ player: currentUser.username, phase: 'battle', captured: newCaptured, score: cassinoScore, streak: cassinoStreak, deckSize: cassinoDeck.length })
+    }
+  }
+
+  const internalSaveCassinoScore = async (username, score) => {
+    if (!useFirebase || score === 0) return
+    const currentRanking = [...(cassinoRanking || [])]
+    const existingIdx = currentRanking.findIndex(r => r.username === username)
+    if (existingIdx >= 0) {
+      if (score > currentRanking[existingIdx].score) {
+        currentRanking[existingIdx] = { username, score }
+      }
+    } else {
+      currentRanking.push({ username, score })
+    }
+    const newRanking = currentRanking.sort((a, b) => b.score - a.score).slice(0, 5)
+    setCassinoRanking(newRanking)
+    await saveCassinoRanking(newRanking)
+  }
+
+  const handleZerarCassinoRanking = async () => {
+    setCassinoRanking([])
+    await saveCassinoRanking([])
   }
 
   // Função para chocar ovo
@@ -13520,6 +13739,27 @@ function App() {
     }
   }, [useFirebase])
 
+  // Subscribe to cassino data
+  useEffect(() => {
+    if (!useFirebase) return
+    const unsubPerms = subscribeToFirebase('cassino/tipagem/permissions', (data) => {
+      setCassinoPermissions(data || {})
+    })
+    const unsubRanking = subscribeToFirebase('cassino/tipagem/ranking', (data) => {
+      if (Array.isArray(data)) setCassinoRanking(data)
+      else if (data && typeof data === 'object') setCassinoRanking(Object.values(data))
+      else setCassinoRanking([])
+    })
+    const unsubGames = subscribeToFirebase('cassino/tipagem/activeGame', (data) => {
+      setCassinoActiveGames(data || {})
+    })
+    return () => {
+      if (unsubPerms) unsubPerms()
+      if (unsubRanking) unsubRanking()
+      if (unsubGames) unsubGames()
+    }
+  }, [useFirebase])
+
   // Subscribe to clima (weather) data
   useEffect(() => {
     if (!useFirebase) return
@@ -14555,6 +14795,27 @@ function App() {
     await saveSafariData(data)
   }
 
+  // ===== CASSINO FIREBASE FUNCTIONS =====
+  const saveCassinoPermissions = async (newPerms) => {
+    if (!useFirebase) return
+    await saveToFirebase('cassino/tipagem/permissions', newPerms)
+  }
+
+  const saveCassinoRanking = async (newRanking) => {
+    if (!useFirebase) return
+    await saveToFirebase('cassino/tipagem/ranking', newRanking)
+  }
+
+  const saveCassinoActiveGame = async (gameState) => {
+    if (!useFirebase || !currentUser) return
+    await saveToFirebase(`cassino/tipagem/activeGame/${currentUser.username}`, gameState)
+  }
+
+  const clearCassinoActiveGame = async () => {
+    if (!useFirebase || !currentUser) return
+    await saveToFirebase(`cassino/tipagem/activeGame/${currentUser.username}`, null)
+  }
+
   // Salvar grid de um run no Firebase
   const syncGridToRun = async (grid, runNumber) => {
     if (!useFirebase || !runNumber) return
@@ -14738,7 +14999,72 @@ function App() {
 
   // Gerar grid 8x8 do Safari
   const generateSafariGrid = (areaName) => {
+    const isFrozenCave = FROZEN_CAVE_AREAS.includes(areaName)
     const isCave = CAVE_AREAS.includes(areaName)
+
+    // Geração de grid para cavernas congeladas
+    if (isFrozenCave) {
+      const GRID_SIZE = 8
+      const centerCells = [{ row: 3, col: 3 }, { row: 3, col: 4 }, { row: 4, col: 3 }, { row: 4, col: 4 }]
+      const corners = [{ row: 0, col: 0 }, { row: 0, col: 7 }, { row: 7, col: 0 }, { row: 7, col: 7 }]
+      const centerCell = centerCells[Math.floor(Math.random() * centerCells.length)]
+      const cornerCell = corners[Math.floor(Math.random() * corners.length)]
+
+      const hasHoleNeve = areaName === 'Caverna Congelada 1' || areaName === 'Caverna Congelada 2'
+      const hasRopeNeve = areaName === 'Caverna Congelada 2' || areaName === 'Caverna Congelada 3'
+
+      const terrainWeights =
+        areaName === 'Caverna Congelada 1' ? { TerraNeivada: 45, Neve: 45, Pedra: 10 } :
+        areaName === 'Caverna Congelada 2' ? { Neve: 60, Gelo: 30, Pedra: 10 } :
+        { Neve: 40, Gelo: 40, Pedra: 20 }
+
+      const getRandomFrozenTerrain = () => {
+        const total = Object.values(terrainWeights).reduce((a, b) => a + b, 0)
+        let rand = Math.random() * total
+        for (const [terrain, weight] of Object.entries(terrainWeights)) {
+          rand -= weight
+          if (rand <= 0) return terrain
+        }
+        return 'Neve'
+      }
+
+      const pedraImages = ['/gelosafari/pedra1gelosafari.png', '/gelosafari/pedra2gelosafari.png', '/gelosafari/pedra3gelosafari.png']
+      const getRandomPedraImage = () => pedraImages[Math.floor(Math.random() * pedraImages.length)]
+
+      const grid = []
+      for (let row = 0; row < GRID_SIZE; row++) {
+        const gridRow = []
+        for (let col = 0; col < GRID_SIZE; col++) {
+          let cell = { terrain: 'Neve', pokemon: null, quantity: 0, isSkittish: false, level: 0, levelRange: '-', revealed: false, specialTile: null, pedraImage: null }
+
+          if (hasHoleNeve && row === centerCell.row && col === centerCell.col) {
+            cell.specialTile = 'holeNeve'
+          } else if (hasRopeNeve && row === cornerCell.row && col === cornerCell.col) {
+            cell.specialTile = 'ropeNeve'
+          } else {
+            const terrain = getRandomFrozenTerrain()
+            cell.terrain = terrain
+            if (terrain === 'Pedra') {
+              cell.pedraImage = getRandomPedraImage()
+            } else if (terrain !== 'Gelo') {
+              // Gelo: 0% encontros — sem pokémon
+              const encounter = rollSafariEncounter(areaName, terrain)
+              if (encounter && encounter.pokemon) {
+                const isSolo = SAFARI_SOLO_SPECIES.includes(encounter.pokemon)
+                cell.pokemon = encounter.pokemon
+                cell.quantity = isSolo ? 1 : Math.floor(Math.random() * 6) + 1
+                cell.isSkittish = encounter.isSkittish
+                cell.level = parseSafariLevel(encounter.level)
+                cell.levelRange = encounter.level
+              }
+            }
+          }
+          gridRow.push(cell)
+        }
+        grid.push(gridRow)
+      }
+      return grid
+    }
 
     if (!isCave) {
       const grid = []
@@ -15176,6 +15502,27 @@ function App() {
       return
     }
 
+    // Tile de corda de neve: navegar para área anterior congelada (sem validação)
+    if (cell.specialTile === 'ropeNeve') {
+      if (currentTimer <= 0) { alert('⏰ Tempo esgotado!'); return }
+      const prevArea = FROZEN_CAVE_PREVIOUS_AREA[safariCurrentArea]
+      if (!prevArea) return
+      const newGrid = generateSafariGrid(prevArea)
+      setSafariCurrentArea(prevArea)
+      setSafariGridData(newGrid)
+      setSafariGridClickCount(0)
+      const resetPositions = Object.fromEntries(Object.entries(safariRunLastClicked).filter(([k]) => k !== runKey))
+      setSafariRunLastClicked(resetPositions)
+      syncGridToRun(newGrid, safariActiveRun)
+      if (currentTimer > 0) updateSafariTimer(safariActiveRun, currentTimer - 60)
+      const newRunAreas = { ...safariRunAreas, [runKey]: prevArea }
+      setSafariRunAreas(newRunAreas)
+      saveSafariToFirebase({ runAreas: newRunAreas, runPositions: resetPositions })
+      const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      addChatMessage({ username: 'Sistema', text: `${currentUser.username} (Run ${safariActiveRun}) subiu pela corda de neve de volta para ${prevArea}!`, timestamp, isDiceRoll: false })
+      return
+    }
+
     // Tile de buraco: navegar para próxima caverna
     if (cell.specialTile === 'hole') {
       if (currentTimer <= 0) { alert('⏰ Tempo esgotado!'); return }
@@ -15207,8 +15554,42 @@ function App() {
       return
     }
 
-    // Célula já revelada: ignorar
-    if (cell.revealed) return
+    // Tile de buraco de neve: navegar para próxima caverna congelada
+    if (cell.specialTile === 'holeNeve') {
+      if (currentTimer <= 0) { alert('⏰ Tempo esgotado!'); return }
+      const nextArea = FROZEN_CAVE_NEXT_AREA[safariCurrentArea]
+      if (!nextArea) return
+      const lastClicked = safariRunLastClicked[runKey]
+      const revealedCells = safariGridData.flat().filter(c => c.revealed)
+      const isFirstClick = revealedCells.length === 0
+      if (!isFirstClick && lastClicked) {
+        const dist = Math.max(Math.abs(row - lastClicked.row), Math.abs(col - lastClicked.col))
+        if (dist > 1) { alert('⚠️ Você precisa estar adjacente ao buraco de neve para entrar!'); return }
+      } else if (isFirstClick) {
+        if (!isEdgeCell(row, col, safariGridData.length)) { alert('⚠️ O primeiro clique deve ser na borda do grid!'); return }
+      }
+      const newGrid = generateSafariGrid(nextArea)
+      setSafariCurrentArea(nextArea)
+      setSafariGridData(newGrid)
+      setSafariGridClickCount(0)
+      const resetPositions = Object.fromEntries(Object.entries(safariRunLastClicked).filter(([k]) => k !== runKey))
+      setSafariRunLastClicked(resetPositions)
+      syncGridToRun(newGrid, safariActiveRun)
+      if (currentTimer > 0) updateSafariTimer(safariActiveRun, currentTimer - 60)
+      const newRunAreas = { ...safariRunAreas, [runKey]: nextArea }
+      setSafariRunAreas(newRunAreas)
+      saveSafariToFirebase({ runAreas: newRunAreas, runPositions: resetPositions })
+      const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      addChatMessage({ username: 'Sistema', text: `${currentUser.username} (Run ${safariActiveRun}) desceu pelo buraco de neve para ${nextArea}!`, timestamp, isDiceRoll: false })
+      return
+    }
+
+    // Tile de pedra: bloquear
+    if (cell.terrain === 'Pedra') return
+
+    // Célula já revelada: ignorar (exceto Gelo em Cavernas Congeladas — o slide sempre pode ser disparado)
+    const isGeloCave = cell.terrain === 'Gelo' && FROZEN_CAVE_AREAS.includes(safariCurrentArea)
+    if (cell.revealed && !isGeloCave) return
 
     // Verificar timer para tiles normais
     if (currentTimer <= 0) {
@@ -15221,6 +15602,7 @@ function App() {
     const isFirstClick = revealedCells.length === 0
     const lastClicked = safariRunLastClicked[runKey]
     const isCave23 = safariCurrentArea === 'Caverna 2' || safariCurrentArea === 'Caverna 3'
+    const isFrozenCave23 = safariCurrentArea === 'Caverna Congelada 2' || safariCurrentArea === 'Caverna Congelada 3'
     const playerSalto = (safariCurrentArea === 'Caverna 3') ? (safariSaltoValues[runKey] || 0) : 0
     const maxReach = playerSalto + 1
 
@@ -15254,8 +15636,27 @@ function App() {
           }
         }
       }
+    } else if (isFrozenCave23) {
+      // Cavernas Congeladas 2 e 3: primeiro clique adjacente à corda, depois movimento normal
+      const ropePos = findSpecialTile(safariGridData, 'ropeNeve')
+      if (isFirstClick) {
+        if (!ropePos || !isAdjacentToCell(row, col, ropePos.row, ropePos.col)) {
+          alert('⚠️ Ao entrar na caverna congelada, o primeiro clique deve ser adjacente à corda de neve!')
+          return
+        }
+      } else {
+        const isAdjacentToLast = lastClicked && isAdjacentToCell(row, col, lastClicked.row, lastClicked.col)
+        const allLastAdjacentRevealed = lastClicked && allAdjacentRevealed(lastClicked.row, lastClicked.col, safariGridData)
+        const isAdjacentToRevealed = isAdjacentToAnyRevealed(row, col, safariGridData)
+        if (!isAdjacentToLast) {
+          if (!allLastAdjacentRevealed || !isAdjacentToRevealed) {
+            alert(!allLastAdjacentRevealed ? '⚠️ Você só pode clicar em quadrados adjacentes ao último clicado!' : '⚠️ Você só pode clicar em quadrados adjacentes aos já revelados!')
+            return
+          }
+        }
+      }
     } else {
-      // Caverna 1 e áreas normais
+      // Caverna 1, Caverna Congelada 1 e áreas normais
       if (isFirstClick) {
         if (!isEdgeCell(row, col, safariGridData.length)) {
           alert('⚠️ O primeiro clique deve ser em um dos quadrados da borda do grid!')
@@ -15274,10 +15675,83 @@ function App() {
       }
     }
 
+    // Mecânica de deslizamento no gelo (Cavernas Congeladas 2 e 3)
+    let finalRow = row, finalCol = col
+    if (cell.terrain === 'Gelo' && FROZEN_CAVE_AREAS.includes(safariCurrentArea)) {
+      const refPos = lastClicked || findSpecialTile(safariGridData, 'ropeNeve')
+      if (refPos) {
+        const dr = Math.sign(row - refPos.row)
+        const dc = Math.sign(col - refPos.col)
+        if (dr !== 0 || dc !== 0) {
+          let sr = row, sc = col
+          while (true) {
+            const nr = sr + dr, nc = sc + dc
+            if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) break
+            const nCell = safariGridData[nr][nc]
+            if (nCell.terrain === 'Pedra') break
+            sr = nr; sc = nc
+            if (nCell.terrain !== 'Gelo') break
+          }
+          finalRow = sr; finalCol = sc
+        }
+      }
+    }
+
+    // Se o deslizamento chegou a um tile especial, tratar como clique nele
+    const slideDest = safariGridData[finalRow][finalCol]
+    if (finalRow !== row || finalCol !== col) {
+      if (slideDest.specialTile === 'holeNeve') {
+        const nextArea = FROZEN_CAVE_NEXT_AREA[safariCurrentArea]
+        if (nextArea && currentTimer > 0) {
+          const newGrid = generateSafariGrid(nextArea)
+          setSafariCurrentArea(nextArea)
+          setSafariGridData(newGrid)
+          setSafariGridClickCount(0)
+          const resetPositions = Object.fromEntries(Object.entries(safariRunLastClicked).filter(([k]) => k !== runKey))
+          setSafariRunLastClicked(resetPositions)
+          syncGridToRun(newGrid, safariActiveRun)
+          updateSafariTimer(safariActiveRun, currentTimer - 60)
+          const newRunAreas = { ...safariRunAreas, [runKey]: nextArea }
+          setSafariRunAreas(newRunAreas)
+          saveSafariToFirebase({ runAreas: newRunAreas, runPositions: resetPositions })
+          const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          addChatMessage({ username: 'Sistema', text: `${currentUser.username} deslizou no gelo e caiu pelo buraco de neve para ${nextArea}!`, timestamp, isDiceRoll: false })
+        }
+        return
+      }
+      if (slideDest.specialTile === 'ropeNeve') {
+        const prevArea = FROZEN_CAVE_PREVIOUS_AREA[safariCurrentArea]
+        if (prevArea && currentTimer > 0) {
+          const newGrid = generateSafariGrid(prevArea)
+          setSafariCurrentArea(prevArea)
+          setSafariGridData(newGrid)
+          setSafariGridClickCount(0)
+          const resetPositions = Object.fromEntries(Object.entries(safariRunLastClicked).filter(([k]) => k !== runKey))
+          setSafariRunLastClicked(resetPositions)
+          syncGridToRun(newGrid, safariActiveRun)
+          updateSafariTimer(safariActiveRun, currentTimer - 60)
+          const newRunAreas = { ...safariRunAreas, [runKey]: prevArea }
+          setSafariRunAreas(newRunAreas)
+          saveSafariToFirebase({ runAreas: newRunAreas, runPositions: resetPositions })
+          const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          addChatMessage({ username: 'Sistema', text: `${currentUser.username} deslizou no gelo e voltou para ${prevArea}!`, timestamp, isDiceRoll: false })
+        }
+        return
+      }
+    }
+
+    // Se o destino final já foi revelado, apenas atualiza posição (sem re-revelar ou novo encontro)
+    if (slideDest.revealed) {
+      const newRunPositions = { ...safariRunLastClicked, [runKey]: { row: finalRow, col: finalCol } }
+      setSafariRunLastClicked(newRunPositions)
+      saveSafariToFirebase({ runPositions: newRunPositions })
+      return
+    }
+
     const newGrid = safariGridData.map((r, ri) =>
-      r.map((c, ci) => (ri === row && ci === col ? { ...c, revealed: true } : c))
+      (r || []).map((c, ci) => (ri === finalRow && ci === finalCol ? { ...c, revealed: true } : c))
     )
-    const newRunPositions = { ...safariRunLastClicked, [runKey]: { row, col } }
+    const newRunPositions = { ...safariRunLastClicked, [runKey]: { row: finalRow, col: finalCol } }
     setSafariRunLastClicked(newRunPositions)
     setSafariGridData(newGrid)
     syncGridToRun(newGrid, safariActiveRun)
@@ -15293,29 +15767,34 @@ function App() {
     saveSafariToFirebase({ saltoValues: newSaltoValues, runPositions: newRunPositions })
 
     const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    const terrenoLabel = cell.terrain === 'Cave' ? 'caverna' : cell.terrain === 'Grama' ? 'grama' : 'água'
+    const terrenoLabel =
+      slideDest.terrain === 'Cave' ? 'caverna' :
+      slideDest.terrain === 'Grama' ? 'grama' :
+      slideDest.terrain === 'Neve' ? 'neve' :
+      slideDest.terrain === 'TerraNeivada' ? 'terra nevada' :
+      slideDest.terrain === 'Gelo' ? 'gelo' : 'água'
 
-    if (!cell.pokemon) {
+    if (!slideDest.pokemon) {
       addChatMessage({ username: 'Sistema', text: `${currentUser.username} explorou a ${terrenoLabel}, mas não encontrou nenhum pokémon.`, timestamp, isDiceRoll: false })
       return
     }
 
-    const pokemonData = await fetchSafariPokemonData(cell.pokemon)
+    const pokemonData = await fetchSafariPokemonData(slideDest.pokemon)
     const imageUrl = pokemonData.imageUrl
     const types = pokemonData.types
 
     const gridWithImage = newGrid.map((r, ri) =>
-      r.map((c, ci) => (ri === row && ci === col ? { ...c, imageUrl } : c))
+      r.map((c, ci) => (ri === finalRow && ci === finalCol ? { ...c, imageUrl } : c))
     )
     setSafariGridData(gridWithImage)
     syncGridToRun(gridWithImage, safariActiveRun)
 
     const newEncounterPokemon = []
-    for (let i = 0; i < cell.quantity; i++) {
+    for (let i = 0; i < slideDest.quantity; i++) {
       const npcPkm = generateSafariNpcPokemon(
-        cell.pokemon,
-        parseSafariLevel(cell.levelRange || cell.level.toString()),
-        cell.isSkittish,
+        slideDest.pokemon,
+        parseSafariLevel(slideDest.levelRange || slideDest.level.toString()),
+        slideDest.isSkittish,
         imageUrl,
         types
       )
@@ -15325,7 +15804,7 @@ function App() {
     setSafariRunEncounters(newRunEncounters)
     saveSafariToFirebase({ runEncounters: newRunEncounters, runPositions: newRunPositions, saltoValues: newSaltoValues })
 
-    addChatMessage({ username: 'Sistema', text: `${currentUser.username} encontrou ${cell.quantity}x ${cell.pokemon} (Nv.${cell.level})${cell.isSkittish ? ' ⚠️ Arisco!' : ''} na ${terrenoLabel}!`, timestamp, isDiceRoll: false })
+    addChatMessage({ username: 'Sistema', text: `${currentUser.username} encontrou ${slideDest.quantity}x ${slideDest.pokemon} (Nv.${slideDest.level})${slideDest.isSkittish ? ' ⚠️ Arisco!' : ''} na ${terrenoLabel}!`, timestamp, isDiceRoll: false })
   }
 
   const handleSafariIsca = () => {
@@ -18380,11 +18859,14 @@ function App() {
               <img src="/estilizador.png" alt="" className="w-5 h-5 object-contain" />
               Contenção — Selecionar Pokémon
             </h3>
-            {npcPokemon.filter(p => p.emCena).length === 0 ? (
+            {(() => {
+              const safariEmCena = Object.values(safariRunEncounters).flat().filter(p => p.emCena)
+              const allEmCena = [...npcPokemon.filter(p => p.emCena), ...safariEmCena]
+              return allEmCena.length === 0 ? (
               <p className={`text-sm text-center py-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhum Pokémon em cena.</p>
             ) : (
               <div className="space-y-2 max-h-72 overflow-y-auto">
-                {npcPokemon.filter(p => p.emCena).map((pkm, i) => (
+                {allEmCena.map((pkm, i) => (
                   <button
                     key={i}
                     onClick={() => handleContencao(pkm)}
@@ -18400,7 +18882,8 @@ function App() {
                   </button>
                 ))}
               </div>
-            )}
+            )
+            })()}
             <button
               onClick={() => setShowContencaoSelectModal(false)}
               className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
@@ -30256,15 +30739,21 @@ function App() {
                     </div>
                   ))}
 
-                  {/* Dropdown 6: NPCs em cena */}
+                  {/* Dropdown 6: NPCs em cena (inclui Safari) */}
+                  {(() => {
+                    const safariEmCena = Object.values(safariRunEncounters).flat().filter(p => p.emCena)
+                    const allEmCena = [...npcPokemon.filter(p => p.emCena), ...safariEmCena]
+                    return (
                   <div className="mb-4">
                     <p className={`text-xs font-semibold mb-1 ${darkMode ? 'text-green-400' : 'text-green-600'}`}>NPCs em Cena</p>
                     <select className={`w-full text-sm rounded-lg p-1.5 border ${darkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-800 border-gray-300'}`}
-                      defaultValue="" onChange={e => { const idx = e.target.value; if (idx === '') return; const emCena = npcPokemon.filter(p => p.emCena); setCanalizeSelectedPkm(emCena[parseInt(idx)]) }}>
+                      defaultValue="" onChange={e => { const idx = e.target.value; if (idx === '') return; setCanalizeSelectedPkm(allEmCena[parseInt(idx)]) }}>
                       <option value="">Selecionar NPC...</option>
-                      {npcPokemon.filter(p => p.emCena).map((pkm, i) => <option key={i} value={i}>{pkm.species || pkm.name || 'NPC'} Nv.{pkm.level || '?'}</option>)}
+                      {allEmCena.map((pkm, i) => <option key={i} value={i}>{pkm.species || pkm.name || 'NPC'} Nv.{pkm.level || '?'}</option>)}
                     </select>
                   </div>
+                    )
+                  })()}
 
                   <button
                     onClick={() => { if (canalizeSelectedPkm) { handleCanalizeSelect(canalizeSelectedPkm); setCanalizeSelectedPkm(null) } }}
@@ -47585,23 +48074,45 @@ function App() {
 
                       {/* Grid 8x8 */}
                       <div className="grid grid-cols-8 gap-1 max-w-xl mx-auto">
-                        {safariGridData.map((row, ri) => row.map((cell, ci) => {
+                        {safariGridData.map((row, ri) => (row || []).map((cell, ci) => {
                           const revealedCells = safariGridData.flat().filter(c => c.revealed)
                           const isFirstClick = revealedCells.length === 0
                           const activeRunKey = safariActiveRun ? `run-${safariActiveRun}` : null
                           const lastClicked = activeRunKey ? safariRunLastClicked[activeRunKey] : null
                           const isCave23 = safariCurrentArea === 'Caverna 2' || safariCurrentArea === 'Caverna 3'
+                          const isFrozenCave23 = safariCurrentArea === 'Caverna Congelada 2' || safariCurrentArea === 'Caverna Congelada 3'
                           const playerSalto = (safariCurrentArea === 'Caverna 3') ? (safariSaltoValues[activeRunKey] || 0) : 0
                           const maxReach = playerSalto + 1
 
                           let isClickable = false
                           if (myRunPermission) {
-                            if (cell.specialTile === 'lava') {
+                            if (cell.specialTile === 'lava' || cell.terrain === 'Pedra') {
                               isClickable = false
-                            } else if (cell.specialTile === 'rope' && myTimer > 0) {
+                            } else if ((cell.specialTile === 'rope' || cell.specialTile === 'ropeNeve') && myTimer > 0) {
                               isClickable = true // corda sempre clicável
-                            } else if (!cell.revealed && myTimer > 0) {
-                              if (isFirstClick) {
+                            } else if (cell.specialTile === 'holeNeve' && myTimer > 0) {
+                              // holeNeve: clicável em CC1 se adjacente, não diretamente clicável em CC2/CC3 (só via slide)
+                              if (!isFrozenCave23) {
+                                const isAdj = lastClicked ? isAdjacentToCell(ri, ci, lastClicked.row, lastClicked.col) : isEdgeCell(ri, ci, safariGridData.length)
+                                isClickable = isAdj
+                              }
+                            } else if ((!cell.revealed || (cell.terrain === 'Gelo' && FROZEN_CAVE_AREAS.includes(safariCurrentArea))) && myTimer > 0) {
+                              if (isFrozenCave23) {
+                                // Cavernas Congeladas 2/3: primeiro clique adjacente à corda, depois movimento normal
+                                const ropePos = findSpecialTile(safariGridData, 'ropeNeve')
+                                if (isFirstClick) {
+                                  isClickable = ropePos ? isAdjacentToCell(ri, ci, ropePos.row, ropePos.col) : false
+                                } else {
+                                  const dist = lastClicked ? Math.max(Math.abs(ri - lastClicked.row), Math.abs(ci - lastClicked.col)) : Infinity
+                                  const allLastAdjacentRevealed = lastClicked && allAdjacentRevealed(lastClicked.row, lastClicked.col, safariGridData)
+                                  const isAdjacentToRevealed = isAdjacentToAnyRevealed(ri, ci, safariGridData)
+                                  if (dist <= maxReach) {
+                                    isClickable = true
+                                  } else if (allLastAdjacentRevealed && isAdjacentToRevealed) {
+                                    isClickable = true
+                                  }
+                                }
+                              } else if (isFirstClick) {
                                 if (isCave23) {
                                   const ropePos = findSpecialTile(safariGridData, 'rope')
                                   const isInitialArea = activeRunKey && safariRunStartAreas[activeRunKey] === safariCurrentArea
@@ -47628,19 +48139,22 @@ function App() {
                             }
                           }
 
-                          const isSpecialVisible = cell.specialTile === 'hole' || cell.specialTile === 'rope' || cell.specialTile === 'lava'
+                          const isSpecialVisible = cell.specialTile === 'hole' || cell.specialTile === 'rope' || cell.specialTile === 'lava' || cell.specialTile === 'holeNeve' || cell.specialTile === 'ropeNeve'
                           const isSharedPosition = lastClicked && lastClicked.row === ri && lastClicked.col === ci
                           const runTrainers = activeRunKey ? Object.keys(safariRunPermissions[activeRunKey] || {}).filter(t => safariRunPermissions[activeRunKey][t]) : []
 
                           return (
                             <div key={`${ri}-${ci}`}
-                              onClick={() => myRunPermission && cell.specialTile !== 'lava' && handleSafariCellClick(ri, ci)}
+                              onClick={() => myRunPermission && cell.specialTile !== 'lava' && cell.terrain !== 'Pedra' && handleSafariCellClick(ri, ci)}
                               className={`aspect-square rounded border-2 relative flex flex-col items-center justify-center overflow-hidden ${
-                                cell.specialTile === 'lava' ? 'cursor-not-allowed' :
+                                cell.specialTile === 'lava' || cell.terrain === 'Pedra' ? 'cursor-not-allowed' :
                                 isClickable ? 'cursor-pointer' : cell.revealed ? '' : 'cursor-not-allowed opacity-50'
                               } ${
+                                cell.specialTile === 'ropeNeve' ? 'border-cyan-400' :
+                                cell.specialTile === 'holeNeve' ? 'border-blue-400' :
                                 cell.specialTile === 'rope' ? 'border-yellow-500' :
                                 cell.specialTile === 'hole' ? 'border-orange-500' :
+                                cell.terrain === 'Pedra' ? 'border-gray-600' :
                                 cell.revealed
                                   ? (cell.pokemon
                                     ? (darkMode ? 'bg-yellow-900 border-yellow-600' : 'bg-yellow-100 border-yellow-400')
@@ -47659,8 +48173,22 @@ function App() {
                             {cell.specialTile === 'rope' && (
                               <img src="/holesafarirope.png" alt="corda" className="absolute inset-0 w-full h-full object-cover" />
                             )}
+                            {cell.specialTile === 'holeNeve' && (
+                              <img src="/gelosafari/holenevesafari.png" alt="buraco neve" className="absolute inset-0 w-full h-full object-cover" />
+                            )}
+                            {cell.specialTile === 'ropeNeve' && (
+                              <img src="/gelosafari/holenevesafarirope.png" alt="corda neve" className="absolute inset-0 w-full h-full object-cover" />
+                            )}
                             {!isSpecialVisible && !cell.revealed && (
-                              <img src={cell.terrain === 'Cave' ? '/cavesafari.png' : cell.terrain === 'Grama' ? '/gramasafari.png' : '/aguasafari.png'} alt={cell.terrain}
+                              <img src={
+                                cell.terrain === 'Cave' ? '/cavesafari.png' :
+                                cell.terrain === 'Grama' ? '/gramasafari.png' :
+                                cell.terrain === 'Neve' ? '/gelosafari/nevesafarisafari.png' :
+                                cell.terrain === 'TerraNeivada' ? '/gelosafari/cavewsnowsafari.png' :
+                                cell.terrain === 'Gelo' ? '/gelosafari/gelosafari.png' :
+                                cell.terrain === 'Pedra' ? (cell.pedraImage || '/gelosafari/pedra1gelosafari.png') :
+                                '/aguasafari.png'
+                              } alt={cell.terrain}
                                 className="absolute inset-0 w-full h-full object-cover" />
                             )}
                             {isSharedPosition && runTrainers.length > 0 && (
@@ -50979,8 +51507,22 @@ function App() {
                               {cell.specialTile === 'rope' && (
                                 <img src="/holesafarirope.png" alt="corda" className="absolute inset-0 w-full h-full object-cover" />
                               )}
+                              {cell.specialTile === 'holeNeve' && (
+                                <img src="/gelosafari/holenevesafari.png" alt="buraco neve" className="absolute inset-0 w-full h-full object-cover" />
+                              )}
+                              {cell.specialTile === 'ropeNeve' && (
+                                <img src="/gelosafari/holenevesafarirope.png" alt="corda neve" className="absolute inset-0 w-full h-full object-cover" />
+                              )}
                               {!cell.specialTile && (
-                                <img src={cell.terrain === 'Cave' ? '/cavesafari.png' : cell.terrain === 'Grama' ? '/gramasafari.png' : '/aguasafari.png'} alt={cell.terrain}
+                                <img src={
+                                  cell.terrain === 'Cave' ? '/cavesafari.png' :
+                                  cell.terrain === 'Grama' ? '/gramasafari.png' :
+                                  cell.terrain === 'Neve' ? '/gelosafari/nevesafarisafari.png' :
+                                  cell.terrain === 'TerraNeivada' ? '/gelosafari/cavewsnowsafari.png' :
+                                  cell.terrain === 'Gelo' ? '/gelosafari/gelosafari.png' :
+                                  cell.terrain === 'Pedra' ? (cell.pedraImage || '/gelosafari/pedra1gelosafari.png') :
+                                  '/aguasafari.png'
+                                } alt={cell.terrain}
                                   className="absolute inset-0 w-full h-full object-cover opacity-40" />
                               )}
                               <div className="relative z-10">
@@ -51257,6 +51799,25 @@ function App() {
                                   }`}>
                                   {!isExpanded ? (
                                     <div className="relative group">
+                                      {/* Checkbox Em Cena */}
+                                      <div className="absolute top-1 left-1 z-10" onClick={e => e.stopPropagation()}>
+                                        <label className="flex items-center gap-0.5 cursor-pointer" title="Marcar como Em Cena">
+                                          <input
+                                            type="checkbox"
+                                            checked={!!pokemon.emCena}
+                                            onChange={() => {
+                                              const updated = (safariRunEncounters[activeRunKey] || []).map(p =>
+                                                p.id === pokemon.id ? { ...p, emCena: !p.emCena } : p
+                                              )
+                                              const newEncounters = { ...safariRunEncounters, [activeRunKey]: updated }
+                                              setSafariRunEncounters(newEncounters)
+                                              saveSafariToFirebase({ runEncounters: newEncounters })
+                                            }}
+                                            className="w-3 h-3 accent-green-500"
+                                          />
+                                          <span className={`text-[9px] font-semibold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>Cena</span>
+                                        </label>
+                                      </div>
                                       <div onClick={() => toggleSafariNpcCard(pokemon.id)} className="cursor-pointer p-4 flex flex-col items-center">
                                         {pokemon.imageUrl && <img src={pokemon.imageUrl} alt={pokemon.species} className="w-24 h-24 object-contain mb-2" />}
                                         <p className={`text-sm font-bold text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -56332,6 +56893,551 @@ function App() {
         <KnowledgeDetailModal target={showMundoInfoPopup} onClose={() => setShowMundoInfoPopup(null)} />
         {/* Keyword popup */}
         <KnowledgeDetailModal target={showKnowledgePopup} onClose={() => setShowKnowledgePopup(null)} />
+      </>
+    )
+  }
+
+  // ==================== ÁREA CASSINO STAFF (MESTRE) ====================
+  if (currentArea === 'Cassino Staff' && currentUser.type === 'mestre') {
+    const CASSINO_TRAINERS = SAFARI_TRAINERS
+
+    const renderCassinoRankingList = (zeroBtnVisible) => (
+      <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-4`}>
+        <div className="flex justify-between items-center mb-4">
+          <h4 className={`font-bold text-lg ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>🏆 Top 5 — Tipagem</h4>
+          {zeroBtnVisible && (
+            <button onClick={handleZerarCassinoRanking} className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-lg font-semibold">Zerar Ranking</button>
+          )}
+        </div>
+        {cassinoRanking.length === 0 ? (
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhum score registrado ainda.</p>
+        ) : (
+          <ol className="space-y-2">
+            {cassinoRanking.map((entry, i) => (
+              <li key={i} className={`flex items-center gap-3 p-2 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-white'}`}>
+                <span className={`text-xl font-black w-8 text-center ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : (darkMode ? 'text-gray-400' : 'text-gray-500')}`}>{i + 1}</span>
+                <span className={`flex-1 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{entry.username}</span>
+                <span className={`font-bold text-lg ${darkMode ? 'text-purple-300' : 'text-purple-700'}`}>{entry.score} pts</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    )
+
+    return (
+      <>
+        <div className={`${mainPageClass}`}>
+          {sidebarNav}
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg sticky top-0 z-30`}>
+            <div className="max-w-4xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setSidebarOpen(true)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}><Menu size={24} /></button>
+                  <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>🎰 Cassino Staff</h2>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
+                  {rpsBtn}{mapaContinentalBtn}{pokezapBtn}{pokeAgendaBtn}{batalhaChatBtn}
+                  <button onClick={() => setShowCursorSettingsModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`} title="Configurações de Cursor"><Settings2 size={20} /></button>
+                  <button onClick={handleLogout} className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">Sair</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mx-auto px-4 py-6">
+            {/* Sub-tab navigation */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {['Tipagem Staff', 'Placeholder 1 Staff', 'Placeholder 2 Staff', 'Placeholder 3 Staff'].map(tab => (
+                <button key={tab} onClick={() => setCassinoStaffTab(tab)}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${cassinoStaffTab === tab ? 'bg-purple-600 text-white shadow-lg' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Tipagem Staff */}
+            {cassinoStaffTab === 'Tipagem Staff' && (
+              <div className="space-y-4">
+                {/* Permissões */}
+                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-6`}>
+                  <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>🎮 Permissões de Jogo</h3>
+                  <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Marque para permitir que o treinador inicie uma partida de Tipagem.</p>
+                  <div className="space-y-3">
+                    {CASSINO_TRAINERS.map(trainer => (
+                      <label key={trainer} className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!cassinoPermissions[trainer]}
+                          onChange={async () => {
+                            const newPerms = { ...cassinoPermissions, [trainer]: !cassinoPermissions[trainer] }
+                            setCassinoPermissions(newPerms)
+                            await saveCassinoPermissions(newPerms)
+                          }}
+                          className="w-5 h-5 accent-purple-500"
+                        />
+                        <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{trainer}</span>
+                        {cassinoPermissions[trainer] && <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Permitido</span>}
+                        {cassinoActiveGames[trainer] && <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Em jogo</span>}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Espectador Staff */}
+                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-6`}>
+                  <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>👁️ Espectador</h3>
+                  {Object.keys(cassinoActiveGames).filter(u => cassinoActiveGames[u]).length === 0 ? (
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma partida ativa no momento.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(cassinoActiveGames).filter(([, g]) => g).map(([username, game]) => (
+                        <div key={username} className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-4`}>
+                          <p className={`font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>{username}</p>
+                          <div className="flex gap-4 text-sm flex-wrap">
+                            <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Fase: <strong>{game.phase}</strong></span>
+                            <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Score: <strong className="text-purple-400">{game.score ?? 0}</strong></span>
+                            <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Streak: <strong className="text-orange-400">{game.streak ?? 0}</strong></span>
+                            <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Cartas no baralho: <strong>{game.deckSize ?? '?'}</strong></span>
+                          </div>
+                          {game.captured && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <img src={game.captured.imageUrl} alt={game.captured.nome} className="w-10 h-10 object-contain" onError={e => { e.target.src = '/pokeball.png' }} />
+                              <span className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{game.captured.nome} <span className="text-purple-400">({game.captured.selectedType})</span></span>
+                            </div>
+                          )}
+                          {game.opponent && (
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Oponente: </span>
+                              <img src={game.opponent.imageUrl} alt={game.opponent.nome} className="w-8 h-8 object-contain" onError={e => { e.target.src = '/pokeball.png' }} />
+                              <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{game.opponent.nome} <span className="text-blue-400">({game.opponent.selectedType})</span></span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ranking Staff */}
+                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-6`}>
+                  {renderCassinoRankingList(true)}
+                </div>
+              </div>
+            )}
+
+            {['Placeholder 1 Staff', 'Placeholder 2 Staff', 'Placeholder 3 Staff'].includes(cassinoStaffTab) && (
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-6`}>
+                <p className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Em breve...</p>
+              </div>
+            )}
+          </div>
+        </div>
+        {accountDataModal}{transformacaoModal}{cursorSettingsModal}{userCursorModal}
+        {scenarioPopupOverlay}{mostrarTriunfosOverlay}
+        {pokezapPanel}{pokeAgendaPanel}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+      </>
+    )
+  }
+
+  // ==================== ÁREA CASSINO (TREINADOR) ====================
+  if (currentUser.type === 'treinador' && currentArea === 'Cassino') {
+    const hasPermission = !!cassinoPermissions[currentUser.username]
+
+    const TYPE_COLOR_MAP = {
+      'Normal': '#A8A878', 'Fogo': '#F08030', 'Água': '#6890F0', 'Elétrico': '#F8D030',
+      'Planta': '#78C850', 'Gelo': '#98D8D8', 'Lutador': '#C03028', 'Venenoso': '#A040A0',
+      'Veneno': '#A040A0', 'Terrestre': '#E0C068', 'Terra': '#E0C068', 'Voador': '#A890F0',
+      'Psíquico': '#F85888', 'Inseto': '#A8B820', 'Pedra': '#B8A038', 'Fantasma': '#705898',
+      'Dragão': '#7038F8', 'Sombrio': '#705848', 'Metal': '#B8B8D0', 'Aço': '#B8B8D0', 'Fada': '#EE99AC'
+    }
+
+    const renderCard = (card, faceUp, flipping = false, flipDone = false, onClick = null, style = {}) => {
+      const isFlipping = flipping
+      const showFront = faceUp || (isFlipping && flipDone)
+      return (
+        <div onClick={onClick} style={{ width: '140px', height: '196px', perspective: '800px', cursor: onClick ? 'pointer' : 'default', ...style }}>
+          <div style={{
+            position: 'relative', width: '100%', height: '100%',
+            transformStyle: 'preserve-3d',
+            transition: isFlipping ? 'transform 0.6s ease' : 'none',
+            transform: showFront ? 'rotateY(180deg)' : 'rotateY(0deg)'
+          }}>
+            {/* Back face */}
+            <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+              <img src="/cassino/versocartapkm.png" alt="verso" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+            </div>
+            {/* Front face */}
+            <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <img src="/cassino/frentecartapkm.png" alt="frente" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                {/* Pokemon image — orange rectangle area */}
+                <div style={{ position: 'absolute', top: '12%', left: '14%', right: '14%', height: '44%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={card?.imageUrl} alt={card?.nome} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} onError={e => { e.target.src = '/pokeball.png' }} />
+                </div>
+                {/* Type — blue rectangle area */}
+                <div style={{ position: 'absolute', top: '60%', left: '10%', right: '10%', height: '15%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{
+                    background: TYPE_COLOR_MAP[card?.selectedType] || '#888',
+                    color: '#fff', fontWeight: 'bold', fontSize: '11px',
+                    padding: '2px 8px', borderRadius: '6px', textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {card?.selectedType || ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    const renderRankingSection = () => (
+      <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-4 mt-4`}>
+        <h4 className={`font-bold text-lg mb-4 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>🏆 Top 5 — Tipagem</h4>
+        {cassinoRanking.length === 0 ? (
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhum score registrado ainda.</p>
+        ) : (
+          <ol className="space-y-2">
+            {cassinoRanking.map((entry, i) => (
+              <li key={i} className={`flex items-center gap-3 p-2 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-white'}`}>
+                <span className={`text-xl font-black w-8 text-center ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : (darkMode ? 'text-gray-400' : 'text-gray-500')}`}>{i + 1}</span>
+                <span className={`flex-1 font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{entry.username}</span>
+                <span className={`font-bold text-lg ${darkMode ? 'text-purple-300' : 'text-purple-700'}`}>{entry.score} pts</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    )
+
+    return (
+      <>
+        <div className={`${mainPageClass}`}>
+          {sidebarNav}
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg sticky top-0 z-30`}>
+            <div className="max-w-4xl mx-auto px-4 py-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setSidebarOpen(true)} className={`p-2 rounded-lg ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-200 text-gray-500'}`}><Menu size={24} /></button>
+                  <h2 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>🎰 Cassino</h2>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-200 text-gray-700'}`}>{darkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
+                  {rpsBtn}{mapaContinentalBtn}{pokezapBtn}{pokeAgendaBtn}{batalhaChatBtn}
+                  {cursorConfig?.mode === 'personalizado' && (
+                    <button onClick={() => setShowUserCursorModal(true)} className={`p-2 rounded-lg ${darkMode ? 'bg-gray-700 text-purple-400 hover:bg-gray-600' : 'bg-gray-200 text-purple-600 hover:bg-gray-300'}`} title="Configurar Cursor"><MousePointer size={20} /></button>
+                  )}
+                  <button onClick={handleLogout} className="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">Sair</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mx-auto px-4 py-6">
+            {/* Sub-tab navigation */}
+            <div className="flex gap-2 mb-6 flex-wrap">
+              {['Tipagem', 'Placeholder 1', 'Placeholder 2', 'Placeholder 3'].map(tab => (
+                <button key={tab} onClick={() => { setCassinoTab(tab); if (tab !== 'Tipagem') { setCassinoMenuView('main') } }}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${cassinoTab === tab ? 'bg-purple-600 text-white shadow-lg' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* ===== TIPAGEM ===== */}
+            {cassinoTab === 'Tipagem' && (
+              <div>
+                {/* PRÉ-JOGO */}
+                {!cassinoGameActive && (
+                  <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-6`}>
+                    <h3 className={`text-xl font-bold mb-6 text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>🃏 Tipagem</h3>
+
+                    {cassinoMenuView === 'main' && (
+                      <div className="flex flex-col items-center gap-4">
+                        <button
+                          onClick={() => { if (hasPermission) handleStartTipagemGame(); else alert('Você não tem permissão para iniciar uma partida. Aguarde o Mestre liberar acesso.') }}
+                          className={`w-52 py-3 rounded-xl font-bold text-lg transition-all ${hasPermission ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg' : 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-60'}`}
+                        >
+                          🎮 Jogar
+                        </button>
+                        {!hasPermission && <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Aguarde permissão do Mestre</p>}
+                        <button onClick={() => setCassinoMenuView('espectador')} className={`w-52 py-3 rounded-xl font-bold text-lg transition-all ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
+                          👁️ Espectador
+                        </button>
+                        <button onClick={() => setCassinoMenuView('ranking')} className="w-52 py-3 rounded-xl font-bold text-lg bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-lg transition-all">
+                          🏆 Ranking
+                        </button>
+                      </div>
+                    )}
+
+                    {cassinoMenuView === 'espectador' && (
+                      <div>
+                        <button onClick={() => setCassinoMenuView('main')} className={`mb-4 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'}`}>← Voltar</button>
+                        <h4 className={`font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>👁️ Partidas em Andamento</h4>
+                        {Object.keys(cassinoActiveGames).filter(u => cassinoActiveGames[u]).length === 0 ? (
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma partida ativa no momento.</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {Object.entries(cassinoActiveGames).filter(([, g]) => g).map(([username, game]) => (
+                              <div key={username} className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-4`}>
+                                <p className={`font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>{username}</p>
+                                <div className="flex gap-4 text-sm flex-wrap">
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Score: <strong className="text-purple-400">{game.score ?? 0}</strong></span>
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Streak: <strong className="text-orange-400">{game.streak ?? 0}</strong></span>
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Cartas: <strong>{game.deckSize ?? '?'}</strong></span>
+                                </div>
+                                {game.captured && (
+                                  <div className="mt-3 flex items-center gap-3">
+                                    <img src={game.captured.imageUrl} alt={game.captured.nome} className="w-12 h-12 object-contain" onError={e => { e.target.src = '/pokeball.png' }} />
+                                    <div>
+                                      <p className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{game.captured.nome}</p>
+                                      <span style={{ background: TYPE_COLOR_MAP[game.captured.selectedType] || '#888', color: '#fff', fontSize: '10px', padding: '1px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{game.captured.selectedType}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {cassinoMenuView === 'ranking' && (
+                      <div>
+                        <button onClick={() => setCassinoMenuView('main')} className={`mb-4 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'}`}>← Voltar</button>
+                        {renderRankingSection()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* JOGO ATIVO */}
+                {cassinoGameActive && (
+                  <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-4 sm:p-6`}>
+                    {/* Score/Streak header */}
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex gap-4">
+                        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-xl px-4 py-2 text-center`}>
+                          <p className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Score</p>
+                          <p className={`text-2xl font-black ${darkMode ? 'text-purple-300' : 'text-purple-700'}`}>{cassinoScore}</p>
+                        </div>
+                        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-xl px-4 py-2 text-center`}>
+                          <p className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Streak</p>
+                          <p className={`text-2xl font-black ${darkMode ? 'text-orange-300' : 'text-orange-600'}`}>{cassinoStreak}🔥</p>
+                        </div>
+                      </div>
+                      <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-xl px-4 py-2 text-center`}>
+                        <p className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Baralho</p>
+                        <p className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{cassinoDeck.length}</p>
+                      </div>
+                    </div>
+
+                    {/* Contagem de tipos no baralho */}
+                    {cassinoDeck.length > 0 && (() => {
+                      const counts = cassinoDeck.reduce((acc, card) => {
+                        acc[card.selectedType] = (acc[card.selectedType] || 0) + 1
+                        return acc
+                      }, {})
+                      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+                      return (
+                        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'} rounded-xl p-3 mb-2`}>
+                          <p className={`text-xs font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Tipos no baralho</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {sorted.map(([type, count]) => (
+                              <span key={type} style={{ background: TYPE_COLOR_MAP[type] || '#888', color: '#fff', fontSize: '11px', fontWeight: 'bold', padding: '2px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>
+                                {type} <span style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '4px', padding: '0 4px', fontSize: '10px' }}>{count}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* FASE: idle — show deck + capturar carta */}
+                    {cassinoGamePhase === 'idle' && (
+                      <div className="flex flex-col items-center gap-6 py-4">
+                        <div className="relative">
+                          <img src="/cassino/versobaralhopkm.png" alt="Baralho" style={{ width: '140px', objectFit: 'contain' }} />
+                          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white text-xs font-bold px-2 py-0.5 rounded">
+                            {cassinoDeck.length} cartas
+                          </div>
+                        </div>
+                        <button onClick={handleCapturarCarta} className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-xl font-bold text-lg hover:from-purple-700 hover:to-pink-700 shadow-lg">
+                          Capturar Carta
+                        </button>
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Capture seu primeiro Pokémon para iniciar!</p>
+                      </div>
+                    )}
+
+                    {/* FASE: choosingCapture / captureFlipping — 3 cartas */}
+                    {(cassinoGamePhase === 'choosingCapture' || cassinoGamePhase === 'captureFlipping') && (
+                      <div className="flex flex-col items-center gap-6 py-4">
+                        <p className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Escolha uma carta:</p>
+                        <div className="flex gap-4 justify-center flex-wrap">
+                          {cassinoDrawnCards.map((card, idx) => {
+                            const isSelected = cassinoSelectedCardIdx === idx
+                            const isFlipping = cassinoGamePhase === 'captureFlipping' && isSelected
+                            const transitionStyle = {
+                              transition: 'opacity 0.5s ease, transform 0.5s ease',
+                              opacity: cassinoCardsVisible ? 1 : 0,
+                              transform: cassinoCardsVisible ? 'translateY(0)' : 'translateY(20px)',
+                              transitionDelay: `${idx * 0.12}s`
+                            }
+                            return (
+                              <div key={idx} style={transitionStyle}>
+                                {renderCard(card, isFlipping && cassinoFlipDone, isFlipping, cassinoFlipDone,
+                                  cassinoGamePhase === 'choosingCapture' ? () => handleChooseCard(idx) : null,
+                                  { filter: cassinoGamePhase === 'captureFlipping' && !isSelected ? 'brightness(0.4)' : 'none' }
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* FASE: battle */}
+                    {cassinoGamePhase === 'battle' && cassinoCaptured && (
+                      <div className="flex flex-col items-center gap-6 py-4">
+                        <div className="flex items-center gap-8 flex-wrap justify-center">
+                          {/* Pokémon capturado */}
+                          <div className="flex flex-col items-center gap-2">
+                            <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Capturado</p>
+                            {renderCard(cassinoCaptured, true)}
+                          </div>
+                          {/* VS */}
+                          <div className={`text-3xl font-black ${darkMode ? 'text-gray-400' : 'text-gray-300'}`}>VS</div>
+                          {/* Carta do topo (face-down) */}
+                          <div className="flex flex-col items-center gap-2">
+                            <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Oponente</p>
+                            <img src="/cassino/versocartapkm.png" alt="carta oponente" style={{ width: '140px', objectFit: 'contain' }} />
+                          </div>
+                        </div>
+                        <p className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Seu <strong>{cassinoCaptured.selectedType}</strong> tem qual relação com o tipo do oponente?
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+                          {[
+                            { label: '⚡ Vantagem', value: 'Vantagem', color: 'from-green-500 to-emerald-600' },
+                            { label: '⚖️ Neutro', value: 'Neutro', color: 'from-gray-500 to-gray-600' },
+                            { label: '🛡️ Desvantagem', value: 'Desvantagem', color: 'from-red-500 to-rose-600' },
+                            { label: '🚫 Imune', value: 'Imune', color: 'from-blue-500 to-indigo-600' }
+                          ].map(btn => (
+                            <button key={btn.value} onClick={() => handleChooseAnswer(btn.value)}
+                              className={`bg-gradient-to-r ${btn.color} text-white font-bold py-3 rounded-xl hover:brightness-110 shadow-md transition-all`}>
+                              {btn.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* FASE: revealOpponent */}
+                    {cassinoGamePhase === 'revealOpponent' && cassinoCaptured && cassinoCurrentOpponent && (
+                      <div className="flex flex-col items-center gap-6 py-4">
+                        <div className="flex items-center gap-8 flex-wrap justify-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Capturado</p>
+                            {renderCard(cassinoCaptured, true)}
+                          </div>
+                          <div className={`text-3xl font-black ${darkMode ? 'text-gray-400' : 'text-gray-300'}`}>VS</div>
+                          <div className="flex flex-col items-center gap-2">
+                            <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Oponente</p>
+                            {renderCard(cassinoCurrentOpponent, false, true, false)}
+                          </div>
+                        </div>
+                        <p className={`text-sm animate-pulse ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Revelando oponente...</p>
+                      </div>
+                    )}
+
+                    {/* FASE: swapChoice */}
+                    {cassinoGamePhase === 'swapChoice' && cassinoCaptured && cassinoCurrentOpponent && cassinoBattleResult && (
+                      <div className="flex flex-col items-center gap-6 py-4">
+                        {/* Resultado */}
+                        <div className="bg-green-500 text-white px-6 py-2 rounded-xl font-bold text-lg">
+                          ✅ Correto! +{cassinoBattleResult.addedPoints} pts{cassinoBattleResult.bonus > 0 && ` (+${cassinoBattleResult.bonus} bônus streak)`}
+                        </div>
+                        <div className="flex items-center gap-8 flex-wrap justify-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Capturado</p>
+                            {renderCard(cassinoCaptured, true)}
+                          </div>
+                          <div className={`text-3xl font-black ${darkMode ? 'text-gray-400' : 'text-gray-300'}`}>VS</div>
+                          <div className="flex flex-col items-center gap-2">
+                            <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Vencido</p>
+                            {renderCard(cassinoCurrentOpponent, true)}
+                          </div>
+                        </div>
+                        <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Trocar o Pokémon capturado?</p>
+                        <div className="flex gap-4">
+                          <button onClick={() => handleSwapChoice(false)} className={`px-6 py-3 rounded-xl font-bold text-lg ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}>
+                            Manter ({cassinoCaptured.nome})
+                          </button>
+                          <button onClick={() => handleSwapChoice(true)} className="px-6 py-3 rounded-xl font-bold text-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg">
+                            Trocar ({cassinoCurrentOpponent.nome})
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* FASE: gameOver */}
+                    {cassinoGamePhase === 'gameOver' && cassinoBattleResult && (
+                      <div className="flex flex-col items-center gap-6 py-8">
+                        <div className="text-6xl">💀</div>
+                        <h3 className="text-3xl font-black text-red-500">Você perdeu!</h3>
+                        {cassinoCurrentOpponent && (
+                          <div className="flex flex-col items-center gap-2">
+                            <p className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Carta que te eliminou</p>
+                            {renderCard(cassinoCurrentOpponent, true)}
+                          </div>
+                        )}
+                        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-2xl p-6 text-center space-y-2`}>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Você escolheu <strong className="text-red-400">{cassinoBattleResult.playerChoice}</strong>, mas era <strong className="text-green-400">{cassinoBattleResult.correctChoice}</strong>
+                          </p>
+                          <p className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-800'}`}>Score Final: <span className="text-purple-500">{cassinoScore}</span></p>
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Sua permissão foi revogada. Solicite ao Mestre para jogar novamente.</p>
+                        </div>
+                        <button onClick={() => { setCassinoGameActive(false); setCassinoMenuView('main') }}
+                          className="bg-gradient-to-r from-gray-600 to-gray-700 text-white px-8 py-3 rounded-xl font-bold text-lg hover:from-gray-700 hover:to-gray-800">
+                          Voltar ao Menu
+                        </button>
+                      </div>
+                    )}
+
+                    {/* FASE: victory */}
+                    {cassinoGamePhase === 'victory' && (
+                      <div className="flex flex-col items-center gap-6 py-8">
+                        <div className="text-6xl">🏆</div>
+                        <h3 className="text-3xl font-black text-yellow-400">Vitória!</h3>
+                        <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Você completou o baralho inteiro!</p>
+                        <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-2xl p-6 text-center`}>
+                          <p className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-800'}`}>Score Final: <span className="text-purple-500">{cassinoScore}</span></p>
+                        </div>
+                        <button onClick={() => { setCassinoGameActive(false); setCassinoMenuView('ranking') }}
+                          className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-3 rounded-xl font-bold text-lg hover:from-yellow-600 hover:to-orange-600 shadow-lg">
+                          Ver Ranking
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {['Placeholder 1', 'Placeholder 2', 'Placeholder 3'].includes(cassinoTab) && (
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-xl p-6`}>
+                <p className={`text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Em breve...</p>
+              </div>
+            )}
+          </div>
+        </div>
+        {accountDataModal}{transformacaoModal}{cursorSettingsModal}{userCursorModal}
+        {scenarioPopupOverlay}{mostrarTriunfosOverlay}
+        {pokezapPanel}{pokeAgendaPanel}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
