@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.jornada-root {
+  cursor: url('/customcursor/dittocursor1.cur'), auto;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

@@ -19220,7 +19220,7 @@ function App() {
   )
 
   // JORNADA NIAYPETA
-  if (showJN) return <JornadaNiaypeta onExit={() => setShowJN(false)} userPokedex={pokedex} />
+  if (showJN) return <JornadaNiaypeta onExit={() => setShowJN(false)} userPokedex={pokedex} onChatMessage={addChatMessage} />
 
   // TELA DE LOGIN
   if (!currentUser) {
