@@ -631,14 +631,14 @@ export const CONDITION_CLEAR_CHANCE = 0.10; // 10% per turn
 // ==================== FIXED STARTERS (1ª run) ====================
 // Names must match pokemonData.js exactly (pt-BR)
 export const FIXED_STARTER_NAMES = [
-  'Squirtle','Bulbasauro','Charmander',
+  'Squirtle','Bulbassauro','Charmander',
   'Totodile','Chikorita','Cyndaquil',
   'Chimchar','Treecko','Mudkip',
 ];
 
 export const PROFESSOR_STARTER_NAMES = [
   'Pikachu','Squirtle','Wartortle','Blastoise',
-  'Bulbasauro','Ivysauro','Venosauro',
+  'Bulbassauro','Ivysauro','Venosauro',
   'Charmander','Charmeleon','Charizard',
 ];
 
@@ -4787,7 +4787,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           )}
 
           {/* Stage complete button */}
-          {visitedEncounters.length >= (isSpecial ? 1 : normalMaxVisits) && (
+          {phase === 'map' && visitedEncounters.length >= (isSpecial ? 1 : normalMaxVisits) && (
             <div className="flex justify-center mt-1">
               <button onClick={handleStageComplete}
                 className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-all hover:scale-105">

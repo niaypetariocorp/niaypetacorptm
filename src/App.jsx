@@ -14580,7 +14580,12 @@ function App() {
   // Notificação PokeZap — detectar nova mensagem recebida
   useEffect(() => {
     if (!currentUser || pokezapMessages.length === 0) return
-    const last = pokezapMessages[pokezapMessages.length - 1]
+    const sorted = [...pokezapMessages].sort((a, b) => {
+      const ta = parseInt(a.id?.split('-')[1] ?? '0')
+      const tb = parseInt(b.id?.split('-')[1] ?? '0')
+      return ta - tb
+    })
+    const last = sorted[sorted.length - 1]
     if (!last || last.id === lastPokezapMsgId) return
     const isRecipient =
       (Array.isArray(last.recipients) && last.recipients.includes(currentUser.username)) ||
