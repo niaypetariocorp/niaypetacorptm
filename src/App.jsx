@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, RotateCw, RotateCcw, Settings2, Hand, Sigma, Dices, Check, Send, BookType, FileText, ClipboardCheck, Trophy, Target, Shuffle, Pencil, ListPlus, Save, Archive, MoveVertical, Menu, Gamepad2, TowerControl, MousePointer, Star } from 'lucide-react'
 import AccountDataModal from './AccountDataModal'
+import JornadaNiaypeta from './JornadaNiaypeta'
 import pokedexData, { POKEMON_DIET_MAP } from './pokemonData'
 import { POKEMON_DESLOCAMENTO_MAP } from './pokemonDeslocamentos'
 import { POKEMON_CAPACIDADE_MAP } from './pokemonCapacidades'
@@ -3248,6 +3249,7 @@ function App() {
   const [dataLoaded, setDataLoaded] = useState(false) // Flag para evitar salvar antes de carregar
   const [currentArea, setCurrentArea] = useState('')
   const [darkMode, setDarkMode] = useState(true)
+  const [showJN, setShowJN] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarPinned, setSidebarPinned] = useState(() => localStorage.getItem('sidebarPinned') === 'true')
   const [selectedUser, setSelectedUser] = useState(null)
@@ -19217,12 +19219,22 @@ function App() {
     </>
   )
 
+  // JORNADA NIAYPETA
+  if (showJN) return <JornadaNiaypeta onExit={() => setShowJN(false)} userPokedex={pokedex} />
+
   // TELA DE LOGIN
   if (!currentUser) {
     return (
       <div className={`min-h-screen ${mainBgClass} flex flex-col items-center justify-center p-4`}>
         <style>{`@keyframes gradient-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}.animated-gradient{background-size:300% 300%;animation:gradient-shift 4s ease infinite}`}</style>
-        <div className="flex justify-center mb-4"><img src="/logo.png" alt="Logo" className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 object-contain" /></div>
+        <div className="flex justify-center items-center gap-3 mb-4">
+          <img src="/logo.png" alt="Logo" className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 object-contain" />
+          <button onClick={() => setShowJN(true)} title="Jornada Niaypeta"
+            className="flex flex-col items-center gap-1 group">
+            <span className="text-yellow-400 group-hover:text-yellow-300 transition-colors" style={{ fontSize: '2rem', lineHeight: 1 }}>▶</span>
+            <span className="text-yellow-500 group-hover:text-yellow-300 text-xs font-bold transition-colors">JN</span>
+          </button>
+        </div>
         <div className="rounded-2xl shadow-2xl relative overflow-hidden" style={{ width: '500px', height: '750px', maxWidth: '100%' }}>
           <img src="/pokesitebg1.png" alt="" className="absolute inset-0 w-full h-full object-cover rounded-2xl" />
           <div className="relative z-10 py-6 sm:py-8 md:py-12 px-3 sm:px-5 md:px-8">
