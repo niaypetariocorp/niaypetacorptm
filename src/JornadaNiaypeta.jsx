@@ -1929,6 +1929,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   const [escudoBuff,        setEscudoBuff]                  = useState(null); // { uid, stat }
   const [pendingAutoJoin,       setPendingAutoJoin]              = useState(null); // { pkm, idx }
   const [showAutoJoinSwapModal, setShowAutoJoinSwapModal]        = useState(false);
+  const [pendingAutoJoinResult, setPendingAutoJoinResult]        = useState(null); // { pkm } — triggers handleEncounterComplete after auto-join
   const [showCientistModal,     setShowCientistModal]            = useState(false);
 
   // ── Refs ───────────────────────────────────────────────────
@@ -2278,6 +2279,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
               onChatMessage({ username: 'Sistema', text: txt, timestamp: ts, isDiceRoll: false });
             }
             setVisitedEncounters((prev) => [...prev, idx]);
+            setPendingAutoJoinResult({ pkm: joinPkm });
             return;
           } else {
             setPendingAutoJoin({ pkm: autoEnemy, idx });
@@ -2592,12 +2594,22 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     }
     setPendingAutoJoin(null);
     setShowAutoJoinSwapModal(false);
+    setPendingAutoJoinResult({ pkm: joinPkm });
   }, [pendingAutoJoin, currentUser, setCyberdex, onChatMessage]);
 
   const handleAutoJoinSwapCancel = useCallback(() => {
     setPendingAutoJoin(null);
     setShowAutoJoinSwapModal(false);
+    setPendingAutoJoinResult({ pkm: null });
   }, []);
+
+  // After auto-join, call handleEncounterComplete once visitedEncounters state is committed
+  useEffect(() => {
+    if (!pendingAutoJoinResult) return;
+    const { pkm } = pendingAutoJoinResult;
+    setPendingAutoJoinResult(null);
+    handleEncounterComplete(pkm ?? null);
+  }, [pendingAutoJoinResult, handleEncounterComplete]);
 
   /** Cyber Cientista: cria e adiciona uma poção ao inventário. */
   const handleCientistCriar = useCallback((pocaoId) => {
@@ -5934,7 +5946,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                   return def ? (
                     <button key={id}
                       onClick={() => setSelectedBall(isSelected ? null : id)}
-                      disabled={bp !== 'awaitingAction'}
+                      disabled={bp !== 'awaitingAction' && bp !== 'awaitingPlayerAttack'}
                       className={`flex items-center gap-1 px-3 py-2 text-xs font-bold rounded-lg transition-colors disabled:opacity-40
                         ${isSelected ? 'bg-green-500 text-black ring-2 ring-green-300' : 'bg-green-800 hover:bg-green-700 text-white'}`}>
                       <img src={def.img} alt={def.name} onError={safeImg} className="w-5 h-5 object-contain" />
@@ -5952,7 +5964,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                     return def ? (
                       <button key={id}
                         onClick={() => setBattle((b) => b ? { ...b, selectedBallmod: isSelected ? null : def } : b)}
-                        disabled={bp !== 'awaitingAction'}
+                        disabled={bp !== 'awaitingAction' && bp !== 'awaitingPlayerAttack'}
                         className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg transition-colors disabled:opacity-40
                           ${isSelected ? 'bg-blue-500 text-black ring-2 ring-blue-300' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`}>
                         <img src={def.img} alt={def.name} onError={safeImg} className="w-4 h-4 object-contain" />
@@ -5965,7 +5977,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
               {/* Capture button */}
               <button
                 onClick={() => { if (selectedBall) { handleCapture(selectedBall); setSelectedBall(null); } }}
-                disabled={!selectedBall || bp !== 'awaitingAction'}
+                disabled={!selectedBall || (bp !== 'awaitingAction' && bp !== 'awaitingPlayerAttack')}
                 className="px-4 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white text-xs font-bold rounded-lg transition-colors self-center">
                 🎯 Capturar{selectedBall ? ` com ${ITEMS_DATA.find((i) => i.id === selectedBall)?.name}` : ''}
                 {battle?.selectedBallmod ? ` + ${battle.selectedBallmod.name}` : ''}
