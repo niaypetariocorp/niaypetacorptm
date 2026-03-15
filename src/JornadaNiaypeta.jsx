@@ -3018,7 +3018,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     } else if (dragInfo.type === 'item') {
       if (target === 'pokemon_image' && ['consumivel', 'fruta'].includes(dragInfo.def?.category)) {
         handleUseItem(dragInfo.itemId, pkmIdx);
-      } else if (target === 'held_slot' && dragInfo.def?.category === 'held') {
+      } else if (target === 'held_slot' && ['held', 'fruta'].includes(dragInfo.def?.category)) {
         handleEquipItem(dragInfo.itemId, pkmIdx);
       }
     }
@@ -4552,7 +4552,6 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     <div className="min-h-screen flex flex-col items-center justify-center relative"
       style={{ backgroundImage:"url('/pokesitebg1.png')", backgroundSize:'cover', backgroundPosition:'center' }}>
       {showRanking && renderRanking()}
-      {showEnciclopedia && renderEnciclopedia()}
       <div className="bg-black/70 rounded-2xl p-8 flex flex-col items-center gap-5 w-full max-w-sm mx-4 backdrop-blur">
         <img src="/jn/logojn.png" alt="JN" className="w-44 h-auto"
           onError={(e) => { e.target.style.display='none'; }} />
@@ -6987,6 +6986,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       {renderEscudoModal()}
       {renderOradorModal()}
       {renderForrageamentoModal()}
+      {showEnciclopedia && renderEnciclopedia()}
     </div>
   );
 }
