@@ -436,24 +436,24 @@ export const KEYWORDS_DICT = {
 
 // ── Enciclopédia: Type Descriptions ──────────────────────────
 export const TYPE_DESCRIPTIONS = [
-  { name:'Normal',   color:'#A8A878', icon:'⬜', desc:'Tipo neutro sem fraquezas especiais a outros tipos (exceto Fantasma, ao qual é imune). Fraco contra Luta.' },
-  { name:'Fogo',     color:'#F08030', icon:'🔥', desc:'Tipo ofensivo intenso. Forte contra Planta, Gelo, Inseto e Metal. Fraco contra Água, Pedra e Terra.' },
-  { name:'Água',     color:'#6890F0', icon:'💧', desc:'Tipo versátil e defensivo. Forte contra Fogo, Pedra e Terra. Fraco contra Elétrico e Planta.' },
-  { name:'Elétrico', color:'#F8D030', icon:'⚡', desc:'Tipo ágil e preciso. Forte contra Água e Voador. Fraco contra Terra. Imune a si mesmo com aterramento.' },
-  { name:'Planta',   color:'#78C850', icon:'🌿', desc:'Tipo estratégico. Forte contra Água, Pedra e Terra. Fraco contra Fogo, Gelo, Voador, Inseto e Veneno.' },
-  { name:'Gelo',     color:'#98D8D8', icon:'❄️',  desc:'Tipo controlador. Forte contra Planta, Terra, Voador e Dragão. Fraco contra Fogo, Luta, Pedra e Metal.' },
-  { name:'Luta',     color:'#C03028', icon:'🥊', desc:'Tipo físico poderoso. Forte contra Normal, Gelo, Pedra, Noturno e Metal. Fraco contra Voador, Psíquico e Fada.' },
-  { name:'Veneno',   color:'#A040A0', icon:'☠️',  desc:'Tipo debilitador. Forte contra Planta e Fada. Fraco contra Terra e Psíquico.' },
-  { name:'Terra',    color:'#E0C068', icon:'🪨', desc:'Tipo sólido e versátil. Forte contra Fogo, Elétrico, Veneno, Pedra e Metal. Fraco contra Água, Planta e Gelo.' },
-  { name:'Voador',   color:'#A890F0', icon:'🦅', desc:'Tipo livre e ágil. Forte contra Planta, Luta e Inseto. Fraco contra Elétrico, Gelo e Pedra.' },
-  { name:'Psíquico', color:'#F85888', icon:'🔮', desc:'Tipo mental e estratégico. Forte contra Luta e Veneno. Fraco contra Inseto, Fantasma e Noturno.' },
-  { name:'Inseto',   color:'#A8B820', icon:'🐛', desc:'Tipo especializado. Forte contra Planta, Psíquico e Noturno. Fraco contra Fogo, Voador e Pedra.' },
-  { name:'Pedra',    color:'#B8A038', icon:'🪨', desc:'Tipo defensivo e pesado. Forte contra Fogo, Gelo, Voador e Inseto. Fraco contra Água, Planta, Luta, Terra e Metal.' },
-  { name:'Fantasma', color:'#705898', icon:'👻', desc:'Tipo misterioso. Forte contra Psíquico e Fantasma. Imune a Normal e Luta. Fraco contra Noturno e Fantasma.' },
-  { name:'Dragão',   color:'#7038F8', icon:'🐉', desc:'Tipo lendário e poderoso. Forte contra Dragão. Fraco contra Gelo, Dragão e Fada.' },
-  { name:'Noturno',  color:'#705848', icon:'🌑', desc:'Tipo sombrio e tático. Forte contra Psíquico e Fantasma. Fraco contra Luta, Inseto e Fada.' },
-  { name:'Metal',    color:'#B8B8D0', icon:'⚙️',  desc:'Tipo resistente. Forte contra Gelo, Pedra e Fada. Fraco contra Fogo, Luta e Terra.' },
-  { name:'Fada',     color:'#EE99AC', icon:'✨', desc:'Tipo mágico e moderno. Forte contra Luta, Dragão e Noturno. Fraco contra Veneno e Metal.' },
+  { name:'Normal',   color:'#A8A878', icon:'⬜', desc:'Não sofre cyber condições (paralisia, congelamento, queimadura, envenenamento e confusão).' },
+  { name:'Fogo',     color:'#F08030', icon:'🔥', desc:'10% de chance de queimar o oponente ao atacar. O oponente queimado recebe -2 dados de ataque.' },
+  { name:'Água',     color:'#6890F0', icon:'💧', desc:'Recebe +1 dado de ataque e de defesa se está com 2 ou mais de vida.' },
+  { name:'Elétrico', color:'#F8D030', icon:'⚡', desc:'10% de chance de paralisar o oponente ao atacar. O oponente paralisado recebe -2 dados de ataque especial.' },
+  { name:'Planta',   color:'#78C850', icon:'🌿', desc:'Recebe +1 dado defesa e defesa especial.' },
+  { name:'Gelo',     color:'#98D8D8', icon:'❄️',  desc:'10% de chance de congelar o oponente ao atacar. O oponente congelado recebe -2 dados de defesa.' },
+  { name:'Luta',     color:'#C03028', icon:'🥊', desc:'Tem 1% de chance de nocautear o pokémon oponente, levando ele a 0 de vida com um golpe.' },
+  { name:'Veneno',   color:'#A040A0', icon:'☠️',  desc:'10% de chance de envenenar o oponente ao atacar. O oponente envenenado recebe -2 dados de defesa especial.' },
+  { name:'Terra',    color:'#E0C068', icon:'🪨', desc:'Em caso de empate na rolagem de ataque ou defesa, somente o pokémon oponente perde vida. Se os dois pokémons forem de terra, nenhum deles perde vida.' },
+  { name:'Voador',   color:'#A890F0', icon:'🦅', desc:'Recebe +2 dado de velocidade.' },
+  { name:'Psíquico', color:'#F85888', icon:'🔮', desc:'Recebe +2 dados de ataque especial se está com 2 ou mais de vida.' },
+  { name:'Inseto',   color:'#A8B820', icon:'🐛', desc:'Se o atacante vencer na disputa de ataque, o pokémon inseto recupera 1 de vida. Tendo sua vida máxima como limite.' },
+  { name:'Pedra',    color:'#B8A038', icon:'🪨', desc:'Recebe +1 de vida (todos os pokémons de pedra tem +1 coração de vida) e +1 dado de defesa.' },
+  { name:'Fantasma', color:'#705898', icon:'👻', desc:'Ao ficar com 0 de vida, pode realizar mais 1 ataque, após isso ele é derrotado.' },
+  { name:'Dragão',   color:'#7038F8', icon:'🐉', desc:'Recebe +1 dado de ataque especial e de defesa especial se está com 2 ou mais de vida.' },
+  { name:'Noturno',  color:'#705848', icon:'🌑', desc:'7% de chance de confundir o oponente ao atacar. O oponente confuso recebe -2 dados de ataque e ataque especial.' },
+  { name:'Metal',    color:'#B8B8D0', icon:'⚙️',  desc:'Todas as rolagens de ataque físico do oponente diminuem em 2 o valor final da rolagem. O valor do decréscimo aumenta em 1 a cada 10 níveis.' },
+  { name:'Fada',     color:'#EE99AC', icon:'✨', desc:'Recebe +2 dados de defesa especial se está com 1 de vida.' },
 ];
 
 // ── Enciclopédia: Location Descriptions ──────────────────────
@@ -787,9 +787,12 @@ const BASE_VIDAS = {
   finalboss: 15,
 };
 
-export const calcBaseVidas = (species, context = 'wild') => {
+export const calcBaseVidas = (species, context = 'wild', { isLeg = false, isShn = false } = {}) => {
   let v = BASE_VIDAS[context] ?? 3;
   if (species.tipos?.includes('Pedra')) v += 1;
+  if (isLeg && isShn) v += 3;
+  else if (isLeg) v += 2;
+  else if (isShn) v += 1;
   return v;
 };
 
@@ -815,13 +818,8 @@ export const generateJNPokemon = (species, level, opts = {}) => {
   const isSingleType = (species.tipos?.length ?? 0) === 1;
   const isLegendarySpecies = isLegendary(species.nome);
 
-  // Vida bonuses for wild context: leg.shiny = no bonus, leg = +2, shiny = +1, regular = 0
-  let vidasMax = calcBaseVidas(species, context);
-  if (context === 'wild') {
-    if (isLegendarySpecies && !isShiny) vidasMax += 2;
-    else if (!isLegendarySpecies && isShiny) vidasMax += 1;
-    // legendary shiny: no extra bonus (total = base 3)
-  }
+  // Vida: base por contexto + bônus de tipo (Pedra) + bônus lendário/shiny
+  let vidasMax = calcBaseVidas(species, context, { isLeg: isLegendarySpecies, isShn: isShiny });
   const vidasAtual = vidasMax;
 
   const diceBase = {
@@ -1909,6 +1907,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   const [escudoBuff,        setEscudoBuff]                  = useState(null); // { uid, stat }
   const [pendingAutoJoin,       setPendingAutoJoin]              = useState(null); // { pkm, idx }
   const [showAutoJoinSwapModal, setShowAutoJoinSwapModal]        = useState(false);
+  const [autoJoinSwapStep,      setAutoJoinSwapStep]             = useState('choice'); // 'choice' | 'select'
   const [pendingAutoJoinResult, setPendingAutoJoinResult]        = useState(null); // { pkm } — triggers handleEncounterComplete after auto-join
   const [showCientistModal,     setShowCientistModal]            = useState(false);
 
@@ -2028,8 +2027,12 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   }, [playerClasses]);
 
   const handleSelectStarter = useCallback((pkm) => {
+    const starterVidas = calcBaseVidas(
+      { tipos: pkm.tipos ?? [] }, 'player',
+      { isLeg: isLegendary(pkm.nome), isShn: pkm.isShiny ?? false }
+    );
     const starter = {
-      ...pkm, level: 1, vidasMax: 2, vidasAtual: 2, context: 'player',
+      ...pkm, level: 1, vidasMax: starterVidas, vidasAtual: starterVidas, context: 'player',
       diceBase: {
         atk:    (pkm.diceBase?.atk    ?? 1) + 1,
         def:    (pkm.diceBase?.def    ?? 1) + 1,
@@ -2276,6 +2279,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           } else {
             setPendingAutoJoin({ pkm: autoEnemy, idx });
             setShowAutoJoinSwapModal(true);
+            setAutoJoinSwapStep('choice');
             setVisitedEncounters((prev) => [...prev, idx]);
             return;
           }
@@ -2765,13 +2769,16 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         + (playerClasses.some((c) => c.powerKey === 'colecionador') ? 1 : 0)
         + (playerClasses.some((c) => c.powerKey === 'professor')    ? 1 : 0);
       if (prev.length >= curMax) return prev;
+      const isLeg = isLegendary(pkm.nome);
+      const isShn = pkm.isShiny ?? false;
+      const baseVidas = calcBaseVidas({ tipos: pkm.tipos ?? [] }, 'player', { isLeg, isShn });
       const pactuarioBonus = playerClasses.some((c) => c.powerKey === 'pactuario')
-        ? (isLegendary(pkm.nome) ? 2 : 1) : 0;
+        ? (isLeg ? 2 : 1) : 0;
       const added = {
         ...pkm,
         context: 'player',
-        vidasMax:   pkm.vidasMax + pactuarioBonus,
-        vidasAtual: pkm.vidasMax + pactuarioBonus,
+        vidasMax:   baseVidas + pactuarioBonus,
+        vidasAtual: baseVidas + pactuarioBonus,
         conditions: [],
       };
       const newTeam = [...prev, added];
@@ -6766,20 +6773,37 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-6 w-96 flex flex-col gap-4 shadow-2xl" style={{ maxHeight: '85vh' }}>
           <h3 className="text-yellow-400 font-bold text-center text-lg">{icon} Time Cheio!</h3>
           <p className="text-gray-300 text-sm text-center">
-            <span className="text-yellow-300 font-bold">{pkm.nome}{pkm.shiny ? ' ✨' : ''}</span> quer se juntar, mas o time está cheio.
-            <br/>Escolha um pokémon para liberar, ou cancele.
+            <span className="text-yellow-300 font-bold">{pkm.nome}{pkm.isShiny ? ' ✨' : ''}</span> quer se juntar, mas o time está cheio.
           </p>
-          <div className="overflow-y-auto flex flex-col gap-1.5" style={{ maxHeight: '40vh' }}>
-            {team.map((p) => (
-              <button key={p.uid} onClick={() => handleAutoJoinSwapConfirm(p.uid)}
-                className="px-3 py-2 bg-red-800 hover:bg-red-600 text-white text-sm font-bold rounded-lg text-left transition-colors">
-                ❌ {p.nome} (Nv.{p.level ?? '?'})
+          {autoJoinSwapStep === 'choice' ? (
+            <div className="flex flex-col gap-3 mt-1">
+              <button
+                onClick={() => setAutoJoinSwapStep('select')}
+                className="px-4 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl transition-colors text-sm">
+                Liberar um pokémon para dar lugar
               </button>
-            ))}
-          </div>
-          <button onClick={handleAutoJoinSwapCancel} className="text-gray-500 hover:text-gray-300 text-xs text-center">
-            Cancelar (pokémon vai embora)
-          </button>
+              <button
+                onClick={handleAutoJoinSwapCancel}
+                className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold rounded-xl transition-colors text-sm">
+                Deixar o pokémon ir embora
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-gray-400 text-xs text-center">Escolha qual pokémon liberar:</p>
+              <div className="overflow-y-auto flex flex-col gap-1.5" style={{ maxHeight: '40vh' }}>
+                {team.map((p) => (
+                  <button key={p.uid} onClick={() => handleAutoJoinSwapConfirm(p.uid)}
+                    className="px-3 py-2 bg-red-800 hover:bg-red-600 text-white text-sm font-bold rounded-lg text-left transition-colors">
+                    ❌ {p.nome} (Nv.{p.level ?? '?'})
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setAutoJoinSwapStep('choice')} className="text-gray-500 hover:text-gray-300 text-xs text-center">
+                ← Voltar
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
