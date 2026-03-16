@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import pokedexData from './pokemonData.js';
 import { database } from './firebase.js';
-import { ref, get, set, update } from 'firebase/database';
+import { ref, get, set, update, push, onValue } from 'firebase/database';
 
 // ==================== TYPE SYSTEM ====================
 export const TYPES = [
@@ -232,14 +232,14 @@ export const ENCOUNTER_TYPES = {
 export const ITEMS_DATA = [
   // ── Pokébolas (ballDice = número de d4 para rolagem de captura) ──
   { id:'pokebola',   category:'pokeball', tier:'C', name:'Pokébola',  price:200,
-    img:'/pokeballs/pokeball.png',   ballDice:5,
-    desc:'Bola padrão de captura. Rola 5d4.' },
+    img:'/pokeballs/pokeball.png',   ballDice:12,
+    desc:'Bola padrão de captura. Rola 12d4.' },
   { id:'greatball',  category:'pokeball', tier:'B', name:'Greatball', price:1000,
-    img:'/pokeballs/greatball.png',  ballDice:7,
-    desc:'Boa taxa de captura. Rola 7d4.' },
+    img:'/pokeballs/greatball.png',  ballDice:14,
+    desc:'Boa taxa de captura. Rola 14d4.' },
   { id:'ultraball',  category:'pokeball', tier:'B', name:'Ultraball', price:2000,
-    img:'/pokeballs/ultraball.png',  ballDice:10,
-    desc:'Alta taxa de captura. Rola 10d4.' },
+    img:'/pokeballs/ultraball.png',  ballDice:18,
+    desc:'Alta taxa de captura. Rola 18d4.' },
   { id:'masterball', category:'pokeball', tier:'S', name:'Masterball',price:10000,
     ballAuto:true, img:'/pokeballs/masterball.png',
     desc:'Captura qualquer Pokémon sem falha. Apenas 1 por run.' },
@@ -670,7 +670,7 @@ export const addToJNCyberdex = async (username, dexNumber) => {
 };
 
 // ==================== RANKING ====================
-export const RANKING_KEY_PREFIX = 'jn_ranking_';
+export const JN_RANKING_PATH = (modeId) => `jnRanking/${modeId}`;
 export const RANKING_TOP_N = 5;
 
 // ============================================================
@@ -1011,24 +1011,10 @@ export const buildStageEncounters = (stage) => {
   });
 };
 
-// ── Ranking (localStorage) ───────────────────────────────────
-export const loadRanking = (modeId) => {
-  try {
-    const raw = localStorage.getItem(RANKING_KEY_PREFIX + modeId);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-
-export const saveRanking = (modeId, entry) => {
-  // entry: { name, score, stages, date }
-  const list = loadRanking(modeId);
-  list.push({ ...entry, date: new Date().toLocaleDateString('pt-BR') });
-  list.sort((a, b) => b.score - a.score);
-  const top = list.slice(0, RANKING_TOP_N);
-  localStorage.setItem(RANKING_KEY_PREFIX + modeId, JSON.stringify(top));
-  return top;
+// ── Ranking (Firebase) ───────────────────────────────────────
+export const pushRanking = (modeId, entry) => {
+  // entry: { name, score, stages, won, date, team }
+  push(ref(database, JN_RANKING_PATH(modeId)), entry);
 };
 
 /** Calculate final score from run stats */
@@ -1486,21 +1472,19 @@ export const generateWildRewardItems = (stage) => {
   return picks;
 };
 
-/** Get mart stock items for a given stage (respects tier probabilities) */
+/** Get mart stock items for a given stage (respects tier probabilities for all items including pokébolas) */
 export const getMartStock = (stage) => {
   const chances = MART_TIER_CHANCES[stage] ?? MART_TIER_CHANCES[1];
   if (!chances) return [];
-  // Pokébolas always available; rest filtered by tier availability
-  const balls = ITEMS_DATA.filter((i) => i.category === 'pokeball');
-  const others = ITEMS_DATA.filter((i) => i.category !== 'pokeball');
-  // Build a stock of 8 unique items based on tier chances
-  const stock = [...balls];
-  const used = new Set(balls.map((b) => b.id));
+  // All items (including pokébolas) participate in tier-based selection
+  const pool = ITEMS_DATA;
+  const stock = [];
+  const used = new Set();
   let attempts = 0;
   while (stock.length < 12 && attempts < 100) {
     attempts++;
     const tier = pickTier(chances);
-    const tierPool = others.filter((i) => i.tier === tier && !used.has(i.id));
+    const tierPool = pool.filter((i) => i.tier === tier && !used.has(i.id));
     if (tierPool.length === 0) continue;
     const item = tierPool[Math.floor(Math.random() * tierPool.length)];
     used.add(item.id);
@@ -1891,11 +1875,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   const [martCat, setMartCat]           = useState('pokeball');
 
   // ── Ranking ────────────────────────────────────────────────
-  const [rankingData, setRankingData]   = useState({
-    pocket:  loadRanking('pocket'),
-    jornada: loadRanking('jornada'),
-    endless: loadRanking('endless'),
-  });
+  const [rankingData, setRankingData]   = useState({ pocket: [], jornada: [], endless: [] });
   const [showRanking, setShowRanking]   = useState(false);
   const [showEnciclopedia, setShowEnciclopedia]   = useState(false);
   const [enciclopediaTab, setEnciclopediaTab]     = useState('classes');
@@ -1934,6 +1914,20 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
   // ── Refs ───────────────────────────────────────────────────
   const battleLogRef = useRef(null);
+
+  // Subscribe to Firebase ranking for all modes
+  useEffect(() => {
+    const unsubs = GAME_MODES.map((mode) =>
+      onValue(ref(database, JN_RANKING_PATH(mode.id)), (snap) => {
+        const data = snap.val() ?? {};
+        const list = Object.values(data)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, RANKING_TOP_N);
+        setRankingData((rd) => ({ ...rd, [mode.id]: list }));
+      })
+    );
+    return () => unsubs.forEach((u) => u());
+  }, []);
 
   // Auto-scroll battle log
   useEffect(() => {
@@ -1996,18 +1990,16 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       const shuffled = [...fixedSpecies].sort(() => Math.random() - 0.5).slice(0, 3);
       starters = shuffled.map((s) => generateJNPokemon(s, 1, { context: 'player' }));
     } else {
-      // 2nd+ run: cyberdex only for Pesquisador + authorized users
-      const hasCyberdexAccess = classObj.powerKey === 'pesquisador_base' && CYBERDEX_USERS.includes(currentUser?.username);
-      if (hasCyberdexAccess) {
-        const cyberdexSpecies = [...cyberdex]
-          .map((dexNum) => pokedexData.find((p) => p.dexNumber === dexNum))
-          .filter((p) => p && !isRegionBanned(p));
+      // 2nd+ run: Pesquisador vê toda a cyberdex; outros veem 10% (mínimo 2), sorteados
+      const isPesquisador = classObj.powerKey === 'pesquisador_base' && CYBERDEX_USERS.includes(currentUser?.username);
+      const cyberdexSpecies = [...cyberdex]
+        .map((dexNum) => pokedexData.find((p) => p.dexNumber === dexNum))
+        .filter((p) => p && !isRegionBanned(p));
+      if (isPesquisador) {
         starters = cyberdexSpecies.map((s) => generateJNPokemon(s, 1, { context: 'player' }));
       } else {
-        const fixedSpecies = FIXED_STARTER_NAMES
-          .map((nome) => pokedexData.find((p) => p.nome === nome))
-          .filter(Boolean);
-        const shuffled = [...fixedSpecies].sort(() => Math.random() - 0.5).slice(0, 3);
+        const count = Math.max(2, Math.floor(cyberdexSpecies.length * 0.1));
+        const shuffled = [...cyberdexSpecies].sort(() => Math.random() - 0.5).slice(0, count);
         starters = shuffled.map((s) => generateJNPokemon(s, 1, { context: 'player' }));
       }
     }
@@ -2611,6 +2603,18 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     handleEncounterComplete(pkm ?? null);
   }, [pendingAutoJoinResult, handleEncounterComplete]);
 
+  // Fechar tooltips ao pressionar Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setBonusTooltip(null);
+        setHeldTooltip(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   /** Cyber Cientista: cria e adiciona uma poção ao inventário. */
   const handleCientistCriar = useCallback((pocaoId) => {
     if (!battle) return;
@@ -2991,7 +2995,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
   const handleEquipItem = useCallback((itemId, pokemonIdx) => {
     const itemDef = ITEMS_DATA.find((i) => i.id === itemId);
-    if (!itemDef || itemDef.category !== 'held') return;
+    if (!itemDef || !['held', 'fruta'].includes(itemDef.category)) return;
 
     setTeam((prev) => {
       const updated = [...prev];
@@ -3006,9 +3010,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       return updated;
     });
 
+    const invBucket = itemDef.category === 'fruta' ? 'frutas' : 'held';
     setInventory((inv) => {
-      const count = (inv.held[itemId] ?? 0) - 1;
-      return { ...inv, held: { ...inv.held, [itemId]: Math.max(0, count) } };
+      const count = (inv[invBucket]?.[itemId] ?? 0) - 1;
+      return { ...inv, [invBucket]: { ...inv[invBucket], [itemId]: Math.max(0, count) } };
     });
   }, [playerClasses]);
 
@@ -3054,10 +3059,9 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       nome: p.nome, dexNumber: p.dexNumber, level: p.level,
       types: p.types, isShiny: p.isShiny ?? false,
     }));
-    const entry = { name, score, stages: stage, won, team: teamSnap };
-    const updated = saveRanking(modeId, entry);
+    const entry = { name, score, stages: stage, won, team: teamSnap, date: new Date().toLocaleDateString('pt-BR') };
+    pushRanking(modeId, entry);
 
-    setRankingData((rd) => ({ ...rd, [modeId]: updated }));
     setPhase(won ? 'victory' : 'gameover');
   }, [currentUser, guestName, stage, runStats, money, gameMode]);
 
@@ -4814,10 +4818,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
   // ── LEFT: Trainer Panel ──────────────────────────────────────
   const renderTrainerPanel = () => {
-    // Flatten consumiveis + frutas + held into slots, splitting stacks of 3
+    // Flatten consumiveis + frutas + held + ballmods into slots, splitting stacks of 3
     const STACK_MAX = 3;
     const allItems = [];
-    ['consumiveis', 'frutas', 'held'].forEach((cat) => {
+    ['consumiveis', 'frutas', 'held', 'ballmods'].forEach((cat) => {
       Object.entries(inventory[cat] || {}).forEach(([id, count]) => {
         if (count <= 0) return;
         const def = ITEMS_DATA.find((i) => i.id === id);
@@ -5176,77 +5180,75 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
         {/* Stats table */}
         <div className="bg-gray-800 rounded-xl p-3">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gray-700">
-                <th className="text-left text-gray-500 pb-1 font-semibold">
-                  Atributo
-                  {(pkm.pontosAtrib ?? 0) > 0 && (
-                    <span className="text-yellow-400 ml-1">({pontosDisponiveis})</span>
-                  )}
-                </th>
-                <th className="text-center text-gray-500 pb-1 font-semibold">Base</th>
-                <th className="text-center text-gray-500 pb-1 font-semibold">Bônus</th>
-                <th className="text-center text-gray-500 pb-1 font-semibold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {STAT_LABELS.map(({ key, label, color }) => {
-                const rawStat  = (pkm.stats?.[key] ?? 0) + (currentDraft[key] ?? 0);
-                const baseDice = Math.max(1, Math.floor(rawStat / 2));
-                const sources  = getBonusSources(key);
-                const bonusDice = sources.reduce((s, src) => s + src.value, 0);
-                const totalDice = Math.max(1, baseDice + bonusDice);
-                const tooltipKey = `${pkm.uid}-${key}`;
-                const canAdd = pontosDisponiveis > 0;
-                return (
-                  <tr key={key} className="border-b border-gray-700/40">
-                    <td className="py-1">
+          <div className="w-full text-xs">
+            {/* Header */}
+            <div className="flex items-center border-b border-gray-700 pb-1 mb-0.5">
+              <div className="flex-1 text-left text-gray-500 font-semibold">
+                Atributo
+                {(pkm.pontosAtrib ?? 0) > 0 && (
+                  <span className="text-yellow-400 ml-1">({pontosDisponiveis})</span>
+                )}
+              </div>
+              <div className="w-10 text-center text-gray-500 font-semibold">Base</div>
+              <div className="w-14 text-center text-gray-500 font-semibold">Bônus</div>
+              <div className="w-10 text-center text-gray-500 font-semibold">Total</div>
+            </div>
+            {/* Rows */}
+            {STAT_LABELS.map(({ key, label, color }) => {
+              const rawStat   = (pkm.stats?.[key] ?? 0) + (currentDraft[key] ?? 0);
+              const baseDice  = Math.max(1, Math.floor(rawStat / 2));
+              const sources   = getBonusSources(key);
+              const bonusDice = sources.reduce((s, src) => s + src.value, 0);
+              const totalDice = Math.max(1, baseDice + bonusDice);
+              const tooltipKey = `${pkm.uid}-${key}`;
+              const canAdd = pontosDisponiveis > 0;
+              return (
+                <div key={key} className="flex items-center border-b border-gray-700/40 py-1">
+                  <div className="flex-1">
+                    <button
+                      disabled={!canAdd}
+                      onClick={() => {
+                        if (!canAdd) return;
+                        setDraftForUid(pkm.uid);
+                        setAtribDraft((d) => ({ ...d, [key]: (d[key] ?? 0) + 1 }));
+                      }}
+                      title={canAdd ? `+1 em ${label}` : ''}
+                      className={`${color} font-semibold text-left leading-tight ${canAdd ? 'hover:brightness-125 cursor-pointer' : 'cursor-default'}`}
+                    >
+                      {label}
+                      <span className="text-gray-400 ml-1 font-normal">· {rawStat}</span>
+                      {(currentDraft[key] ?? 0) > 0 && (
+                        <span className="text-yellow-400 ml-1">+{currentDraft[key]}</span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="w-10 text-center text-white">{baseDice}d</div>
+                  <div className="w-14 text-center relative">
+                    <span className={bonusDice >= 0 ? 'text-green-400' : 'text-red-400'}>
+                      {bonusDice >= 0 ? '+' : ''}{bonusDice}d
+                    </span>
+                    {sources.length > 0 && (
                       <button
-                        disabled={!canAdd}
-                        onClick={() => {
-                          if (!canAdd) return;
-                          setDraftForUid(pkm.uid);
-                          setAtribDraft((d) => ({ ...d, [key]: (d[key] ?? 0) + 1 }));
-                        }}
-                        title={canAdd ? `+1 em ${label}` : ''}
-                        className={`${color} font-semibold text-left leading-tight ${canAdd ? 'hover:brightness-125 cursor-pointer' : 'cursor-default'}`}
-                      >
-                        {label}
-                        <span className="text-gray-400 ml-1 font-normal">· {rawStat}</span>
-                        {(currentDraft[key] ?? 0) > 0 && (
-                          <span className="text-yellow-400 ml-1">+{currentDraft[key]}</span>
-                        )}
-                      </button>
-                    </td>
-                    <td className="text-center text-white py-1">{baseDice}d</td>
-                    <td className="text-center py-1 relative">
-                      <span className={bonusDice >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        {bonusDice >= 0 ? '+' : ''}{bonusDice}d
-                      </span>
-                      {sources.length > 0 && (
-                        <button
-                          onClick={() => setBonusTooltip(bonusTooltip === tooltipKey ? null : tooltipKey)}
-                          className="ml-0.5 text-gray-500 hover:text-gray-300 leading-none align-middle"
-                          title="Ver fontes dos bônus"
-                        >ℹ</button>
-                      )}
-                      {bonusTooltip === tooltipKey && (
-                        <div className="absolute right-0 top-5 z-30 bg-gray-900 border border-gray-600 rounded-lg p-2 text-xs w-36 shadow-xl text-left">
-                          {sources.map((s, i) => (
-                            <p key={i} className={s.value >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              {s.label}: {s.value >= 0 ? '+' : ''}{s.value}d
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-center text-white font-bold py-1">{totalDice}d</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        onClick={() => setBonusTooltip(bonusTooltip === tooltipKey ? null : tooltipKey)}
+                        className="ml-0.5 text-gray-500 hover:text-gray-300 leading-none align-middle"
+                        title="Ver fontes dos bônus"
+                      >ℹ</button>
+                    )}
+                    {bonusTooltip === tooltipKey && (
+                      <div className="absolute right-0 top-5 z-30 bg-gray-900 border border-gray-600 rounded-lg p-2 text-xs w-36 shadow-xl text-left">
+                        {sources.map((s, i) => (
+                          <p key={i} className={s.value >= 0 ? 'text-green-400' : 'text-red-400'}>
+                            {s.label}: {s.value >= 0 ? '+' : ''}{s.value}d
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-10 text-center text-white font-bold">{totalDice}d</div>
+                </div>
+              );
+            })}
+          </div>
 
           {/* Save / Redo buttons */}
           {pontosUsados > 0 && (
@@ -5286,7 +5288,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           <div className="bg-gray-800 rounded-xl p-3">
             <p className="text-gray-500 text-xs uppercase font-bold mb-2">Itens Held</p>
             {heldArr.map((h) => (
-              <div key={h.id} className="flex items-center gap-2 mb-1">
+              <div key={h.id} className="relative flex items-center gap-2 mb-1">
                 <img src={h.img ?? IMG_FALLBACK} alt={h.name} onError={safeImg} className="w-6 h-6 object-contain shrink-0" />
                 <p className="text-white text-xs font-bold flex-1 leading-tight">{h.name}</p>
                 <button
