@@ -1701,8 +1701,8 @@ const doAttack = (atk, atkAction, def, isPlayer, opts = {}) => {
       }
     }
 
-    // Inseto power: recover 1 vida on successful hit
-    if (atkTypes2.includes('Inseto')) {
+    // Inseto power: 50% chance to recover 1 vida on successful hit
+    if (atkTypes2.includes('Inseto') && Math.random() < 0.5) {
       atk = { ...atk, vidasAtual: Math.min(atk.vidasMax, atk.vidasAtual + 1) };
       log.push(`🐛 ${atk.nome} (Inseto) recuperou 1 vida!`);
     }
@@ -2876,31 +2876,37 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       return;
     }
 
+    // Compute healed state first so we can apply to both team and battle
+    const targetPkm = team[targetIdx];
+    const pkmPatch = {};
+
+    if (itemDef.healVidas) {
+      const isPocao = ['pocao_menor','pocao_maior','pocao_suprema'].includes(itemDef.id);
+      const bonus = (hasClassPower('medico_campo') ? 1 : 0) + (isPocao && hasClassPower('cientista') ? 1 : 0);
+      pkmPatch.vidasAtual = Math.min(targetPkm.vidasMax, targetPkm.vidasAtual + itemDef.healVidas + bonus);
+    }
+    if (itemDef.cureConditions) {
+      pkmPatch.conditions = itemDef.cureConditions.includes('all')
+        ? []
+        : (targetPkm.conditions ?? []).filter((c) => !itemDef.cureConditions.includes(c));
+      if (hasClassPower('quimico')) {
+        const base = pkmPatch.vidasAtual ?? targetPkm.vidasAtual;
+        pkmPatch.vidasAtual = Math.min(targetPkm.vidasMax, base + 1);
+      }
+    }
+
     setTeam((prev) => {
       const updated = [...prev];
-      const pkm = { ...updated[targetIdx] };
-
-      // Healing
-      if (itemDef.healVidas) {
-        const isPocao = ['pocao_menor','pocao_maior','pocao_suprema'].includes(itemDef.id);
-        const bonus = (hasClassPower('medico_campo') ? 1 : 0) + (isPocao && hasClassPower('cientista') ? 1 : 0);
-        pkm.vidasAtual = Math.min(pkm.vidasMax, pkm.vidasAtual + itemDef.healVidas + bonus);
-      }
-      // Condition cure
-      if (itemDef.cureConditions) {
-        if (itemDef.cureConditions.includes('all')) {
-          pkm.conditions = [];
-        } else {
-          pkm.conditions = pkm.conditions.filter((c) => !itemDef.cureConditions.includes(c));
-        }
-        // Alquimista quimico: +1 vida on cure items
-        if (hasClassPower('quimico')) {
-          pkm.vidasAtual = Math.min(pkm.vidasMax, pkm.vidasAtual + 1);
-        }
-      }
-      updated[targetIdx] = pkm;
+      updated[targetIdx] = { ...updated[targetIdx], ...pkmPatch };
       return updated;
     });
+
+    // Sync heal to battle.playerPkm if the target is the active battle pokémon
+    if (battle && targetPkm.uid === battle.playerPkm?.uid) {
+      setBattle((b) => b ? { ...b, playerPkm: { ...b.playerPkm, ...pkmPatch }, itemUsedThisTurn: true } : b);
+    } else if (battle) {
+      setBattle((b) => b ? { ...b, itemUsedThisTurn: true } : b);
+    }
 
     // Consume item (unless Alquimista base: 50% chance to not consume)
     const alqBase = hasClassPower('alquimista_base');
@@ -2912,9 +2918,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         return updated;
       });
     }
-    // Mark item used this turn (only during battle)
-    if (battle) setBattle((b) => b ? { ...b, itemUsedThisTurn: true } : b);
-  }, [playerClasses, battle, phase, stage, stageEncounters]);
+  }, [playerClasses, battle, team, phase, stage, stageEncounters]);
 
   const handleApplyEvoStone = useCallback((stat) => {
     if (!pendingEvoStone) return;
@@ -4778,13 +4782,15 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                 ? [...new Set(enc.enemy.flatMap((ep) => ep.types ?? []))]
                 : [];
               return (
-                <button key={i} disabled={!canVisit} onClick={() => handleSelectEncounter(i)}
+                <button key={i} disabled={!canVisit || phase === 'battle'} onClick={() => handleSelectEncounter(i)}
                   className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl border transition-all
                     ${visited
                       ? 'border-gray-700 bg-black/40 opacity-40 cursor-not-allowed'
-                      : canVisit
-                        ? 'border-gray-500 bg-black/50 hover:border-yellow-400 hover:scale-105 cursor-pointer'
-                        : 'border-gray-700 bg-black/40 opacity-50 cursor-not-allowed'}`}>
+                      : phase === 'battle'
+                        ? 'border-gray-700 bg-black/40 opacity-40 cursor-not-allowed'
+                        : canVisit
+                          ? 'border-gray-500 bg-black/50 hover:border-yellow-400 hover:scale-105 cursor-pointer'
+                          : 'border-gray-700 bg-black/40 opacity-50 cursor-not-allowed'}`}>
                   <img src={meta.img} alt={meta.label} onError={safeImg} className="w-12 h-12 object-contain" />
                   <span className={`text-xs font-bold ${meta.color}`}>{meta.label}</span>
                   {encTypes.length > 0 && (

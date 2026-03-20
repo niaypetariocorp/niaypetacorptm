@@ -930,7 +930,9 @@ const POKEBALLS_LIST = [
   'Diveball', 'Dreamball', 'Duskball', 'Fastball', 'Featherball', 'Friendball', 'Healball',
   'Heavyball', 'Leadenball', 'Levelball', 'Loveball', 'Lunarball', 'Lureball', 'Luxuryball',
   'Nestball', 'Netball', 'Parkball', 'Premierball', 'Quickball', 'Repeatball',
-  'Safariball', 'Sportball', 'Timerball', 'NeoGenBall', 'Noryball'
+  'Safariball', 'Sportball', 'Timerball', 'NeoGenBall', 'Noryball', 'Saviorball',
+  'Blizzardball', 'Scareball', 'Echantball', 'Jabball', 'Mysticball', 'Sparkball', 'Solidball', 'Farmball',
+  'Lakeball', 'Articball', 'Caveball', 'Cityball', 'Saaraball', 'Florestball', 'Mountainball', 'Swampball', 'Flatball', 'Beachball', 'Jungleball', 'Taigaball', 'Tundraball'
 ]
 
 // Mapa de modificadores de captura por pokébola
@@ -967,9 +969,63 @@ const POKEBALL_MODIFIERS = {
   'Beastball': ['+45', '-50'],
   'NeoGenBall': ['0'], // Pokébola especial
   'Noryball': ['-5'], // Pokébola especial
+  'Saviorball': ['0'], // Forjada pelo treinador
+  'Blizzardball': ['0', '-15'], // +0, ou -15 se Gelo ou Voador
+  'Scareball': ['0', '-15'],   // +0, ou -15 se Fantasma ou Noturno
+  'Echantball': ['0', '-15'],  // +0, ou -15 se Fada ou Normal
+  'Jabball': ['0', '-15'],     // +0, ou -15 se Lutador ou Venenoso
+  'Mysticball': ['0', '-15'],  // +0, ou -15 se Dragão ou Psíquico
+  'Sparkball': ['0', '-15'],   // +0, ou -15 se Elétrico ou Fogo
+  'Solidball': ['0', '-15'],   // +0, ou -15 se Metal ou Pedra
+  'Farmball': ['0', '-15'],    // +0, ou -15 se Planta ou Terra
+  'Lakeball':     ['0', '-15'], // +0, ou -15 se habitat de água doce
+  'Articball':    ['0', '-15'], // +0, ou -15 se habitat ártico
+  'Caveball':     ['0', '-15'], // +0, ou -15 se habitat cavernoso
+  'Cityball':     ['0', '-15'], // +0, ou -15 se habitat urbano
+  'Saaraball':    ['0', '-15'], // +0, ou -15 se habitat desético
+  'Florestball':  ['0', '-15'], // +0, ou -15 se habitat florestal
+  'Mountainball': ['0', '-15'], // +0, ou -15 se habitat montanhoso
+  'Swampball':    ['0', '-15'], // +0, ou -15 se habitat pantanoso
+  'Flatball':     ['0', '-15'], // +0, ou -15 se habitat de planície
+  'Beachball':    ['0', '-15'], // +0, ou -15 se habitat praia
+  'Jungleball':   ['0', '-15'], // +0, ou -15 se habitat selva
+  'Taigaball':    ['0', '-15'], // +0, ou -15 se habitat taiga
+  'Tundraball':   ['0', '-15'], // +0, ou -15 se habitat tundra
   'Featherball': ['+5', '-5'], // +5, ou -5 se o alvo possuir mais de 15 de velocidade ou voar/flutuar
   'Leadenball': ['+5', '-15'], // +5, caso o treinador esteja escondido, -15
   'Alphaball': ['+10', '-15'] // +10, ou -15 se o pokémon for Alpha
+}
+
+// Mapa de imagens especiais para pokébolas com caminhos não-padrão
+const POKEBALL_SPECIAL_IMAGE_MAP = {
+  'Blizzardball': '/pokeballs/ballespecial/aereaball.png',
+  'Scareball':    '/pokeballs/ballespecial/assobrosaball.png',
+  'Echantball':   '/pokeballs/ballespecial/encantoball.png',
+  'Jabball':      '/pokeballs/ballespecial/jabball.png',
+  'Mysticball':   '/pokeballs/ballespecial/misticaball.png',
+  'Sparkball':    '/pokeballs/ballespecial/sparkball.png',
+  'Solidball':    '/pokeballs/ballespecial/solidball.png',
+  'Farmball':     '/pokeballs/ballespecial/farmball.png',
+  'Lakeball':     '/pokeballs/ballespecial/lakeball.png',
+  'Articball':    '/pokeballs/ballespecial/articball.png',
+  'Caveball':     '/pokeballs/ballespecial/caveball.png',
+  'Cityball':     '/pokeballs/ballespecial/cityball.png',
+  'Saaraball':    '/pokeballs/ballespecial/saaraball.png',
+  'Florestball':  '/pokeballs/ballespecial/florestball.png',
+  'Mountainball': '/pokeballs/ballespecial/mountainball.png',
+  'Swampball':    '/pokeballs/ballespecial/swampball.png',
+  'Flatball':     '/pokeballs/ballespecial/faltball.png',
+  'Beachball':    '/pokeballs/ballespecial/beachball.png',
+  'Jungleball':   '/pokeballs/ballespecial/jungleball.png',
+  'Taigaball':    '/pokeballs/ballespecial/taigaball.png',
+  'Tundraball':   '/pokeballs/ballespecial/tundraball.png',
+}
+
+// Retorna o caminho correto da imagem de uma pokébola
+const getPokeballImage = (name) => {
+  if (!name) return '/pokeballs/pokeball.png'
+  if (POKEBALL_SPECIAL_IMAGE_MAP[name]) return POKEBALL_SPECIAL_IMAGE_MAP[name]
+  return `/pokeballs/${name.toLowerCase().replace(/\s+/g, '')}.png`
 }
 
 // Lista de pokébolas para o PC (com Custom Pokeball 2)
@@ -1403,7 +1459,7 @@ const getItemImage = (itemName) => {
     if (item) return item.image
   }
   // Se não encontrar, retornar imagem padrão baseada no nome
-  return `/pokeballs/${itemName.toLowerCase().replace(/\s+/g, '')}.png`
+  return getPokeballImage(itemName)
 }
 
 // Função para renderizar o efeito de um golpe (com suporte a tabelas)
@@ -1574,7 +1630,29 @@ const POKELOJA_DATA = {
     { name: 'Timerball', price: 2000, description: '+5, reduzindo em 5 para cada duas rodadas de combate (até o mínimo de -20)', image: '/pokeballs/timerball.png' },
     { name: 'Featherball', price: 2000, description: '+5, ou -5 se o alvo possuir mais de 15 de velocidade ou voar/flutuar. Pode ser arremessada a até 15m sem precisar fazer teste de força.', image: '/pokeballs/featherball.png' },
     { name: 'Masterball', description: 'Captura automática.', image: '/pokeballs/masterball.png', noShop: true },
-    { name: 'Alphaball', description: '+10, ou -15 se o pokémon for Alpha.', image: '/pokeballs/alphaball.png', noShop: true }
+    { name: 'Alphaball', description: '+10, ou -15 se o pokémon for Alpha.', image: '/pokeballs/alphaball.png', noShop: true },
+    { name: 'Saviorball', description: '+0, pode ser usada para capturar um pokémon deixado inconsciente na rodada anterior.', image: '/pokeballs/saviorball.png', noShop: true },
+    { name: 'Blizzardball', description: '+0, ou -15 se o alvo for do tipo Gelo ou Voador.', image: '/pokeballs/ballespecial/aereaball.png', noShop: true },
+    { name: 'Scareball', description: '+0, ou -15 se o alvo for do tipo Fantasma ou Noturno.', image: '/pokeballs/ballespecial/assobrosaball.png', noShop: true },
+    { name: 'Echantball', description: '+0, ou -15 se o alvo for do tipo Fada ou Normal.', image: '/pokeballs/ballespecial/encantoball.png', noShop: true },
+    { name: 'Jabball', description: '+0, ou -15 se o alvo for do tipo Lutador ou Venenoso.', image: '/pokeballs/ballespecial/jabball.png', noShop: true },
+    { name: 'Mysticball', description: '+0, ou -15 se o alvo for do tipo Dragão ou Psíquico.', image: '/pokeballs/ballespecial/misticaball.png', noShop: true },
+    { name: 'Sparkball', description: '+0, ou -15 se o alvo for do tipo Elétrico ou Fogo.', image: '/pokeballs/ballespecial/sparkball.png', noShop: true },
+    { name: 'Solidball', description: '+0, ou -15 se o alvo for do tipo Metal ou Pedra.', image: '/pokeballs/ballespecial/solidball.png', noShop: true },
+    { name: 'Farmball', description: '+0, ou -15 se o alvo for do tipo Planta ou Terra.', image: '/pokeballs/ballespecial/farmball.png', noShop: true },
+    { name: 'Lakeball', description: '+0, ou -15 se capturando em habitat de água doce.', image: '/pokeballs/ballespecial/lakeball.png', noShop: true },
+    { name: 'Articball', description: '+0, ou -15 se capturando em habitat ártico.', image: '/pokeballs/ballespecial/articball.png', noShop: true },
+    { name: 'Caveball', description: '+0, ou -15 se capturando em habitat cavernoso.', image: '/pokeballs/ballespecial/caveball.png', noShop: true },
+    { name: 'Cityball', description: '+0, ou -15 se capturando em habitat urbano.', image: '/pokeballs/ballespecial/cityball.png', noShop: true },
+    { name: 'Saaraball', description: '+0, ou -15 se capturando em habitat desético.', image: '/pokeballs/ballespecial/saaraball.png', noShop: true },
+    { name: 'Florestball', description: '+0, ou -15 se capturando em habitat florestal.', image: '/pokeballs/ballespecial/florestball.png', noShop: true },
+    { name: 'Mountainball', description: '+0, ou -15 se capturando em habitat montanhoso.', image: '/pokeballs/ballespecial/mountainball.png', noShop: true },
+    { name: 'Swampball', description: '+0, ou -15 se capturando em habitat pantanoso.', image: '/pokeballs/ballespecial/swampball.png', noShop: true },
+    { name: 'Flatball', description: '+0, ou -15 se capturando em habitat de planície.', image: '/pokeballs/ballespecial/faltball.png', noShop: true },
+    { name: 'Beachball', description: '+0, ou -15 se capturando em habitat praia.', image: '/pokeballs/ballespecial/beachball.png', noShop: true },
+    { name: 'Jungleball', description: '+0, ou -15 se capturando em habitat de selva.', image: '/pokeballs/ballespecial/jungleball.png', noShop: true },
+    { name: 'Taigaball', description: '+0, ou -15 se capturando em habitat taiga.', image: '/pokeballs/ballespecial/taigaball.png', noShop: true },
+    { name: 'Tundraball', description: '+0, ou -15 se capturando em habitat tundra.', image: '/pokeballs/ballespecial/tundraball.png', noShop: true }
   ],
   'Suplemento': [
     { name: 'Hp-up', price: 4900, description: 'Aumenta a Saúde Basal em 1.', image: '/pokeballs/hpup.png' },
@@ -3599,6 +3677,21 @@ function App() {
   const [keyItemSearch, setKeyItemSearch] = useState('')
   const [keyItemsPage, setKeyItemsPage] = useState(0)
   const [showAddCustomItemModal, setShowAddCustomItemModal] = useState(false)
+  const [showMisturarAbricorModal, setShowMisturarAbricorModal] = useState(false)
+  const [misturarSlot1, setMisturarSlot1] = useState('')
+  const [misturarSlot2, setMisturarSlot2] = useState('')
+  const [misturarSlot3, setMisturarSlot3] = useState('')
+  const [misturarPickingSlot, setMisturarPickingSlot] = useState(null) // 1 | 2 | 3 | null
+  const [showForjarSaviorModal, setShowForjarSaviorModal] = useState(false)
+  const [forjarSaviorMethod, setForjarSaviorMethod] = useState(null) // 1 | 2 | null
+  const [showModificarNetballModal, setShowModificarNetballModal] = useState(false)
+  const [netballSelectedBall, setNetballSelectedBall] = useState(null)
+  const [showModificarDiveballModal, setShowModificarDiveballModal] = useState(false)
+  const [diveballSelectedBall, setDiveballSelectedBall] = useState(null)
+  const [pokeoficinaBtnOrder, setPokeoficinaBtnOrder] = useState([])
+  const [pokeoficinaBtnPage, setPokeoficinaBtnPage] = useState(0)
+  const [showPokeoficinaConfigModal, setShowPokeoficinaConfigModal] = useState(false)
+  const [pokeoficinaBtnOrderDraft, setPokeoficinaBtnOrderDraft] = useState([])
   const [customItemName, setCustomItemName] = useState('')
   const [customItemQuantity, setCustomItemQuantity] = useState(1)
   const [showCustomKeyItemModal, setShowCustomKeyItemModal] = useState(false)
@@ -8090,6 +8183,199 @@ function App() {
     setShowRepairPokeballModal(false)
     setSelectedPokeballToRepair('')
     setRepairPokeballSearch('')
+  }
+
+  // Função para confirmar mistura de Abricós
+  const handleConfirmarMisturarAbricor = async () => {
+    if (!misturarSlot1 || !misturarSlot2 || !misturarSlot3) return
+
+    // Consome slot1 e slot2, adiciona slot3
+    let updated = [...keyItems]
+
+    const consumir = (nome) => {
+      const idx = updated.findIndex(i => i.name === nome)
+      if (idx === -1) return false
+      if ((updated[idx].quantity ?? 1) <= 1) {
+        updated.splice(idx, 1)
+      } else {
+        updated = updated.map((i, j) => j === idx ? { ...i, quantity: i.quantity - 1 } : i)
+      }
+      return true
+    }
+
+    if (!consumir(misturarSlot1)) { alert('Sem ' + misturarSlot1 + ' na mochila.'); return }
+    if (!consumir(misturarSlot2)) { alert('Sem ' + misturarSlot2 + ' na mochila.'); return }
+
+    const existIdx = updated.findIndex(i => i.name === misturarSlot3)
+    if (existIdx !== -1) {
+      updated = updated.map((i, j) => j === existIdx ? { ...i, quantity: (i.quantity ?? 1) + 1 } : i)
+    } else {
+      updated = [...updated, { name: misturarSlot3, quantity: 1 }]
+    }
+
+    setKeyItems(updated)
+    if (useFirebase && currentUser) {
+      const { ref, set } = await import('firebase/database')
+      await set(ref(database, `trainers/${currentUser.username}/keyItems`), updated)
+    }
+
+    alert(`✅ Mistura concluída!\n${misturarSlot1} + ${misturarSlot2} → ${misturarSlot3}`)
+    setMisturarSlot1('')
+    setMisturarSlot2('')
+    setMisturarSlot3('')
+    setShowMisturarAbricorModal(false)
+  }
+
+  // Função para forjar Saviorball
+  const handleForjarSaviorball = async () => {
+    if (!forjarSaviorMethod) return
+
+    if (currentHP < 25) {
+      alert('❌ HP insuficiente!\n\nVocê precisa de pelo menos 25 HP para forjar uma Saviorball.\nHP atual: ' + currentHP)
+      return
+    }
+
+    let updated = [...keyItems]
+
+    const consumir = (nome) => {
+      const idx = updated.findIndex(i => i.name === nome)
+      if (idx === -1 || (updated[idx].quantity ?? 1) < 1) return false
+      if ((updated[idx].quantity ?? 1) <= 1) updated.splice(idx, 1)
+      else updated = updated.map((i, j) => j === idx ? { ...i, quantity: i.quantity - 1 } : i)
+      return true
+    }
+
+    const adicionarSaviorball = () => {
+      const existIdx = updated.findIndex(i => i.name === 'Saviorball')
+      if (existIdx !== -1) updated = updated.map((i, j) => j === existIdx ? { ...i, quantity: (i.quantity ?? 1) + 1 } : i)
+      else updated = [...updated, { name: 'Saviorball', quantity: 1 }]
+    }
+
+    if (forjarSaviorMethod === 1) {
+      const apricornsCores = Object.keys(APRICORN_COLOR_MAP).filter(n => n !== 'Apricorn Arco-íris')
+      const faltando = apricornsCores.filter(nome => {
+        const item = updated.find(i => i.name === nome)
+        return !item || (item.quantity ?? 1) < 1
+      })
+      if (faltando.length > 0) {
+        alert('❌ Apricorns insuficientes!\n\nVocê precisa de pelo menos 1 de cada apricorn colorida.\nFaltando: ' + faltando.join(', '))
+        return
+      }
+      for (const nome of apricornsCores) consumir(nome)
+    } else {
+      const arcoiris = updated.find(i => i.name === 'Apricorn Arco-íris')
+      if (!arcoiris || (arcoiris.quantity ?? 1) < 1) {
+        alert('❌ Apricorn Arco-íris insuficiente!\n\nVocê precisa de pelo menos 1 Apricorn Arco-íris.')
+        return
+      }
+      consumir('Apricorn Arco-íris')
+    }
+
+    adicionarSaviorball()
+    setKeyItems(updated)
+    setCurrentHP(prev => Math.max(0, prev - 25))
+
+    if (useFirebase && currentUser) {
+      const { ref, set } = await import('firebase/database')
+      await set(ref(database, `trainers/${currentUser.username}/keyItems`), updated)
+      await set(ref(database, `trainers/${currentUser.username}/currentHP`), Math.max(0, currentHP - 25))
+    }
+
+    alert('✅ Saviorball forjada com sucesso!\n\n-25 HP do treinador. A Saviorball foi adicionada à mochila.')
+    setShowForjarSaviorModal(false)
+    setForjarSaviorMethod(null)
+  }
+
+  // Função para modificar Netball em pokébola especial
+  const NETBALL_OPTIONS = [
+    { name: 'Blizzardball', description: '+0, ou -15 se Gelo ou Voador', image: '/pokeballs/ballespecial/aereaball.png' },
+    { name: 'Scareball',    description: '+0, ou -15 se Fantasma ou Noturno', image: '/pokeballs/ballespecial/assobrosaball.png' },
+    { name: 'Echantball',   description: '+0, ou -15 se Fada ou Normal', image: '/pokeballs/ballespecial/encantoball.png' },
+    { name: 'Jabball',      description: '+0, ou -15 se Lutador ou Venenoso', image: '/pokeballs/ballespecial/jabball.png' },
+    { name: 'Mysticball',   description: '+0, ou -15 se Dragão ou Psíquico', image: '/pokeballs/ballespecial/misticaball.png' },
+    { name: 'Sparkball',    description: '+0, ou -15 se Elétrico ou Fogo', image: '/pokeballs/ballespecial/sparkball.png' },
+    { name: 'Solidball',    description: '+0, ou -15 se Metal ou Pedra', image: '/pokeballs/ballespecial/solidball.png' },
+    { name: 'Farmball',     description: '+0, ou -15 se Planta ou Terra', image: '/pokeballs/ballespecial/farmball.png' },
+  ]
+
+  const handleModificarNetball = async () => {
+    if (!netballSelectedBall) return
+    if (currentHP < 10) {
+      alert('❌ HP insuficiente!\n\nVocê precisa de pelo menos 10 HP para modificar uma Netball.\nHP atual: ' + currentHP)
+      return
+    }
+    const netballItem = keyItems.find(i => i.name === 'Netball')
+    if (!netballItem || (netballItem.quantity ?? 1) < 1) {
+      alert('❌ Sem Netball na mochila!')
+      return
+    }
+    let updated = [...keyItems]
+    // Consome 1 Netball
+    const netIdx = updated.findIndex(i => i.name === 'Netball')
+    if ((updated[netIdx].quantity ?? 1) <= 1) updated.splice(netIdx, 1)
+    else updated = updated.map((i, j) => j === netIdx ? { ...i, quantity: i.quantity - 1 } : i)
+    // Adiciona ball forjada
+    const existIdx = updated.findIndex(i => i.name === netballSelectedBall.name)
+    if (existIdx !== -1) updated = updated.map((i, j) => j === existIdx ? { ...i, quantity: (i.quantity ?? 1) + 1 } : i)
+    else updated = [...updated, { name: netballSelectedBall.name, quantity: 1 }]
+
+    setKeyItems(updated)
+    setCurrentHP(prev => Math.max(0, prev - 10))
+    if (useFirebase && currentUser) {
+      const { ref, set } = await import('firebase/database')
+      await set(ref(database, `trainers/${currentUser.username}/keyItems`), updated)
+      await set(ref(database, `trainers/${currentUser.username}/currentHP`), Math.max(0, currentHP - 10))
+    }
+    alert(`✅ ${netballSelectedBall.name} criada com sucesso!\n\n-1 Netball | -10 HP do treinador.`)
+    setNetballSelectedBall(null)
+    setShowModificarNetballModal(false)
+  }
+
+  // Função para modificar Diveball em pokébola especial de habitat
+  const DIVEBALL_OPTIONS = [
+    { name: 'Lakeball',     description: '+0, ou -15 se habitat de água doce', image: '/pokeballs/ballespecial/lakeball.png' },
+    { name: 'Articball',    description: '+0, ou -15 se habitat ártico',        image: '/pokeballs/ballespecial/articball.png' },
+    { name: 'Caveball',     description: '+0, ou -15 se habitat cavernoso',     image: '/pokeballs/ballespecial/caveball.png' },
+    { name: 'Cityball',     description: '+0, ou -15 se habitat urbano',        image: '/pokeballs/ballespecial/cityball.png' },
+    { name: 'Saaraball',    description: '+0, ou -15 se habitat desético',      image: '/pokeballs/ballespecial/saaraball.png' },
+    { name: 'Florestball',  description: '+0, ou -15 se habitat florestal',     image: '/pokeballs/ballespecial/florestball.png' },
+    { name: 'Mountainball', description: '+0, ou -15 se habitat montanhoso',    image: '/pokeballs/ballespecial/mountainball.png' },
+    { name: 'Swampball',    description: '+0, ou -15 se habitat pantanoso',     image: '/pokeballs/ballespecial/swampball.png' },
+    { name: 'Flatball',     description: '+0, ou -15 se habitat de planície',   image: '/pokeballs/ballespecial/faltball.png' },
+    { name: 'Beachball',    description: '+0, ou -15 se habitat praia',         image: '/pokeballs/ballespecial/beachball.png' },
+    { name: 'Jungleball',   description: '+0, ou -15 se habitat de selva',      image: '/pokeballs/ballespecial/jungleball.png' },
+    { name: 'Taigaball',    description: '+0, ou -15 se habitat taiga',         image: '/pokeballs/ballespecial/taigaball.png' },
+    { name: 'Tundraball',   description: '+0, ou -15 se habitat tundra',        image: '/pokeballs/ballespecial/tundraball.png' },
+  ]
+
+  const handleModificarDiveball = async () => {
+    if (!diveballSelectedBall) return
+    if (currentHP < 10) {
+      alert('❌ HP insuficiente!\n\nVocê precisa de pelo menos 10 HP para modificar uma Diveball.\nHP atual: ' + currentHP)
+      return
+    }
+    const diveballItem = keyItems.find(i => i.name === 'Diveball')
+    if (!diveballItem || (diveballItem.quantity ?? 1) < 1) {
+      alert('❌ Sem Diveball na mochila!')
+      return
+    }
+    let updated = [...keyItems]
+    const diveIdx = updated.findIndex(i => i.name === 'Diveball')
+    if ((updated[diveIdx].quantity ?? 1) <= 1) updated.splice(diveIdx, 1)
+    else updated = updated.map((i, j) => j === diveIdx ? { ...i, quantity: i.quantity - 1 } : i)
+    const existIdx = updated.findIndex(i => i.name === diveballSelectedBall.name)
+    if (existIdx !== -1) updated = updated.map((i, j) => j === existIdx ? { ...i, quantity: (i.quantity ?? 1) + 1 } : i)
+    else updated = [...updated, { name: diveballSelectedBall.name, quantity: 1 }]
+    setKeyItems(updated)
+    setCurrentHP(prev => Math.max(0, prev - 10))
+    if (useFirebase && currentUser) {
+      const { ref, set } = await import('firebase/database')
+      await set(ref(database, `trainers/${currentUser.username}/keyItems`), updated)
+      await set(ref(database, `trainers/${currentUser.username}/currentHP`), Math.max(0, currentHP - 10))
+    }
+    alert(`✅ ${diveballSelectedBall.name} criada com sucesso!\n\n-1 Diveball | -10 HP do treinador.`)
+    setDiveballSelectedBall(null)
+    setShowModificarDiveballModal(false)
   }
 
   // ===== FUNÇÕES DO CASSINO - TIPAGEM =====
@@ -12959,6 +13245,7 @@ function App() {
             setPokemonedas(data.pokemonedas || 0)
             setPokecaixinha(data.pokecaixinha || 0)
             setKeyItems(data.keyItems || [])
+            setPokeoficinaBtnOrder(data.pokeoficinaBtnOrder || [])
             setCustomItems(data.customItems || [])
             setPokeovoList(data.pokeovoList || [])
             setFotografias(data.fotografias || [])
@@ -16764,7 +17051,7 @@ function App() {
   // Cursor VTT (captura e escaneamento) — único style element, sempre movido para o fim do <head>
   useEffect(() => {
     if (vttCaptureMode && vttCapturePokeball) {
-      applyVttCursor(`/pokeballs/${vttCapturePokeball.toLowerCase().replace(/\s/g, '')}.png`)
+      applyVttCursor(getPokeballImage(vttCapturePokeball))
     } else if (vttScanMode) {
       applyVttCursor(classes.includes('Engenheiro') ? '/coisasengenheiro/miniengedex.png' : '/pokedexpq.png')
     } else {
@@ -24863,7 +25150,7 @@ function App() {
                 style={{
                   width: `${vttCanvasWidth}px`,
                   height: `${vttCanvasHeight}px`,
-                  cursor: vttCaptureMode && vttCapturePokeball ? `url(/pokeballs/${vttCapturePokeball.toLowerCase().replace(/\s/g,'')}.png) 16 16, crosshair` : undefined,
+                  cursor: vttCaptureMode && vttCapturePokeball ? `url(${getPokeballImage(vttCapturePokeball)}) 16 16, crosshair` : undefined,
                   maxWidth: '100%'
                 }}
               >
@@ -25967,7 +26254,7 @@ function App() {
                 <h3 className={`text-xl font-bold text-center mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Captura VTT</h3>
                 <div className="flex flex-col items-center mb-4 gap-2">
                   <img
-                    src={`/pokeballs/${vttCaptureResultModal.pokeballName.toLowerCase().replace(/\s/g,'')}.png`}
+                    src={getPokeballImage(vttCaptureResultModal.pokeballName)}
                     alt={vttCaptureResultModal.pokeballName}
                     className="w-12 h-12 object-contain"
                   />
@@ -31197,7 +31484,7 @@ function App() {
                               })()}
                               {pokemon.pokeball && (
                                 <img
-                                  src={pokemon.pokeball === 'Custom Pokeball' && pokemon.customPokeballImage ? pokemon.customPokeballImage : `/pokeballs/${pokemon.pokeball.toLowerCase().replace(/\s+/g, '')}.png`}
+                                  src={pokemon.pokeball === 'Custom Pokeball' && pokemon.customPokeballImage ? pokemon.customPokeballImage : getPokeballImage(pokemon.pokeball)}
                                   alt={pokemon.pokeball}
                                   className="w-10 h-10 object-contain"
                                   title={pokemon.pokeball}
@@ -33681,7 +33968,7 @@ function App() {
                           }`}
                         >
                           <img
-                            src={ball === 'Custom Pokeball' ? `/pokeballs/custompokeball.png` : `/pokeballs/${ball.toLowerCase().replace(/\s+/g, '')}.png`}
+                            src={ball === 'Custom Pokeball' ? `/pokeballs/custompokeball.png` : getPokeballImage(ball)}
                             alt={ball}
                             className="w-16 h-16 object-contain"
                           />
@@ -34306,7 +34593,7 @@ function App() {
                             <img src={_imgSrc} onError={_fallback && _imgSrc !== _fallback ? (e) => { e.currentTarget.onerror = null; e.currentTarget.src = _fallback } : undefined} alt={pokemon.nickname || pokemon.species} className="w-16 h-16 object-contain rounded-lg border-2 border-purple-500" />
                             {pokemon.pokeball && (
                               <img
-                                src={pokemon.pokeball === 'Custom Pokeball' && pokemon.customPokeballImage ? pokemon.customPokeballImage : `/pokeballs/${pokemon.pokeball.toLowerCase().replace(/\s+/g, '')}.png`}
+                                src={pokemon.pokeball === 'Custom Pokeball' && pokemon.customPokeballImage ? pokemon.customPokeballImage : getPokeballImage(pokemon.pokeball)}
                                 alt={pokemon.pokeball}
                                 className="w-8 h-8 object-contain"
                                 title={pokemon.pokeball}
@@ -35629,7 +35916,7 @@ function App() {
                           }`}
                         >
                           <img
-                            src={ball === 'Custom Pokeball 2' ? `/pokeballs/custompokeball.png` : `/pokeballs/${ball.toLowerCase().replace(/\s+/g, '')}.png`}
+                            src={ball === 'Custom Pokeball 2' ? `/pokeballs/custompokeball.png` : getPokeballImage(ball)}
                             alt={ball}
                             className="w-16 h-16 object-contain"
                           />
@@ -37886,32 +38173,77 @@ function App() {
               const nome = typeof t === 'string' ? t : t.nome
               return nome === 'Reparar Pokébola'
             })
+            const hasFerreiroAbricor = talentosSelected.some(t => {
+              const nome = typeof t === 'string' ? t : t.nome
+              return nome === 'Ferreiro de Abricós'
+            })
+            const hasSaviorball = talentosSelected.some(t => {
+              const nome = typeof t === 'string' ? t : t.nome
+              return nome === 'A Pokébola do Salvador'
+            })
+            const hasModificarNetball = talentosSelected.some(t => {
+              const nome = typeof t === 'string' ? t : t.nome
+              return nome === 'Pokébola para cada Tipo'
+            })
+            const hasModificarDiveball = talentosSelected.some(t => {
+              const nome = typeof t === 'string' ? t : t.nome
+              return nome === 'Pokébola para cada Habitat'
+            })
 
             // Só mostrar a seção se tiver pelo menos um dos talentos
-            if (!hasCriarPokebola && !hasRepararPokebola) return null
+            if (!hasCriarPokebola && !hasRepararPokebola && !hasFerreiroAbricor && !hasSaviorball && !hasModificarNetball && !hasModificarDiveball) return null
+
+            const POKEOFICINA_BTN_DEFS = [
+              { key: 'criarPokebola', has: hasCriarPokebola, label: '🎲 Criar Pokébola', onClick: handleCriarPokebola, color: 'from-blue-600 to-cyan-700 hover:from-blue-700 hover:to-cyan-800' },
+              { key: 'repararPokebola', has: hasRepararPokebola, label: '🔧 Reparar Pokébola', onClick: handleRepararPokebola, color: 'from-orange-600 to-red-700 hover:from-orange-700 hover:to-red-800' },
+              { key: 'ferreiroAbricor', has: hasFerreiroAbricor, label: '🍏 Misturar Abricós', onClick: () => { setMisturarSlot1(''); setMisturarSlot2(''); setMisturarSlot3(''); setShowMisturarAbricorModal(true) }, color: 'from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800' },
+              { key: 'saviorball', has: hasSaviorball, label: '⚔️ Forjar Saviorball', onClick: () => { setForjarSaviorMethod(null); setShowForjarSaviorModal(true) }, color: 'from-yellow-600 to-amber-700 hover:from-yellow-700 hover:to-amber-800' },
+              { key: 'netball', has: hasModificarNetball, label: '🔵 Modificar Netball', onClick: () => { setNetballSelectedBall(null); setShowModificarNetballModal(true) }, color: 'from-teal-600 to-cyan-700 hover:from-teal-700 hover:to-cyan-800', badgeKey: 'Netball', badgeColor: 'text-teal-700' },
+              { key: 'diveball', has: hasModificarDiveball, label: '🌊 Modificar Diveball', onClick: () => { setDiveballSelectedBall(null); setShowModificarDiveballModal(true) }, color: 'from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800', badgeKey: 'Diveball', badgeColor: 'text-blue-700' },
+            ]
+            const pofActiveKeys = POKEOFICINA_BTN_DEFS.filter(b => b.has).map(b => b.key)
+            const pofOrderedKeys = [
+              ...pokeoficinaBtnOrder.filter(k => pofActiveKeys.includes(k)),
+              ...pofActiveKeys.filter(k => !pokeoficinaBtnOrder.includes(k))
+            ]
+            const pofOrderedBtns = pofOrderedKeys.map(k => POKEOFICINA_BTN_DEFS.find(b => b.key === k))
+            const POF_PAGE_SIZE = 6
+            const pofTotalPages = Math.ceil(pofOrderedBtns.length / POF_PAGE_SIZE)
+            const pofSafePage = Math.min(pokeoficinaBtnPage, Math.max(0, pofTotalPages - 1))
+            const pofPageBtns = pofOrderedBtns.slice(pofSafePage * POF_PAGE_SIZE, (pofSafePage + 1) * POF_PAGE_SIZE)
 
             return (
+              <>
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-3 sm:p-5 md:p-6 mb-4 sm:mb-5 md:mb-6`}>
                 <h3 className={`text-lg sm:text-xl md:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-3 sm:mb-4`}>🔧 Pokéoficina</h3>
                 <div className={`p-2 sm:p-4 md:p-6 rounded-lg border-2 ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
-                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-3 sm:mb-4">
-                    {hasCriarPokebola && (
-                      <button
-                        onClick={handleCriarPokebola}
-                        className="flex-1 min-w-[160px] sm:min-w-[200px] bg-gradient-to-r from-blue-600 to-cyan-700 text-white px-3 py-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3 rounded-lg hover:from-blue-700 hover:to-cyan-800 font-semibold shadow-lg transition-all text-sm sm:text-base"
-                      >
-                        🎲 Criar Pokébola
-                      </button>
-                    )}
-                    {hasRepararPokebola && (
-                      <button
-                        onClick={handleRepararPokebola}
-                        className="flex-1 min-w-[160px] sm:min-w-[200px] bg-gradient-to-r from-orange-600 to-red-700 text-white px-3 py-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3 rounded-lg hover:from-orange-700 hover:to-red-800 font-semibold shadow-lg transition-all text-sm sm:text-base"
-                      >
-                        🔧 Reparar Pokébola
-                      </button>
-                    )}
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={() => { setPokeoficinaBtnOrderDraft([...pofOrderedKeys]); setShowPokeoficinaConfigModal(true) }}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
+                      title="Configurar ordem dos botões"
+                    >⚙️ Organizar</button>
                   </div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    {pofPageBtns.map(btn => {
+                      const qty = btn.badgeKey ? (keyItems.find(i => i.name === btn.badgeKey)?.quantity ?? 0) : null
+                      return (
+                        <button key={btn.key} onClick={btn.onClick} className={`bg-gradient-to-r ${btn.color} text-white px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg font-semibold shadow-lg transition-all text-sm sm:text-base flex items-center justify-center gap-2`}>
+                          <span>{btn.label}</span>
+                          {qty !== null && <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${qty > 0 ? `bg-white ${btn.badgeColor}` : 'bg-red-500 text-white'}`}>×{qty}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {pofTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <button onClick={() => setPokeoficinaBtnPage(p => Math.max(0, p - 1))} disabled={pofSafePage === 0} className={`w-7 h-7 rounded-full flex items-center justify-center font-bold transition-all ${pofSafePage === 0 ? 'text-gray-400 cursor-not-allowed' : darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-200'}`}>‹</button>
+                      {Array.from({ length: pofTotalPages }, (_, i) => (
+                        <button key={i} onClick={() => setPokeoficinaBtnPage(i)} className={`w-2.5 h-2.5 rounded-full transition-all ${i === pofSafePage ? 'bg-blue-500' : darkMode ? 'bg-gray-500 hover:bg-gray-400' : 'bg-gray-300 hover:bg-gray-400'}`} />
+                      ))}
+                      <button onClick={() => setPokeoficinaBtnPage(p => Math.min(pofTotalPages - 1, p + 1))} disabled={pofSafePage === pofTotalPages - 1} className={`w-7 h-7 rounded-full flex items-center justify-center font-bold transition-all ${pofSafePage === pofTotalPages - 1 ? 'text-gray-400 cursor-not-allowed' : darkMode ? 'text-white hover:bg-gray-600' : 'text-gray-600 hover:bg-gray-200'}`}>›</button>
+                    </div>
+                  )}
                   <div className={`p-2 sm:p-3 rounded-lg ${darkMode ? 'bg-gray-600' : 'bg-gray-100'}`}>
                     <p className={`text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                       {hasCriarPokebola && (
@@ -37925,10 +38257,71 @@ function App() {
                           <strong>Reparar Pokébola:</strong> Rola 1d20 + Mod. Velocidade. Resultado ≥16: Sucesso (consome peça e adiciona pokébola) | &lt;16: Falha (apenas consome peça)
                         </>
                       )}
+                      {(hasCriarPokebola || hasRepararPokebola) && hasFerreiroAbricor && <br />}
+                      {hasFerreiroAbricor && (
+                        <>
+                          <strong>Misturar Abricós:</strong> Escolha 2 apricorns da mochila para consumir e 1 apricorn para receber.
+                        </>
+                      )}
+                      {(hasCriarPokebola || hasRepararPokebola || hasFerreiroAbricor) && hasSaviorball && <br />}
+                      {hasSaviorball && (
+                        <>
+                          <strong>Forjar Saviorball:</strong> Use 1 de cada apricorn colorida (7 cores) OU 1 Apricorn Arco-íris. Custa 25 HP do treinador.
+                        </>
+                      )}
+                      {(hasCriarPokebola || hasRepararPokebola || hasFerreiroAbricor || hasSaviorball) && hasModificarNetball && <br />}
+                      {hasModificarNetball && (
+                        <>
+                          <strong>Modificar Netball:</strong> Converte 1 Netball em uma pokébola especializada por tipo. Custa 10 HP do treinador.
+                        </>
+                      )}
+                      {(hasCriarPokebola || hasRepararPokebola || hasFerreiroAbricor || hasSaviorball || hasModificarNetball) && hasModificarDiveball && <br />}
+                      {hasModificarDiveball && (
+                        <>
+                          <strong>Modificar Diveball:</strong> Converte 1 Diveball em uma pokébola especializada por habitat. Custa 10 HP do treinador.
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
               </div>
+              {showPokeoficinaConfigModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+                  <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-2xl shadow-2xl p-6 w-full max-w-sm`}>
+                    <h3 className="text-lg font-bold mb-1">⚙️ Organizar Botões</h3>
+                    <p className={`text-xs mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Escolha a ordem em que os botões aparecem na Pokéoficina.</p>
+                    <div className="flex flex-col gap-2 mb-5">
+                      {pokeoficinaBtnOrderDraft.map((key, idx) => (
+                        <div key={idx} className={`flex items-center gap-3 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                          <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold flex-shrink-0 ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'}`}>{idx + 1}</span>
+                          <select
+                            value={key}
+                            onChange={e => {
+                              const newKey = e.target.value
+                              const newDraft = [...pokeoficinaBtnOrderDraft]
+                              const swapIdx = newDraft.indexOf(newKey)
+                              if (swapIdx !== -1) newDraft[swapIdx] = key
+                              newDraft[idx] = newKey
+                              setPokeoficinaBtnOrderDraft(newDraft)
+                            }}
+                            className={`flex-1 px-2 py-1 rounded border text-sm ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300 text-gray-800'}`}
+                          >
+                            {pofActiveKeys.map(k => {
+                              const b = POKEOFICINA_BTN_DEFS.find(bd => bd.key === k)
+                              return <option key={k} value={k}>{b.label}</option>
+                            })}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3 justify-end">
+                      <button onClick={() => setShowPokeoficinaConfigModal(false)} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>Cancelar</button>
+                      <button onClick={async () => { setPokeoficinaBtnOrder(pokeoficinaBtnOrderDraft); setShowPokeoficinaConfigModal(false); await set(ref(database, `trainers/${currentUser.username}/pokeoficinaBtnOrder`), pokeoficinaBtnOrderDraft) }} className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all">Confirmar</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              </>
             )
           })()}
 
@@ -38106,6 +38499,288 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Modal Misturar Abricós */}
+        {showMisturarAbricorModal && (() => {
+          const APRICORN_LIST = Object.entries(APRICORN_COLOR_MAP).map(([nome]) => {
+            const itemDef = (POKELOJA_DATA['Apricorns e Bonsais'] ?? []).find(i => i.name === nome)
+            const qty = keyItems.find(i => i.name === nome)?.quantity ?? 0
+            return { nome, img: itemDef?.image ?? '', qty }
+          })
+          const ownedList = APRICORN_LIST.filter(a => a.qty > 0)
+          const pickerList = misturarPickingSlot === 3 ? APRICORN_LIST : ownedList
+
+          const slotValues = [misturarSlot1, misturarSlot2, misturarSlot3]
+          const setSlot = (n, v) => { if (n === 1) setMisturarSlot1(v); else if (n === 2) setMisturarSlot2(v); else setMisturarSlot3(v) }
+
+          const SlotBox = ({ slotNum, value }) => {
+            const info = value ? APRICORN_LIST.find(a => a.nome === value) : null
+            return (
+              <button
+                onClick={() => setMisturarPickingSlot(misturarPickingSlot === slotNum ? null : slotNum)}
+                className={`w-20 h-20 rounded-xl border-2 flex flex-col items-center justify-center transition-all
+                  ${misturarPickingSlot === slotNum
+                    ? 'border-green-400 bg-green-900/30'
+                    : darkMode ? 'border-gray-600 bg-gray-700 hover:border-gray-400' : 'border-gray-300 bg-gray-100 hover:border-gray-500'}`}
+              >
+                {info ? (
+                  <>
+                    <img src={info.img} alt={info.nome} className="w-10 h-10 object-contain" onError={e => { e.target.style.display='none' }} />
+                    <span className={`text-xs mt-1 font-bold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {slotNum !== 3 ? `×${info.qty}` : ''}
+                    </span>
+                  </>
+                ) : (
+                  <span className={`text-3xl font-thin ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>+</span>
+                )}
+              </button>
+            )
+          }
+
+          const canConfirm = misturarSlot1 && misturarSlot2 && misturarSlot3
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex flex-col items-center justify-center z-50 p-4 gap-3"
+              onClick={() => { setMisturarPickingSlot(null); setShowMisturarAbricorModal(false) }}>
+
+              {/* Modal principal */}
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-5 w-full max-w-sm`} onClick={e => e.stopPropagation()}>
+                <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>🍏 Misturar Abricós</h3>
+
+                {/* Slots */}
+                <div className="flex items-center justify-center gap-3 mb-5">
+                  <SlotBox slotNum={1} value={misturarSlot1} />
+                  <span className={`text-2xl font-bold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>+</span>
+                  <SlotBox slotNum={2} value={misturarSlot2} />
+                  <span className={`text-2xl font-bold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>=</span>
+                  <SlotBox slotNum={3} value={misturarSlot3} />
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={handleConfirmarMisturarAbricor} disabled={!canConfirm}
+                    className="flex-1 py-2 rounded-lg font-bold text-sm bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white transition-colors">
+                    Confirmar
+                  </button>
+                  <button onClick={() => { setMisturarPickingSlot(null); setShowMisturarAbricorModal(false) }}
+                    className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-modal picker */}
+              {misturarPickingSlot !== null && (
+                <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 w-full max-w-sm`} onClick={e => e.stopPropagation()}>
+                  <p className={`text-sm font-bold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Escolha para o Slot {misturarPickingSlot}
+                    {misturarPickingSlot !== 3 && pickerList.length === 0 && (
+                      <span className="text-red-400 font-normal ml-2">— nenhum apricorn na mochila</span>
+                    )}
+                  </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {pickerList.map(({ nome, img, qty }) => (
+                      <button key={nome} onClick={() => { setSlot(misturarPickingSlot, nome); setMisturarPickingSlot(null) }}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all
+                          ${slotValues[misturarPickingSlot - 1] === nome
+                            ? 'border-green-400 bg-green-900/30'
+                            : darkMode ? 'border-gray-600 bg-gray-700 hover:border-gray-400' : 'border-gray-200 bg-gray-50 hover:border-gray-400'}`}
+                        title={nome}
+                      >
+                        <img src={img} alt={nome} className="w-10 h-10 object-contain" onError={e => { e.target.style.display='none' }} />
+                        {misturarPickingSlot !== 3 && (
+                          <span className={`text-xs font-bold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>×{qty}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* Modal Forjar Saviorball */}
+        {showForjarSaviorModal && (() => {
+          const CORES = Object.keys(APRICORN_COLOR_MAP).filter(n => n !== 'Apricorn Arco-íris')
+          const ARCOIRIS = 'Apricorn Arco-íris'
+          const getQty = (nome) => keyItems.find(i => i.name === nome)?.quantity ?? 0
+          const getImg = (nome) => (POKELOJA_DATA['Apricorns e Bonsais'] ?? []).find(i => i.name === nome)?.image ?? ''
+
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowForjarSaviorModal(false)}>
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-5 w-full max-w-sm`} onClick={e => e.stopPropagation()}>
+                <h3 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>⚔️ Forjar Saviorball</h3>
+
+                {/* Seção 1 */}
+                <div className={`rounded-xl border-2 p-3 mb-3 transition-all cursor-pointer ${forjarSaviorMethod === 1
+                  ? 'border-yellow-400 bg-yellow-900/20'
+                  : darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-50'}`}
+                  onClick={() => setForjarSaviorMethod(forjarSaviorMethod === 1 ? null : 1)}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input type="checkbox" readOnly checked={forjarSaviorMethod === 1}
+                      className="w-4 h-4 accent-yellow-500 pointer-events-none" />
+                    <span className={`text-sm font-bold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                      1 de cada apricorn colorida (7 cores)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {CORES.map(nome => {
+                      const qty = getQty(nome)
+                      const img = getImg(nome)
+                      return (
+                        <div key={nome} className="flex flex-col items-center gap-1">
+                          <img src={img} alt={nome} className={`w-10 h-10 object-contain transition-all ${qty === 0 ? 'grayscale opacity-40' : ''}`}
+                            onError={e => { e.target.style.display='none' }} />
+                          <span className={`text-xs font-bold ${qty === 0 ? (darkMode ? 'text-red-400' : 'text-red-500') : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}>
+                            ×{qty}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Seção 2 */}
+                <div className={`rounded-xl border-2 p-3 mb-4 transition-all cursor-pointer ${forjarSaviorMethod === 2
+                  ? 'border-yellow-400 bg-yellow-900/20'
+                  : darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-50'}`}
+                  onClick={() => setForjarSaviorMethod(forjarSaviorMethod === 2 ? null : 2)}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input type="checkbox" readOnly checked={forjarSaviorMethod === 2}
+                      className="w-4 h-4 accent-yellow-500 pointer-events-none" />
+                    <span className={`text-sm font-bold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                      1 Apricorn Arco-íris
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const qty = getQty(ARCOIRIS)
+                      const img = getImg(ARCOIRIS)
+                      return (
+                        <>
+                          <img src={img} alt={ARCOIRIS} className={`w-12 h-12 object-contain transition-all ${qty === 0 ? 'grayscale opacity-40' : ''}`}
+                            onError={e => { e.target.style.display='none' }} />
+                          <span className={`text-sm font-bold ${qty === 0 ? (darkMode ? 'text-red-400' : 'text-red-500') : (darkMode ? 'text-gray-300' : 'text-gray-600')}`}>
+                            ×{qty}
+                          </span>
+                        </>
+                      )
+                    })()}
+                  </div>
+                </div>
+
+                <p className={`text-xs mb-4 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                  ⚠️ Custa <strong>25 HP</strong> do treinador (HP atual: {currentHP})
+                </p>
+
+                <div className="flex gap-2">
+                  <button onClick={handleForjarSaviorball} disabled={!forjarSaviorMethod}
+                    className="flex-1 py-2 rounded-lg font-bold text-sm bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 text-white transition-colors">
+                    ⚔️ Forjar
+                  </button>
+                  <button onClick={() => setShowForjarSaviorModal(false)}
+                    className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Modal Modificar Netball */}
+        {showModificarNetballModal && (() => {
+          const netQty = keyItems.find(i => i.name === 'Netball')?.quantity ?? 0
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={() => setShowModificarNetballModal(false)}>
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 sm:p-6 max-w-lg w-full`} onClick={e => e.stopPropagation()}>
+                <h3 className={`text-xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-800'}`}>🔵 Modificar Netball</h3>
+                <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Netballs na mochila: <span className={`font-bold ${netQty > 0 ? 'text-teal-400' : 'text-red-400'}`}>×{netQty}</span>
+                  {' '}· Custa 1 Netball + 10 HP
+                </p>
+                <p className={`text-xs mb-3 font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Selecione a pokébola a criar:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+                  {NETBALL_OPTIONS.map(opt => {
+                    const selected = netballSelectedBall?.name === opt.name
+                    return (
+                      <button
+                        key={opt.name}
+                        onClick={() => setNetballSelectedBall(selected ? null : opt)}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${selected ? 'border-teal-500 bg-teal-900 bg-opacity-30' : darkMode ? 'border-gray-600 bg-gray-700 hover:border-teal-500' : 'border-gray-200 bg-gray-50 hover:border-teal-400'}`}
+                      >
+                        <img src={opt.image} alt={opt.name} className="w-12 h-12 object-contain" />
+                        <span className={`text-xs font-bold text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>{opt.name}</span>
+                        <span className={`text-xs text-center leading-tight ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{opt.description}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className={`text-xs mb-4 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>⚠️ HP atual: {currentHP}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleModificarNetball}
+                    disabled={!netballSelectedBall || netQty < 1}
+                    className="flex-1 py-2 rounded-lg font-bold text-sm bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    🔵 Modificar
+                  </button>
+                  <button onClick={() => setShowModificarNetballModal(false)}
+                    className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Modal Modificar Diveball */}
+        {showModificarDiveballModal && (() => {
+          const diveQty = keyItems.find(i => i.name === 'Diveball')?.quantity ?? 0
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={() => setShowModificarDiveballModal(false)}>
+              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-4 sm:p-6 max-w-lg w-full`} onClick={e => e.stopPropagation()}>
+                <h3 className={`text-xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-gray-800'}`}>🌊 Modificar Diveball</h3>
+                <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Diveballs na mochila: <span className={`font-bold ${diveQty > 0 ? 'text-blue-400' : 'text-red-400'}`}>×{diveQty}</span>
+                  {' '}· Custa 1 Diveball + 10 HP
+                </p>
+                <p className={`text-xs mb-3 font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Selecione a pokébola a criar:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5 max-h-80 overflow-y-auto">
+                  {DIVEBALL_OPTIONS.map(opt => {
+                    const selected = diveballSelectedBall?.name === opt.name
+                    return (
+                      <button
+                        key={opt.name}
+                        onClick={() => setDiveballSelectedBall(selected ? null : opt)}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${selected ? 'border-blue-500 bg-blue-900 bg-opacity-30' : darkMode ? 'border-gray-600 bg-gray-700 hover:border-blue-500' : 'border-gray-200 bg-gray-50 hover:border-blue-400'}`}
+                      >
+                        <img src={opt.image} alt={opt.name} className="w-12 h-12 object-contain" />
+                        <span className={`text-xs font-bold text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>{opt.name}</span>
+                        <span className={`text-xs text-center leading-tight ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{opt.description}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className={`text-xs mb-4 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>⚠️ HP atual: {currentHP}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleModificarDiveball}
+                    disabled={!diveballSelectedBall || diveQty < 1}
+                    className="flex-1 py-2 rounded-lg font-bold text-sm bg-blue-700 hover:bg-blue-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    🌊 Modificar
+                  </button>
+                  <button onClick={() => setShowModificarDiveballModal(false)}
+                    className={`flex-1 py-2 rounded-lg font-bold text-sm transition-colors ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-gray-200' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Modal Adicionar Item Customizado */}
         {showAddCustomItemModal && (
@@ -44386,7 +45061,7 @@ function App() {
                           ) : pokeballsInBag.map(item => (
                             <button key={item.name} onClick={() => { setVttCapturePokeball(item.name); setVttCaptureMode(true); setVttCaptureDropdownOpen(false) }}
                               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttCapturePokeball === item.name ? 'bg-red-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                              <img src={`/pokeballs/${item.name.toLowerCase().replace(/\s/g,'')}.png`} alt={item.name} className="w-5 h-5 object-contain" />
+                              <img src={getPokeballImage(item.name)} alt={item.name} className="w-5 h-5 object-contain" />
                               <span className="flex-1 text-left">{item.name}</span>
                               <span className="text-xs opacity-70">×{item.quantity}</span>
                             </button>
@@ -44487,7 +45162,7 @@ function App() {
                     width: '100%',
                     height: 'min(95vh, 1000px)',
                     maxWidth: '100%',
-                    cursor: vttCaptureMode && vttCapturePokeball ? `url(/pokeballs/${vttCapturePokeball.toLowerCase().replace(/\s/g,'')}.png) 16 16, crosshair` : undefined
+                    cursor: vttCaptureMode && vttCapturePokeball ? `url(${getPokeballImage(vttCapturePokeball)}) 16 16, crosshair` : undefined
                   }}
                 >
                   {/* Canvas do Mapa - Dimensões Customizáveis */}
@@ -46485,7 +47160,7 @@ function App() {
                           title={item.name}
                         >
                           <img
-                            src={`/pokeballs/${item.name.toLowerCase().replace(' ', '')}.png`}
+                            src={getPokeballImage(item.name)}
                             alt={item.name}
                             className="w-12 h-12 object-contain"
                             onError={(e) => {
@@ -46560,7 +47235,7 @@ function App() {
                               title={item.name}
                             >
                               <img
-                                src={curaItem?.image || `/pokeballs/${item.name.toLowerCase().replace(/ /g, '')}.png`}
+                                src={curaItem?.image || getPokeballImage(item.name)}
                                 alt={item.name}
                                 className="w-12 h-12 object-contain"
                                 onError={(e) => {
@@ -50165,7 +50840,7 @@ function App() {
                             title={item.name}
                           >
                             <img
-                              src={`/pokeballs/${item.name.toLowerCase().replace(' ', '')}.png`}
+                              src={getPokeballImage(item.name)}
                               alt={item.name}
                               className="w-10 h-10 object-contain"
                               onError={(e) => {
@@ -50238,7 +50913,7 @@ function App() {
                                 title={item.name}
                               >
                                 <img
-                                  src={curaItem?.image || `/pokeballs/${item.name.toLowerCase().replace(/ /g, '')}.png`}
+                                  src={curaItem?.image || getPokeballImage(item.name)}
                                   alt={item.name}
                                   className="w-10 h-10 object-contain"
                                   onError={(e) => {
@@ -52823,7 +53498,7 @@ function App() {
                                   title={item.name}
                                 >
                                   <img
-                                    src={`/pokeballs/${item.name.toLowerCase().replace(' ', '')}.png`}
+                                    src={getPokeballImage(item.name)}
                                     alt={item.name}
                                     className="w-10 h-10 object-contain"
                                     onError={(e) => {
@@ -52891,7 +53566,7 @@ function App() {
                                     title={item.name}
                                   >
                                     <img
-                                      src={curaItem?.image || `/pokeballs/${item.name.toLowerCase().replace(/ /g, '')}.png`}
+                                      src={curaItem?.image || getPokeballImage(item.name)}
                                       alt={item.name}
                                       className="w-10 h-10 object-contain"
                                       onError={(e) => {
@@ -53746,7 +54421,7 @@ function App() {
                     >
                       <span className={`text-[10px] font-bold truncate w-full text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{pkmn.nickname || pkmn.species}</span>
                       <img
-                        src={`/pokeballs/${(pkmn.pokeball || 'Pokeball').toLowerCase().replace(/\s+/g, '')}.png`}
+                        src={getPokeballImage(pkmn.pokeball || 'Pokeball')}
                         alt={pkmn.pokeball || 'Pokeball'}
                         className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
                       />
@@ -54485,7 +55160,7 @@ function App() {
                       >
                         <span className={`text-[10px] font-bold truncate w-full text-center ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{npc.nome}</span>
                         <img
-                          src={`/pokeballs/${(npc.pokeball || 'Pokeball').toLowerCase().replace(/\s+/g, '')}.png`}
+                          src={getPokeballImage(npc.pokeball || 'Pokeball')}
                           alt={npc.pokeball || 'Pokeball'}
                           className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
                         />
