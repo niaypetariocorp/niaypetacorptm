@@ -152,11 +152,11 @@ export const isLegendary = (nome) =>
   nome.includes('Zamazenta');
 
 export const FOSSIL_DEX_NUMBERS = new Set([
-  138,140,142,           // Gen 1: Omanyte, Kabuto, Aerodactyl
-  345,347,               // Gen 3: Lileep, Anorith
-  408,410,               // Gen 4: Cranidos, Shieldon
-  564,566,               // Gen 5: Tirtouga, Archen
-  696,698,               // Gen 6: Tyrunt, Amaura
+  138,139,140,141,142,   // Gen 1: Omanyte, Omastar, Kabuto, Kabutops, Aerodactyl
+  345,346,347,348,       // Gen 3: Lileep, Cradily, Anorith, Armaldo
+  408,409,410,411,       // Gen 4: Cranidos, Rampardos, Shieldon, Bastiodon
+  564,565,566,567,       // Gen 5: Tirtouga, Carracosta, Archen, Archeops
+  696,697,698,699,       // Gen 6: Tyrunt, Tyrantrum, Amaura, Aurorus
 ]);
 
 // ==================== STAGE CONFIGURATION ====================
@@ -530,14 +530,14 @@ export const CLASSES_DATA = [
   {
     groupId:'mistico', groupName:'Místico', icon:'🌟',
     classes:[
-      {id:'cyber_mistico',     name:'Cyber Místico',    isBase:true,  powerKey:'mistico_base',   powerDesc:'10% de chance de um lendário aparecer e se juntar a você ao entrar em um encontro.'},
+      {id:'cyber_mistico',     name:'Cyber Místico',    isBase:true,  powerKey:'mistico_base',   powerDesc:'5% de chance de um lendário aparecer e se juntar a você ao entrar em um encontro. Funciona com lendários shiny.'},
       {id:'cyber_bardo',       name:'Cyber Bardo',      isBase:false, powerKey:'bardo',          powerDesc:'Lendário: todas as rolagens com vantagem. Não lendário: Inspiração 1×/batalha (vantagem em 1 rolagem).'},
       {id:'cyber_guardiao_m',  name:'Cyber Guardião',   isBase:false, powerKey:'guardiao_mis',   powerDesc:'Lendário: +1d em todos os atrib. Não lendário: Escudo 1×/batalha (+1d Def ou DefEsp).'},
       {id:'cyber_ilusionista', name:'Cyber Ilusionista',isBase:false, powerKey:'ilusionista',    powerDesc:'Ação especial: Ilusão — 1×/batalha, oponente tem desvantagem na próxima rolagem.'},
       {id:'cyber_medium',      name:'Cyber Médium',     isBase:false, powerKey:'medium',         powerDesc:'+1d em todas as rolagens para cada pokémon capturado abatido.'},
       {id:'cyber_orador',      name:'Cyber Orador',     isBase:false, powerKey:'orador',         powerDesc:'Ação especial: Clamor — antes do boss, sacrifica todos e recebe lendário Nv.90 (+1d/pokémon sacrificado).'},
-      {id:'cyber_runico',      name:'Cyber Rúnico',     isBase:false, powerKey:'runico',         powerDesc:'15% de chance de um Unown aparecer e se juntar a você ao entrar em um encontro.'},
-      {id:'cyber_xama',        name:'Cyber Xamã',       isBase:false, powerKey:'xama',           powerDesc:'15% de chance de um pokémon tipo Fantasma aparecer e se juntar a você ao entrar em um encontro.'},
+      {id:'cyber_runico',      name:'Cyber Rúnico',     isBase:false, powerKey:'runico',         powerDesc:'10% de chance de um Unown aparecer e se juntar a você ao entrar em um encontro.'},
+      {id:'cyber_xama',        name:'Cyber Xamã',       isBase:false, powerKey:'xama',           powerDesc:'10% de chance de um pokémon tipo Fantasma aparecer e se juntar a você ao entrar em um encontro.'},
     ],
   },
   // ── Grupo 6: Pesquisa ──────────────────────────────────
@@ -550,7 +550,7 @@ export const CLASSES_DATA = [
       {id:'cyber_hipnologo',   name:'Cyber Hipnólogo',  isBase:false, powerKey:'hipnologo',       powerDesc:'Ação especial: Hipnose 1×/batalha — oponente -5 Atk/AtkEsp finais (-10 est.7, -20 contra boss).'},
       {id:'cyber_observador',  name:'Cyber Observador', isBase:false, powerKey:'observador',      powerDesc:'10% de chance de o pokémon encontrado ser shiny.'},
       {id:'cyber_ocultista',   name:'Cyber Ocultista',  isBase:false, powerKey:'ocultista',       powerDesc:'Lendários: +2d em todas as rolagens. Não lendário: Ocultismo 1×/batalha (+2d na próxima rolagem).'},
-      {id:'cyber_petrologista',name:'Cyber Petrologista',isBase:false,powerKey:'petrologista',    powerDesc:'15% de chance de aparecer um pokémon fóssil ao entrar em um encontro.'},
+      {id:'cyber_petrologista',name:'Cyber Petrologista',isBase:false,powerKey:'petrologista',    powerDesc:'10% de chance de um pokémon fóssil aparecer e se juntar a você ao entrar em um encontro.'},
       {id:'cyber_professor',   name:'Cyber Professor',  isBase:false, powerKey:'professor',       powerDesc:'Ganha +1 slot e recebe pokémon aleatório do set inicial (Nv. igual ao pokémon mais alto).'},
     ],
   },
@@ -686,8 +686,32 @@ export const rollD4 = (n) => {
   return { rolls, total: rolls.reduce((a, b) => a + b, 0) };
 };
 
-/** Convert stat value to base d4 dice count: floor(stat / 2) */
-export const statToDice = (stat) => Math.max(1, Math.floor((stat || 1) / 2));
+/** Convert stat value to base d4 dice count: floor(stat / 5), minimum 1 */
+export const statToDice = (stat) => Math.max(1, Math.floor((stat || 1) / 5));
+
+/** Convert velocity stat to base d4 dice count: floor(vel / 10), minimum 1 */
+export const velToDice = (stat) => Math.max(1, Math.floor((stat || 1) / 10));
+
+/**
+ * Roll nDice d4 with optional vantagem (keep best of 2) or desvantagem (keep worst of 2).
+ * Always returns { rolls, total, discarded } — discarded is null when not applicable.
+ */
+const doRoll = (nDice, { vantagem = false, desvantagem = false } = {}) => {
+  const r1 = rollD4(nDice);
+  if (vantagem) {
+    const r2 = rollD4(nDice);
+    const kept = r1.total >= r2.total ? r1 : r2;
+    const disc = r1.total >= r2.total ? r2 : r1;
+    return { ...kept, discarded: disc.rolls };
+  }
+  if (desvantagem) {
+    const r2 = rollD4(nDice);
+    const kept = r1.total <= r2.total ? r1 : r2;
+    const disc = r1.total <= r2.total ? r2 : r1;
+    return { ...kept, discarded: disc.rolls };
+  }
+  return { ...r1, discarded: null };
+};
 
 /** Map App.jsx statusBasais keys → JN stat keys */
 const mapStatsToJN = (s) => ({
@@ -787,13 +811,21 @@ const BASE_VIDAS = {
   finalboss: 15,
 };
 
-export const calcBaseVidas = (species, context = 'wild', { isLeg = false, isShn = false } = {}) => {
-  let v = BASE_VIDAS[context] ?? 3;
+export const calcBaseVidas = (species, context = 'wild', { isLeg = false, isShn = false, baseOverride = null } = {}) => {
+  let v = baseOverride ?? BASE_VIDAS[context] ?? 3;
   if (species.tipos?.includes('Pedra')) v += 1;
   if (isLeg && isShn) v += 3;
   else if (isLeg) v += 2;
   else if (isShn) v += 1;
   return v;
+};
+
+/** Returns the base vidasMax for a player-owned Pokémon based on the current stage (0-indexed). */
+const getPlayerBaseVidasByStage = (stage) => {
+  if (stage <= 2) return 2; // stages 1–3
+  if (stage <= 4) return 3; // stages 4–5
+  if (stage <= 6) return 4; // stages 6–7
+  return 5;                 // stages 8–11
 };
 
 // ── Pokémon Image URL ────────────────────────────────────────
@@ -827,7 +859,7 @@ export const generateJNPokemon = (species, level, opts = {}) => {
     def:    statToDice(finalStats.def),
     atkEsp: statToDice(finalStats.atkEsp),
     defEsp: statToDice(finalStats.defEsp),
-    vel:    statToDice(finalStats.vel),
+    vel:    velToDice(finalStats.vel),
   };
 
   return {
@@ -866,7 +898,7 @@ const _addContextAtribBonus = (pkm, extraPoints) => {
       def:    statToDice(newStats.def),
       atkEsp: statToDice(newStats.atkEsp),
       defEsp: statToDice(newStats.defEsp),
-      vel:    statToDice(newStats.vel),
+      vel:    velToDice(newStats.vel),
     },
   };
 };
@@ -1132,68 +1164,105 @@ const getTypePowerBonus = (pkm, stat) => {
   return bonus;
 };
 
-/**
- * Calculate final attack dice count.
- * Returns 'immune' if the target is immune.
- */
-const calcAttackDice = (attacker, attackType, defenderTypes, classKeys, useMetalCoat = false, selectedType = null, ignoreTypeResist = false, extraTypes = []) => {
-  const base = attacker.diceBase?.[attackType] ?? 1;
-  const atkTypes = useMetalCoat ? ['Metal'] : (selectedType ? [selectedType, ...extraTypes] : [...(attacker.types ?? []), ...extraTypes]);
+// ── Dice Computation (from raw stats, never diceBase cache) ──────────────────
 
-  let diceMod = 0;
+/**
+ * Compute attack dice + breakdown for one attack exchange.
+ * Base: statToDice(stats[attackType]) = floor(stat / 5), min 1.
+ * Vel:  velToDice(stats.vel)          = floor(vel  / 10), min 1 — added on top.
+ * Returns 'immune' if all attacker types are immune against the defender.
+ */
+const computeAttackDice = (attacker, attackType, defenderTypes, opts = {}) => {
+  const {
+    classKeys = null, useMetalCoat = false, selectedType = null,
+    ignoreTypeResist = false, extraTypes = [], extraAtkDice = 0,
+  } = opts;
+
+  const base     = statToDice(attacker.stats?.[attackType] ?? 1);
+  const atkTypes = useMetalCoat
+    ? ['Metal']
+    : (selectedType ? [selectedType, ...extraTypes] : [...(attacker.types ?? []), ...extraTypes]);
+
+  let tipagem = 0;
   if (!ignoreTypeResist) {
-    // Best multiplier across all attacker types, ignoring immune matchups.
-    // Only returns 'immune' if ALL attacker types are immune against this defender.
     let bestMult = 0;
     for (const t of atkTypes) {
       const m = getTypeEffectiveness(t, defenderTypes ?? []);
-      if (m === 0) continue; // skip immune type pairings, try other types
+      if (m === 0) continue;
       if (m > bestMult) bestMult = m;
     }
-    if (bestMult === 0) return 'immune'; // every attacker type is immune → truly blocked
-    diceMod = multToDiceMod(bestMult);
+    if (bestMult === 0) return 'immune';
+    tipagem = multToDiceMod(bestMult);
   }
-  // ignoreTypeResist = true → diceMod stays 0 (neutral), no immunity possible
 
-  const singleBonus = getSingleTypeBonus(attacker);
-  const classBonus  = getClassAtkBonus(attackType, classKeys, attacker.types ?? []);
-  const typeBonus   = getTypePowerBonus(attacker, attackType);
-  const condPenalty = getConditionPenalty(attacker, attackType);
-  const diceBonus   = attacker.diceBonus?.[attackType] ?? 0;
+  const monótipo    = getSingleTypeBonus(attacker);
+  const classe      = getClassAtkBonus(attackType, classKeys, attacker.types ?? []);
+  const poderDeTipo = getTypePowerBonus(attacker, attackType);
+  const condição    = getConditionPenalty(attacker, attackType);
+  const bônus       = attacker.diceBonus?.[attackType] ?? 0;
+  const ação        = extraAtkDice;
+  const velocidade  = velToDice(attacker.stats?.vel ?? 1);
 
-  return Math.max(1, base + diceMod + singleBonus + classBonus + typeBonus + condPenalty + diceBonus);
+  const statDice = Math.max(1, base + tipagem + monótipo + classe + poderDeTipo + condição + bônus + ação);
+  const total    = statDice + velocidade;
+
+  return { total, breakdown: { base, tipagem, monótipo, classe, poderDeTipo, condição, bônus, ação, velocidade } };
 };
 
-const calcDefDice = (defender, defStat, classKeys) => {
-  const base        = defender.diceBase?.[defStat] ?? 1;
-  const singleBonus = getSingleTypeBonus(defender);
-  const classBonus  = getClassDefBonus(defStat, classKeys);
-  const typeBonus   = getTypePowerBonus(defender, defStat);
-  const condPenalty = getConditionPenalty(defender, defStat);
-  const diceBonus   = defender.diceBonus?.[defStat] ?? 0;
-  // Carapaça de Squirtle: +1d to def and defEsp
-  const defHeld = Array.isArray(defender.heldItem) ? defender.heldItem : (defender.heldItem ? [defender.heldItem] : []);
-  const carapacaBonus = (defStat === 'def' || defStat === 'defEsp')
-    ? defHeld.filter((h) => h?.effect === 'squirtle_carapaca').length
-    : 0;
-  return Math.max(1, base + singleBonus + classBonus + typeBonus + condPenalty + diceBonus + carapacaBonus);
+/**
+ * Compute defense dice + breakdown for one attack exchange.
+ * Base: statToDice(stats[defStat]) = floor(stat / 5), min 1.
+ * Vel:  velToDice(stats.vel)       = floor(vel  / 10), min 1 — added on top.
+ */
+const computeDefDice = (defender, defStat, opts = {}) => {
+  const { classKeys = null } = opts;
+
+  const base = statToDice(defender.stats?.[defStat] ?? 1);
+
+  const monótipo    = getSingleTypeBonus(defender);
+  const classe      = getClassDefBonus(defStat, classKeys);
+  const poderDeTipo = getTypePowerBonus(defender, defStat);
+  const condição    = getConditionPenalty(defender, defStat);
+  const bônus       = defender.diceBonus?.[defStat] ?? 0;
+  const defHeld     = Array.isArray(defender.heldItem)
+    ? defender.heldItem : (defender.heldItem ? [defender.heldItem] : []);
+  const carapaça    = (defStat === 'def' || defStat === 'defEsp')
+    ? defHeld.filter((h) => h?.effect === 'squirtle_carapaca').length : 0;
+  const velocidade  = velToDice(defender.stats?.vel ?? 1);
+
+  const statDice = Math.max(1, base + monótipo + classe + poderDeTipo + condição + bônus + carapaça);
+  const total    = statDice + velocidade;
+
+  return { total, breakdown: { base, monótipo, classe, poderDeTipo, condição, bônus, carapaça, velocidade } };
+};
+
+/**
+ * Compute velocity initiative dice + breakdown for one Pokémon.
+ * Base: velToDice(stats.vel) = floor(vel / 10), min 1.
+ * Adds only vel-specific class and type-power bonuses (no monótipo, no def bonuses).
+ */
+const computeVelDice = (pkm, classKeys = null) => {
+  const base      = velToDice(pkm.stats?.vel ?? 1);
+  const classe    = getClassDefBonus('vel', classKeys);
+  const poderDeTipo = getTypePowerBonus(pkm, 'vel');
+  const condição  = getConditionPenalty(pkm, 'vel');
+  const bônus     = pkm.diceBonus?.vel ?? 0;
+  const total     = Math.max(1, base + classe + poderDeTipo + condição + bônus);
+  return { total, breakdown: { base, classe, poderDeTipo, condição, bônus } };
 };
 
 // ── Enemy AI ──────────────────────────────────────────────────
 const enemyChooseAttack = (enemyPkm, playerPkm, eClassKeys = null) => {
-  const a  = calcAttackDice(enemyPkm, 'atk',    playerPkm.types, eClassKeys);
-  const ae = calcAttackDice(enemyPkm, 'atkEsp', playerPkm.types, eClassKeys);
+  const a  = computeAttackDice(enemyPkm, 'atk',    playerPkm.types, { classKeys: eClassKeys });
+  const ae = computeAttackDice(enemyPkm, 'atkEsp', playerPkm.types, { classKeys: eClassKeys });
   if (a  === 'immune' && ae === 'immune') return 'atk';
   if (a  === 'immune') return 'atkEsp';
   if (ae === 'immune') return 'atk';
-  return ae > a ? 'atkEsp' : 'atk';
+  return ae.total > a.total ? 'atkEsp' : 'atk';
 };
 
 const enemyChooseDefense = (enemyPkm, playerAtkAction, eClassKeys = null) => {
-  const forcedDefStat = playerAtkAction === 'atk' ? 'def' : 'defEsp';
-  const defDice = calcDefDice(enemyPkm, forcedDefStat, eClassKeys);
-  const velDice = calcDefDice(enemyPkm, 'vel', eClassKeys);
-  return velDice > defDice ? 'vel' : forcedDefStat;
+  return playerAtkAction === 'atk' ? 'def' : 'defEsp';
 };
 
 /** CTnpc AI: decides which special action to use this turn (returns key or null). */
@@ -1338,7 +1407,7 @@ const attemptCaptureRoll = (enemy, ballItem, activeballmod, playerPkm, classKeys
   // Enemy escape: base vel dice + vida modifier (each current vida = +1d, each lost vida = -1d)
   // Shiny: +1 dice per current vida | Legendary: +3 | Legendary Shiny: +4
   // CTnpc: +1 dice per current vida (instead of shiny/leg mods)
-  const baseVelDice   = calcDefDice(enemy, 'vel', null);
+  const baseVelDice   = computeVelDice(enemy, null).total;
   const malabaristaMod = ck.includes('malabarista')
     ? -(1 + (opts.stage >= 4 ? 1 : 0) + (opts.stage >= 6 ? 1 : 0) + (opts.stage >= 7 ? 1 : 0))
     : 0;
@@ -1533,22 +1602,18 @@ const applyAutoFruta = (pkm, log, trigger) => {
 const rollVelInitiative = (playerPkm, enemyPkm, pClassKeys, log, eClassKeys = null) => {
   const pVelVantagem = (pClassKeys ?? []).includes('augure');
   const eVelVantagem = (eClassKeys ?? []).includes('augure');
-  const pVDice = calcDefDice(playerPkm, 'vel', pClassKeys);
-  const eVDice = calcDefDice(enemyPkm,  'vel', eClassKeys);
-  const doRollVel = (dice, vantagem) => {
-    const r1 = rollD4(dice);
-    if (!vantagem) return r1;
-    const r2 = rollD4(dice);
-    const kept = r1.total >= r2.total ? r1 : r2;
-    const disc = r1.total >= r2.total ? r2 : r1;
-    return { ...kept, discarded: disc.rolls };
-  };
-  const pVRoll = doRollVel(pVDice, pVelVantagem);
-  const eVRoll = doRollVel(eVDice, eVelVantagem);
+
+  // Always computed fresh from raw stats via velToDice — never from cached diceBase
+  const pVel = computeVelDice(playerPkm, pClassKeys);
+  const eVel = computeVelDice(enemyPkm,  eClassKeys);
+
+  const pVRoll = doRoll(pVel.total, { vantagem: pVelVantagem });
+  const eVRoll = doRoll(eVel.total, { vantagem: eVelVantagem });
+
   log.push({
     type: 'vel',
-    pNome: playerPkm.nome, pRolls: pVRoll.rolls, pDiscarded: pVelVantagem ? (pVRoll.discarded ?? null) : null, pTotal: pVRoll.total,
-    eNome: enemyPkm.nome,  eRolls: eVRoll.rolls, eDiscarded: eVelVantagem ? (eVRoll.discarded ?? null) : null, eTotal: eVRoll.total,
+    pNome: playerPkm.nome, pRolls: pVRoll.rolls, pDiscarded: pVRoll.discarded, pTotal: pVRoll.total, pBreakdown: pVel.breakdown,
+    eNome: enemyPkm.nome,  eRolls: eVRoll.rolls, eDiscarded: eVRoll.discarded, eTotal: eVRoll.total, eBreakdown: eVel.breakdown,
   });
 
   let playerGoesFirst;
@@ -1559,10 +1624,11 @@ const rollVelInitiative = (playerPkm, enemyPkm, pClassKeys, log, eClassKeys = nu
     playerGoesFirst = false;
     log.push(`⚡ ${enemyPkm.nome} tem a iniciativa!`);
   } else {
-    const pVelAttr = playerPkm.diceBase?.vel ?? 1;
-    const eVelAttr = enemyPkm.diceBase?.vel ?? 1;
-    if (pVelAttr !== eVelAttr) {
-      playerGoesFirst = pVelAttr > eVelAttr;
+    // Tie: compare raw vel stat values (floor/10), then coin flip
+    const pVelStat = playerPkm.stats?.vel ?? 1;
+    const eVelStat = enemyPkm.stats?.vel  ?? 1;
+    if (pVelStat !== eVelStat) {
+      playerGoesFirst = pVelStat > eVelStat;
       log.push(`⚖️ Empate de vel! ${playerGoesFirst ? playerPkm.nome : enemyPkm.nome} tem mais vel e vai primeiro.`);
     } else {
       playerGoesFirst = Math.random() < 0.5;
@@ -1585,9 +1651,8 @@ const doAttack = (atk, atkAction, def, isPlayer, opts = {}) => {
   const metalCoatUsedThisTurn = opts.metalCoatUsedThisTurn ?? false;
 
   const forcedDefStat = atkAction === 'atk' ? 'def' : 'defEsp';
-  const defChoice = opts.defChoice ?? null;
-  const defStat   = defChoice === 'vel' ? 'vel' : forcedDefStat;
-  const defLbl    = defStat === 'vel' ? 'Vel' : defStat === 'def' ? 'Def' : 'DefEsp';
+  const defStat   = forcedDefStat;
+  const defLbl    = defStat === 'def' ? 'Def+Vel' : 'DefEsp+Vel';
 
   const eClassKeys = opts.eClassKeys ?? null;
   const defKeys  = isPlayer ? eClassKeys : pClassKeys;
@@ -1613,23 +1678,27 @@ const doAttack = (atk, atkAction, def, isPlayer, opts = {}) => {
   if (bossIgnoreResist) log.push(`💀 [Boss] Turno de poder! Ignora resistências de tipo e item!`);
 
   const estilizarExtra = isPlayer && opts.estilizarExtraType ? [opts.estilizarExtraType] : [];
-  const baseDice = calcAttackDice(atk, atkAction, def.types, atkKeys2, useMC, isPlayer ? (opts.selectedType ?? null) : null, bossIgnoreResist, estilizarExtra);
-  if (baseDice === 'immune') {
+
+  // Attack dice — base from floor(stat/5), vel from floor(vel/10), always from raw stats
+  const atkResult = computeAttackDice(atk, atkAction, def.types, {
+    classKeys: atkKeys2,
+    useMetalCoat: useMC,
+    selectedType: isPlayer ? (opts.selectedType ?? null) : null,
+    ignoreTypeResist: bossIgnoreResist,
+    extraTypes: estilizarExtra,
+    extraAtkDice: opts.extraAtkDice ?? 0,
+  });
+  if (atkResult === 'immune') {
     log.push(`🚫 ${def.nome} é imune ao ataque de ${atk.nome}!`);
     return { atk, def, defFainted: false, usedMC: false };
   }
-  const atkDice = Math.max(1, baseDice + (opts.extraAtkDice ?? 0));
+  const atkRoll = doRoll(atkResult.total, { vantagem: opts.atkVantagem, desvantagem: opts.atkDesvantagem });
 
-  const doRollAdv = (dice, vantagem, desvantagem) => {
-    const r1 = rollD4(dice);
-    if (vantagem)   { const r2 = rollD4(dice); const kept = r1.total >= r2.total ? r1 : r2; const disc = r1.total >= r2.total ? r2 : r1; return { ...kept, discarded: disc.rolls }; }
-    if (desvantagem){ const r2 = rollD4(dice); return r1.total <= r2.total ? r1 : r2; }
-    return r1;
-  };
-  const atkRoll = doRollAdv(atkDice, opts.atkVantagem, opts.atkDesvantagem);
-  const defDice = calcDefDice(def, defStat, defKeys);
-  const defRoll = doRollAdv(defDice, defVantagem, defDesvantagem);
-  const lbl = atkAction === 'atk' ? 'Atk' : 'AtkEsp';
+  // Defense dice — base from floor(stat/5), vel from floor(vel/10), always from raw stats
+  const defResult = computeDefDice(def, defStat, { classKeys: defKeys });
+  const defRoll   = doRoll(defResult.total, { vantagem: defVantagem, desvantagem: defDesvantagem });
+
+  const lbl = atkAction === 'atk' ? 'Atk+Vel' : 'AtkEsp+Vel';
 
   // Metal type power: reduce physical atk final total against Metal defenders
   const atkTypes2 = useMC ? ['Metal'] : (atk.types ?? []);
@@ -1653,11 +1722,11 @@ const doAttack = (atk, atkAction, def, isPlayer, opts = {}) => {
     type: 'roll',
     atkIcon: isPlayer ? '⚔️' : '👾',
     atkNome: atk.nome, lbl,
-    atkRolls: atkRoll.rolls, atkDiscarded: opts.atkVantagem ? (atkRoll.discarded ?? null) : null,
-    atkDesvantagem: !!opts.atkDesvantagem, atkTotal,
+    atkRolls: atkRoll.rolls, atkDiscarded: atkRoll.discarded,
+    atkDesvantagem: !!opts.atkDesvantagem, atkTotal, atkBreakdown: atkResult.breakdown,
     defNome: def.nome, defLbl,
-    defRolls: defRoll.rolls, defDiscarded: defVantagem ? (defRoll.discarded ?? null) : null,
-    defDesvantagem: !!defDesvantagem, defTotal: defRoll.total,
+    defRolls: defRoll.rolls, defDiscarded: defRoll.discarded,
+    defDesvantagem: !!defDesvantagem, defTotal: defRoll.total, defBreakdown: defResult.breakdown,
   });
 
   const isSE = atkTotal > defRoll.total && multToDiceMod(
@@ -1736,9 +1805,7 @@ const doAttack = (atk, atkAction, def, isPlayer, opts = {}) => {
       }
     }
   } else if (atkTotal === defRoll.total) {
-    if (defStat === 'vel') {
-      log.push(`⚖️ Empate! Defesa por velocidade — ninguém perde vida.`);
-    } else {
+    {
       const atkHasTerra = atkTypes2.includes('Terra');
       const defHasTerra = (def.types ?? []).includes('Terra');
       if (!atkHasTerra) atk = { ...atk, vidasAtual: atk.vidasAtual - 1 };
@@ -1810,8 +1877,9 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // ── Pokémon profile: attribute distribution draft ───────────
   const [atribDraft,  setAtribDraft]  = useState({ atk: 0, def: 0, atkEsp: 0, defEsp: 0, vel: 0 });
   const [draftForUid, setDraftForUid] = useState(null);
-  const [heldTooltip,  setHeldTooltip]  = useState(null); // held item id with open tooltip
-  const [bonusTooltip, setBonusTooltip] = useState(null); // 'uid-statKey' with open tooltip
+  const [heldTooltip,  setHeldTooltip]  = useState(null); // { id, x, y, desc }
+  const [rollTooltip,  setRollTooltip]  = useState(null); // { idx, side, x, y, breakdown }
+  const [bonusTooltip, setBonusTooltip] = useState(null); // { key, x, y, sources }
   const [dragInfo,      setDragInfo]      = useState(null);  // { type:'item'|'pokemon', ... }
   const [classInfoOpen, setClassInfoOpen] = useState(null);  // class slot index showing desc
   const [selectedBall,  setSelectedBall]  = useState(null);  // pokeball id selected for capture
@@ -2103,7 +2171,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       const activeShinyBonus = activeIncense?.effect === 'incenso_shiny_tipo' ? (activeIncense.bonus ?? 0.10) : 0;
 
       const legShinyChance = 0.005 + (hasMistico ? 0.05 : 0);
-      const legChance      = 0.01 + (incLend > 0 ? 0.10 : 0) + (hasMistico ? 0.10 : 0);
+      const legChance      = 0.01 + (incLend > 0 ? 0.10 : 0) + (hasMistico ? 0.05 : 0);
       const shinyChance = 0.01 + (hasObservador ? 0.10 : 0) + (incGlitter > 0 ? 0.10 : 0) + activeShinyBonus;
 
       // Priority roll: legendary shiny → legendary → shiny → regular
@@ -2149,24 +2217,24 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
             enc = { ...enc, enemy: [newPkm] };
           }
         }
-      } else if (pClassKeys.includes('petrologista') && Math.random() < 0.15) {
-        // Cyber Petrologista: 15% chance de pokémon fóssil aparecer no encontro
+      } else if (pClassKeys.includes('petrologista') && Math.random() < 0.10) {
+        // Cyber Petrologista: 10% chance de pokémon fóssil aparecer no encontro
         const fossilPool = _basePool().filter((p) => FOSSIL_DEX_NUMBERS.has(p.dexNumber));
         if (fossilPool.length > 0) {
           const fSpecies = fossilPool[Math.floor(Math.random() * fossilPool.length)];
           const fPkm = generateJNPokemon(fSpecies, level, { context: 'wild' });
           enc = { ...enc, enemy: [fPkm] };
         }
-      } else if (pClassKeys.includes('runico') && Math.random() < 0.15) {
-        // Cyber Rúnico: 15% chance de Unown aparecer no encontro
+      } else if (pClassKeys.includes('runico') && Math.random() < 0.10) {
+        // Cyber Rúnico: 10% chance de Unown aparecer no encontro
         const unownPool = _basePool().filter((p) => p.nome?.toLowerCase().startsWith('unown'));
         if (unownPool.length > 0) {
           const rSpecies = unownPool[Math.floor(Math.random() * unownPool.length)];
           const rPkm = generateJNPokemon(rSpecies, level, { context: 'wild' });
           enc = { ...enc, enemy: [rPkm] };
         }
-      } else if (pClassKeys.includes('xama') && Math.random() < 0.15) {
-        // Cyber Xamã: 15% chance de pokémon tipo Fantasma aparecer no encontro
+      } else if (pClassKeys.includes('xama') && Math.random() < 0.10) {
+        // Cyber Xamã: 10% chance de pokémon tipo Fantasma aparecer no encontro
         const ghostPool = _basePool().filter((p) => (p.tipos ?? []).map(normalizeType).includes(normalizeType('Fantasma')));
         if (ghostPool.length > 0) {
           const xSpecies = ghostPool[Math.floor(Math.random() * ghostPool.length)];
@@ -2243,22 +2311,26 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         }
       }
 
-      // Auto-join: Místico (lendário/lendário shiny), Rúnico (Unown), Xamã (Fantasma)
+      // Auto-join: Místico (lendário/lendário shiny), Rúnico (Unown), Xamã (Fantasma), Petrologista (fóssil)
       const autoEnemy = enc.enemy?.[0];
       if (autoEnemy) {
-        const autoIsLeg   = isLegendary(autoEnemy.nome);
-        const autoIsUnown = autoEnemy.nome?.toLowerCase().startsWith('unown');
-        const autoIsGhost = (autoEnemy.tipos ?? []).map(normalizeType).includes(normalizeType('Fantasma'));
+        const autoIsLeg    = isLegendary(autoEnemy.nome);
+        const autoIsUnown  = autoEnemy.nome?.toLowerCase().startsWith('unown');
+        const autoIsGhost  = (autoEnemy.tipos ?? []).map(normalizeType).includes(normalizeType('Fantasma'));
+        const autoIsFossil = FOSSIL_DEX_NUMBERS.has(autoEnemy.dexNumber);
         const shouldAutoJoin =
           (hasMistico && autoIsLeg) ||
           (pClassKeys.includes('runico') && autoIsUnown) ||
-          (pClassKeys.includes('xama') && autoIsGhost);
+          (pClassKeys.includes('xama') && autoIsGhost) ||
+          (pClassKeys.includes('petrologista') && autoIsFossil);
         if (shouldAutoJoin) {
           const mochilaBonus = (inventory.consumiveis?.mochila ?? 0) * 2;
           const guiaBonus = pClassKeys.includes('guia') ? 2 : 0;
           const maxSlots = 5 + mochilaBonus + guiaBonus;
           if (team.length < maxSlots) {
-            const joinPkm = { ...autoEnemy, vidasAtual: autoEnemy.vidasMax, conditions: [] };
+            const autoJoinBase = getPlayerBaseVidasByStage(stage);
+            const autoJoinVidas = calcBaseVidas({ tipos: autoEnemy.tipos ?? [] }, 'player', { isLeg: autoIsLeg, isShn: autoEnemy.isShiny ?? false, baseOverride: autoJoinBase });
+            const joinPkm = { ...autoEnemy, vidasMax: autoJoinVidas, vidasAtual: autoJoinVidas, conditions: [] };
             setTeam((prev) => [...prev, joinPkm]);
             if (!currentUser?.isGuest && autoEnemy.dexNumber) {
               setCyberdex((prev) => new Set([...prev, autoEnemy.dexNumber]));
@@ -2270,6 +2342,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
               if (hasMistico && autoIsLeg && autoEnemy.shiny) txt = `🌟✨ Cyber Místico! ${autoEnemy.nome} Lendário Shiny se juntou à equipe!`;
               else if (hasMistico && autoIsLeg)               txt = `🌟 Cyber Místico! ${autoEnemy.nome} Lendário se juntou à equipe!`;
               else if (pClassKeys.includes('runico'))         txt = `🔤 Cyber Rúnico! ${autoEnemy.nome} se juntou à equipe!`;
+              else if (pClassKeys.includes('petrologista'))   txt = `⛏️ Cyber Petrologista! ${autoEnemy.nome} Fóssil se juntou à equipe!`;
               else                                             txt = `👻 Cyber Xamã! ${autoEnemy.nome} se juntou à equipe!`;
               onChatMessage({ username: 'Sistema', text: txt, timestamp: ts, isDiceRoll: false });
             }
@@ -2277,7 +2350,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
             setPendingAutoJoinResult({ pkm: joinPkm });
             return;
           } else {
-            setPendingAutoJoin({ pkm: autoEnemy, idx });
+            const swapBase = getPlayerBaseVidasByStage(stage);
+            const swapVidas = calcBaseVidas({ tipos: autoEnemy.tipos ?? [] }, 'player', { isLeg: autoIsLeg, isShn: autoEnemy.isShiny ?? false, baseOverride: swapBase });
+            const swapPkm = { ...autoEnemy, vidasMax: swapVidas, vidasAtual: swapVidas };
+            setPendingAutoJoin({ pkm: swapPkm, idx });
             setShowAutoJoinSwapModal(true);
             setAutoJoinSwapStep('choice');
             setVisitedEncounters((prev) => [...prev, idx]);
@@ -2448,7 +2524,22 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     if (pool.length === 0) pool = _basePool();
     const species = pool[Math.floor(Math.random() * pool.length)];
     const newPkm = generateJNPokemon(species, level, { context: 'player' });
-    const pkmWithCtx = { ...newPkm, vidasAtual: newPkm.vidasMax, conditions: [] };
+    const criadorBase = getPlayerBaseVidasByStage(stage);
+    const criadorVidas = calcBaseVidas({ tipos: species.tipos ?? [] }, 'player', { isLeg: isLegendary(species.nome), isShn: newPkm.isShiny ?? false, baseOverride: criadorBase });
+    const pkmWithCtx = { ...newPkm, vidasMax: criadorVidas, vidasAtual: criadorVidas, conditions: [] };
+
+    // If team is full, open swap modal instead of adding directly
+    const criadorMaxTeam = 2
+      + (playerClasses.some((c) => c.powerKey === 'captor_base')  ? 1 : 0)
+      + (playerClasses.some((c) => c.powerKey === 'colecionador') ? 1 : 0)
+      + (playerClasses.some((c) => c.powerKey === 'professor')    ? 1 : 0);
+    if (team.length >= criadorMaxTeam) {
+      const hasIncubador = playerClasses.some((c) => c.powerKey === 'incubador');
+      setPendingAutoJoin({ pkm: pkmWithCtx, context: 'criador', withIncubador: hasIncubador });
+      setShowAutoJoinSwapModal(true);
+      setAutoJoinSwapStep('choice');
+      return;
+    }
 
     const newTeam = [...team, pkmWithCtx];
     setTeam(newTeam);
@@ -2468,7 +2559,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     setPendingCriadorOvo(false);
     setPhase('map');
     handleEncounterComplete();
-  }, [team, playerClasses, currentUser, handleEncounterComplete]);
+  }, [team, stage, playerClasses, currentUser, handleEncounterComplete]);
 
   /** Cyber Incubador: +10 to selected stat of newly hatched pokémon. */
   const handleIncubadorChoice = useCallback((stat) => {
@@ -2577,7 +2668,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   /** Auto-join swap: remove chosen pokémon and add the pending one. */
   const handleAutoJoinSwapConfirm = useCallback((removeUid) => {
     if (!pendingAutoJoin) return;
-    const { pkm } = pendingAutoJoin;
+    const { pkm, context, withIncubador } = pendingAutoJoin;
     const joinPkm = { ...pkm, vidasAtual: pkm.vidasMax, conditions: [] };
     setTeam((prev) => [...prev.filter((p) => p.uid !== removeUid), joinPkm]);
     if (!currentUser?.isGuest && pkm.dexNumber) {
@@ -2588,16 +2679,23 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       const ts = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       onChatMessage({ username: 'Sistema', text: `🔄 ${pkm.nome}${pkm.shiny ? ' ✨' : ''} se juntou à equipe!`, timestamp: ts, isDiceRoll: false });
     }
+    // Criador context: clean up ovo state and trigger Incubador if applicable
+    if (context === 'criador') {
+      setPendingCriadorOvo(false);
+      if (withIncubador) setPendingIncubadorChoice({ pkmIdx: team.length - 1 });
+    }
     setPendingAutoJoin(null);
     setShowAutoJoinSwapModal(false);
     setPendingAutoJoinResult({ pkm: joinPkm });
-  }, [pendingAutoJoin, currentUser, setCyberdex, onChatMessage]);
+  }, [pendingAutoJoin, currentUser, team, setCyberdex, onChatMessage]);
 
   const handleAutoJoinSwapCancel = useCallback(() => {
+    const context = pendingAutoJoin?.context;
+    if (context === 'criador') setPendingCriadorOvo(false);
     setPendingAutoJoin(null);
     setShowAutoJoinSwapModal(false);
     setPendingAutoJoinResult({ pkm: null });
-  }, []);
+  }, [pendingAutoJoin]);
 
   // After auto-join, call handleEncounterComplete once visitedEncounters state is committed
   useEffect(() => {
@@ -2613,6 +2711,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       if (e.key === 'Escape') {
         setBonusTooltip(null);
         setHeldTooltip(null);
+        setRollTooltip(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -2703,7 +2802,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
             const gained = newThresholds(8);
             if (gained > 0) {
               const newStat    = (p.stats?.[key] ?? 0) + gained;
-              const newDiceKey = Math.max(1, Math.floor(newStat / 2));
+              const newDiceKey = key === 'vel' ? velToDice(newStat) : statToDice(newStat);
               p = {
                 ...p,
                 stats:    { ...p.stats,    [key]: newStat },
@@ -2728,6 +2827,11 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         // parrudo stage-9 bonus: +1 vida to ALL pokémon after completing stage 9
         if (stage === 9 && playerClasses.some((c) => c.powerKey === 'parrudo')) {
           p = { ...p, vidasMax: p.vidasMax + 1 };
+        }
+
+        // Every 3 stages (completing stage 3, 6, 9 → indices 2, 5, 8): +1 vidasMax retroactive
+        if ((stage + 1) % 3 === 0) {
+          p = { ...p, vidasMax: p.vidasMax + 1, vidasAtual: p.vidasAtual + 1 };
         }
 
         return p;
@@ -2771,7 +2875,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       if (prev.length >= curMax) return prev;
       const isLeg = isLegendary(pkm.nome);
       const isShn = pkm.isShiny ?? false;
-      const baseVidas = calcBaseVidas({ tipos: pkm.tipos ?? [] }, 'player', { isLeg, isShn });
+      const baseVidas = calcBaseVidas({ tipos: pkm.tipos ?? [] }, 'player', { isLeg, isShn, baseOverride: getPlayerBaseVidasByStage(stage) });
       const pactuarioBonus = playerClasses.some((c) => c.powerKey === 'pactuario')
         ? (isLeg ? 2 : 1) : 0;
       const added = {
@@ -4233,7 +4337,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     const newDiceBase = { ...pkm.diceBase };
     for (const key of STAT_KEYS) {
       newStats[key]    = (pkm.stats?.[key]    ?? 0) + (atribDraft[key] ?? 0);
-      newDiceBase[key] = Math.max(1, Math.floor(newStats[key] / 2));
+      newDiceBase[key] = key === 'vel' ? velToDice(newStats[key]) : statToDice(newStats[key]);
     }
     const newPkm = {
       ...pkm,
@@ -5209,7 +5313,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
             {/* Rows */}
             {STAT_LABELS.map(({ key, label, color }) => {
               const rawStat   = (pkm.stats?.[key] ?? 0) + (currentDraft[key] ?? 0);
-              const baseDice  = Math.max(1, Math.floor(rawStat / 2));
+              const baseDice  = key === 'vel' ? velToDice(rawStat) : statToDice(rawStat);
               const sources   = getBonusSources(key);
               const bonusDice = sources.reduce((s, src) => s + src.value, 0);
               const totalDice = Math.max(1, baseDice + bonusDice);
@@ -5242,19 +5346,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                     </span>
                     {sources.length > 0 && (
                       <button
-                        onClick={() => setBonusTooltip(bonusTooltip === tooltipKey ? null : tooltipKey)}
+                        onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setBonusTooltip(bonusTooltip?.key === tooltipKey ? null : { key: tooltipKey, x: r.right, y: r.bottom, sources }); }}
                         className="ml-0.5 text-gray-500 hover:text-gray-300 leading-none align-middle"
                         title="Ver fontes dos bônus"
                       >ℹ</button>
-                    )}
-                    {bonusTooltip === tooltipKey && (
-                      <div className="absolute right-0 top-5 z-30 bg-gray-900 border border-gray-600 rounded-lg p-2 text-xs w-36 shadow-xl text-left">
-                        {sources.map((s, i) => (
-                          <p key={i} className={s.value >= 0 ? 'text-green-400' : 'text-red-400'}>
-                            {s.label}: {s.value >= 0 ? '+' : ''}{s.value}d
-                          </p>
-                        ))}
-                      </div>
                     )}
                   </div>
                   <div className="w-10 text-center text-white font-bold">{totalDice}d</div>
@@ -5305,15 +5400,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                 <img src={h.img ?? IMG_FALLBACK} alt={h.name} onError={safeImg} className="w-6 h-6 object-contain shrink-0" />
                 <p className="text-white text-xs font-bold flex-1 leading-tight">{h.name}</p>
                 <button
-                  onClick={() => setHeldTooltip(heldTooltip === h.id ? null : h.id)}
+                  onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHeldTooltip(heldTooltip?.id === h.id ? null : { id: h.id, x: r.right, y: r.bottom, desc: h.desc }); }}
                   className="text-gray-500 hover:text-gray-300 text-xs leading-none shrink-0"
                   title="Descrição do item"
                 >ℹ</button>
-                {heldTooltip === h.id && (
-                  <div className="absolute right-0 z-30 bg-gray-900 border border-gray-600 rounded-lg p-2 text-xs w-40 shadow-xl">
-                    <p className="text-gray-300 leading-snug">{h.desc}</p>
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -5649,9 +5739,15 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     // Legendary full-team swap screen
     if (bp === 'legendary_swap') {
       const lPkm = battle.capturedPkm;
+      const lIsLeg   = isLegendary(lPkm?.nome);
+      const lIsShiny = !!lPkm?.isShiny;
+      const lAttrPoints = (lIsLeg && lIsShiny) ? 15 : lIsLeg ? 10 : lIsShiny ? 5 : 0;
+      const lColor = lIsLeg ? 'text-purple-400' : lIsShiny ? 'text-yellow-400' : 'text-green-400';
       return (
         <div className="flex flex-col items-center gap-4 py-6">
-          <p className="text-purple-400 text-xl font-bold">🌟 {lPkm?.nome} quer se juntar!</p>
+          <p className={`text-xl font-bold ${lColor}`}>
+            {lIsLeg && lIsShiny ? '🌟✨' : lIsLeg ? '🌟' : lIsShiny ? '✨' : '✅'} {lPkm?.nome} quer se juntar!
+          </p>
           <p className="text-yellow-300 text-sm">Time cheio — escolha um Pokémon para liberar:</p>
           <div className="flex flex-wrap gap-3 justify-center">
             {team.map((pkm, idx) => (
@@ -5662,12 +5758,17 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                 <button onClick={() => {
                     setTeam((prev) => prev.filter((_, i) => i !== idx));
                     if (activeIdx >= idx && activeIdx > 0) setActiveIdx((a) => a - 1);
-                    setBattle((b) => ({
-                      ...b, phase: 'legendary_attr',
-                      legendaryPkmToAdd: b.capturedPkm,
-                      legendaryBonuses: { atk:0, def:0, atkEsp:0, defEsp:0, vel:0 },
-                      legendaryPointsLeft: 10,
-                    }));
+                    if (lAttrPoints > 0) {
+                      setBattle((b) => ({
+                        ...b, phase: 'legendary_attr',
+                        legendaryPkmToAdd: b.capturedPkm,
+                        legendaryBonuses: { atk:0, def:0, atkEsp:0, defEsp:0, vel:0 },
+                        legendaryPointsLeft: lAttrPoints,
+                      }));
+                    } else {
+                      handleAddToTeam(applyCaptureBallmodBonus(lPkm));
+                      handleEncounterComplete(applyCaptureBallmodBonus(lPkm));
+                    }
                   }}
                   className="px-3 py-1 bg-red-700 hover:bg-red-600 text-white text-xs rounded-lg">
                   Liberar
@@ -5677,7 +5778,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           </div>
           <button onClick={() => handleEncounterComplete(null)}
             className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg">
-            Terminar sem o Lendário
+            Descartar e continuar
           </button>
         </div>
       );
@@ -5706,16 +5807,14 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                 className={`px-6 py-2 font-bold rounded-lg text-white ${isLeg ? 'bg-purple-600 hover:bg-purple-500' : isShinyPkm ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-green-600 hover:bg-green-500'}`}>
                 Adicionar ao time
               </button>
-            : isSpecial
-              ? <button onClick={() => setBattle((b) => ({ ...b, phase: 'legendary_swap' }))}
-                  className={`px-6 py-2 font-bold rounded-lg text-white ${isLeg ? 'bg-purple-600 hover:bg-purple-500' : 'bg-yellow-600 hover:bg-yellow-500'}`}>
-                  Substituir um Pokémon
-                </button>
-              : <p className="text-yellow-400 text-sm">Time cheio — Pokémon liberado.</p>
+            : <button onClick={() => setBattle((b) => ({ ...b, phase: 'legendary_swap' }))}
+                className={`px-6 py-2 font-bold rounded-lg text-white ${isLeg ? 'bg-purple-600 hover:bg-purple-500' : isShinyPkm ? 'bg-yellow-600 hover:bg-yellow-500' : 'bg-green-600 hover:bg-green-500'}`}>
+                Substituir um Pokémon
+              </button>
           }
           <button onClick={() => handleEncounterComplete(null)}
             className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg">
-            {teamFull && !isSpecial ? 'Continuar' : 'Libertar e continuar'}
+            Descartar e continuar
           </button>
         </div>
       );
@@ -5855,16 +5954,25 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
               if (desvantagem) return <span className="text-red-400">[{rolls.join(',')}]</span>;
               return <span>[{rolls.join(',')}]</span>;
             };
+            const openRoll = (e, side, breakdown) => { const r = e.currentTarget.getBoundingClientRect(); setRollTooltip(rollTooltip?.idx === i && rollTooltip?.side === side ? null : { idx: i, side, x: r.left, y: r.bottom, breakdown }); };
             if (line.type === 'roll') return (
               <div key={i} className="leading-tight">
-                <p>{line.atkIcon} {line.atkNome} {line.lbl} {rollStr(line.atkRolls, line.atkDiscarded, line.atkDesvantagem)}={line.atkTotal}</p>
-                <p>🛡️ {line.defNome} {line.defLbl} {rollStr(line.defRolls, line.defDiscarded, line.defDesvantagem)}={line.defTotal}</p>
+                <p className="inline-block cursor-pointer select-none" onClick={(e) => openRoll(e, 'atk', line.atkBreakdown)}>
+                  {line.atkIcon} {line.atkNome} {line.lbl} {rollStr(line.atkRolls, line.atkDiscarded, line.atkDesvantagem)}=<span className="text-purple-400 text-base font-bold">{line.atkTotal}</span>
+                </p>
+                <p className="inline-block cursor-pointer select-none" onClick={(e) => openRoll(e, 'def', line.defBreakdown)}>
+                  🛡️ {line.defNome} {line.defLbl} {rollStr(line.defRolls, line.defDiscarded, line.defDesvantagem)}=<span className="text-yellow-400 text-base font-bold">{line.defTotal}</span>
+                </p>
               </div>
             );
             if (line.type === 'vel') return (
               <div key={i} className="leading-tight">
-                <p>💨 {line.pNome} Vel {rollStr(line.pRolls, line.pDiscarded, false)}={line.pTotal}</p>
-                <p>💨 {line.eNome} Vel {rollStr(line.eRolls, line.eDiscarded, false)}={line.eTotal}</p>
+                <p className="inline-block cursor-pointer select-none" onClick={(e) => openRoll(e, 'p', line.pBreakdown)}>
+                  💨 {line.pNome} Vel {rollStr(line.pRolls, line.pDiscarded, false)}=<span className="text-blue-400 text-base font-bold">{line.pTotal}</span>
+                </p>
+                <p className="inline-block cursor-pointer select-none" onClick={(e) => openRoll(e, 'e', line.eBreakdown)}>
+                  💨 {line.eNome} Vel {rollStr(line.eRolls, line.eDiscarded, false)}=<span className="text-blue-400 text-base font-bold">{line.eTotal}</span>
+                </p>
               </div>
             );
             return <p key={i}>{String(line)}</p>;
@@ -5886,17 +5994,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                   <p className="text-yellow-300 font-bold text-sm text-center">
                     {enemyPkm?.nome} vai usar {pd.enemyAction === 'atk' ? '⚔️ Ataque' : '✨ Atq.Esp'}!
                   </p>
-                  <p className="text-gray-400 text-xs">Como quer se defender?</p>
-                  <div className="flex gap-3">
-                    <button onClick={() => onDefense('vel')}
-                      className="px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl text-sm transition-colors">
-                      ⚡ Esquivar<br/><span className="text-xs font-normal opacity-80">(Velocidade)</span>
-                    </button>
-                    <button onClick={() => onDefense(forcedDefStat)}
-                      className="px-5 py-2.5 bg-blue-700 hover:bg-blue-600 text-white font-bold rounded-xl text-sm transition-colors">
-                      🛡️ Defender<br/><span className="text-xs font-normal opacity-80">({forcedDefLabel})</span>
-                    </button>
-                  </div>
+                  <button onClick={() => onDefense(forcedDefStat)}
+                    className="px-5 py-2.5 bg-blue-700 hover:bg-blue-600 text-white font-bold rounded-xl text-sm transition-colors">
+                    🛡️ Defender<br/><span className="text-xs font-normal opacity-80">({forcedDefLabel} + Vel)</span>
+                  </button>
                 </>
               );
             })()}
@@ -6771,9 +6872,13 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // ── Auto-join swap modal (Místico/Rúnico/Xamã, time cheio) ────────
   const renderAutoJoinSwapModal = () => {
     if (!showAutoJoinSwapModal || !pendingAutoJoin) return null;
-    const { pkm } = pendingAutoJoin;
+    const { pkm, context } = pendingAutoJoin;
     const autoIsLeg = isLegendary(pkm.nome);
-    const icon = autoIsLeg ? '🌟' : pkm.nome?.toLowerCase().startsWith('unown') ? '🔤' : '👻';
+    const icon = context === 'criador' ? '🥚'
+      : autoIsLeg ? '🌟'
+      : pkm.nome?.toLowerCase().startsWith('unown') ? '🔤'
+      : FOSSIL_DEX_NUMBERS.has(pkm.dexNumber) ? '⛏️'
+      : '👻';
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
         <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-6 w-96 flex flex-col gap-4 shadow-2xl" style={{ maxHeight: '85vh' }}>
@@ -7031,6 +7136,39 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       {renderOradorModal()}
       {renderForrageamentoModal()}
       {showEnciclopedia && renderEnciclopedia()}
+
+      {/* ── Fixed floating tooltips (always above everything) ── */}
+      {bonusTooltip && (
+        <div className="fixed z-[9999] bg-gray-900 border border-gray-600 rounded-lg p-2 text-xs w-36 shadow-xl text-left pointer-events-none"
+          style={{ top: bonusTooltip.y + 4, left: bonusTooltip.x - 144 }}>
+          {bonusTooltip.sources.map((s, i) => (
+            <p key={i} className={s.value >= 0 ? 'text-green-400' : 'text-red-400'}>
+              {s.label}: {s.value >= 0 ? '+' : ''}{s.value}d
+            </p>
+          ))}
+        </div>
+      )}
+      {heldTooltip && (
+        <div className="fixed z-[9999] bg-gray-900 border border-gray-600 rounded-lg p-2 text-xs w-40 shadow-xl pointer-events-none"
+          style={{ top: heldTooltip.y + 4, left: heldTooltip.x - 160 }}>
+          <p className="text-gray-300 leading-snug">{heldTooltip.desc}</p>
+        </div>
+      )}
+      {rollTooltip?.breakdown && (() => {
+        const entries = Object.entries(rollTooltip.breakdown).filter(([, v]) => v !== 0);
+        return (
+          <div className="fixed z-[9999] bg-gray-900 border border-gray-600 rounded-lg p-2 text-xs text-gray-200 whitespace-nowrap shadow-xl pointer-events-none"
+            style={{ top: rollTooltip.y + 4, left: rollTooltip.x }}>
+            {entries.map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3">
+                <span className="capitalize text-gray-400">{k}</span>
+                <span className={v > 0 ? 'text-green-400' : 'text-red-400'}>{v > 0 ? `+${v}` : v}d</span>
+              </div>
+            ))}
+            {entries.length === 0 && <span className="text-gray-500">sem bônus</span>}
+          </div>
+        );
+      })()}
     </div>
   );
 }
