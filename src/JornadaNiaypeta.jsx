@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import pokedexData from './pokemonData.js';
 import { database } from './firebase.js';
-import { ref, get, set, update, push, onValue } from 'firebase/database';
+import { ref, get, set, update, push, remove, onValue } from 'firebase/database';
 
 // ==================== TYPE SYSTEM ====================
 export const TYPES = [
@@ -1042,9 +1042,28 @@ export const buildStageEncounters = (stage) => {
 };
 
 // ── Ranking (Firebase) ───────────────────────────────────────
-export const pushRanking = (modeId, entry) => {
+export const pushRanking = async (modeId, entry) => {
   // entry: { name, score, stages, won, date, team }
-  push(ref(database, JN_RANKING_PATH(modeId)), entry);
+  console.log('[Ranking] Saving entry:', modeId, entry);
+  try {
+    const modeRef = ref(database, JN_RANKING_PATH(modeId));
+    await push(modeRef, entry);
+    console.log('[Ranking] Push OK');
+    // Prune to top N by score
+    const snap = await get(modeRef);
+    if (!snap.exists()) return;
+    const sorted = Object.entries(snap.val()).sort((a, b) => b[1].score - a[1].score);
+    if (sorted.length > RANKING_TOP_N) {
+      await Promise.all(
+        sorted.slice(RANKING_TOP_N).map(([key]) =>
+          remove(ref(database, `${JN_RANKING_PATH(modeId)}/${key}`))
+        )
+      );
+      console.log('[Ranking] Pruned to top', RANKING_TOP_N);
+    }
+  } catch (err) {
+    console.error('[Ranking] ERROR saving ranking:', err);
+  }
 };
 
 /** Calculate final score from run stats */
@@ -1872,7 +1891,8 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // ── Class helpers (after playerClasses is declared) ────────
   const hasClassPower = (key) => playerClasses.some((c) => c.powerKey === key);
   const classKeys     = playerClasses.map((c) => c.powerKey);
-  const [starterOptions, setStarterOptions] = useState([]);
+  const [starterOptions,       setStarterOptions]       = useState([]);
+  const [lockedStarterOptions, setLockedStarterOptions] = useState([]);
 
   // ── Pokémon profile: attribute distribution draft ───────────
   const [atribDraft,  setAtribDraft]  = useState({ atk: 0, def: 0, atkEsp: 0, defEsp: 0, vel: 0 });
@@ -1978,6 +1998,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   const [autoJoinSwapStep,      setAutoJoinSwapStep]             = useState('choice'); // 'choice' | 'select'
   const [pendingAutoJoinResult, setPendingAutoJoinResult]        = useState(null); // { pkm } — triggers handleEncounterComplete after auto-join
   const [showCientistModal,     setShowCientistModal]            = useState(false);
+  const [mobilePanel,           setMobilePanel]                  = useState(null); // 'left' | 'right' | null
 
   // ── Refs ───────────────────────────────────────────────────
   const battleLogRef = useRef(null);
@@ -2040,6 +2061,16 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     if (classObj.powerKey === 'cozinheiro') setCozinheiroCharges(3);
     if (classObj.powerKey === 'cuidador')   setCuidadorCharges(3);
 
+    // Pesquisador always generates fresh from full cyberdex (no locking)
+    const isPesquisador = classObj.powerKey === 'pesquisador_base' && CYBERDEX_USERS.includes(currentUser?.username);
+
+    // Non-pesquisador: reuse locked options if already generated this session
+    if (!isPesquisador && lockedStarterOptions.length > 0) {
+      setStarterOptions(lockedStarterOptions);
+      setPhase('starterSelect');
+      return;
+    }
+
     let starters;
 
     if (currentUser?.isGuest) {
@@ -2058,7 +2089,6 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       starters = shuffled.map((s) => generateJNPokemon(s, 1, { context: 'player' }));
     } else {
       // 2nd+ run: Pesquisador vê toda a cyberdex; outros veem 10% (mínimo 2), sorteados
-      const isPesquisador = classObj.powerKey === 'pesquisador_base' && CYBERDEX_USERS.includes(currentUser?.username);
       const cyberdexSpecies = [...cyberdex]
         .map((dexNum) => pokedexData.find((p) => p.dexNumber === dexNum))
         .filter((p) => p && !isRegionBanned(p));
@@ -2071,9 +2101,11 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       }
     }
 
+    // Lock options for the session (non-pesquisador only)
+    if (!isPesquisador) setLockedStarterOptions(starters);
     setStarterOptions(starters);
     setPhase('starterSelect');
-  }, [currentUser, cyberdex]);
+  }, [currentUser, cyberdex, lockedStarterOptions]);
 
   // ═══════════════════════════════════════════════════════════
   // STAGE / ENCOUNTER HANDLERS
@@ -2842,6 +2874,20 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     const nextStage = stage + 1;
 
     if (nextStage >= maxStages) {
+      // Auto-save ranking on victory
+      const name = currentUser?.isGuest
+        ? (guestName.trim() || 'Visitante')
+        : (currentUser?.username ?? 'Jogador');
+      const modeId = gameMode?.id ?? 'jornada';
+      const score = modeId === 'pocket'
+        ? calcPocketScore({ runStats, team, money })
+        : calcScore({ stage, captures: runStats.captures, money, turnsTotal: runStats.turnsTotal });
+      const teamSnap = team.map((p) => ({
+        nome: p.nome, dexNumber: p.dexNumber, level: p.level,
+        types: p.types, isShiny: p.isShiny ?? false,
+      }));
+      pushRanking(modeId, { name, score, stages: stage, won: true, team: teamSnap, date: new Date().toLocaleDateString('pt-BR') });
+      setLockedStarterOptions([]);
       setPhase('victory');
     } else {
       setStage(nextStage);
@@ -2854,7 +2900,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         setPhase('artifice_stage_choice');
       }
     }
-  }, [stage, gameMode, _beginStage, playerClasses]);
+  }, [stage, gameMode, _beginStage, playerClasses, currentUser, guestName, runStats, team, money]);
 
   // ═══════════════════════════════════════════════════════════
   // TEAM MANAGEMENT
@@ -3176,9 +3222,9 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     }));
     const entry = { name, score, stages: stage, won, team: teamSnap, date: new Date().toLocaleDateString('pt-BR') };
     pushRanking(modeId, entry);
-
+    setLockedStarterOptions([]);
     setPhase(won ? 'victory' : 'gameover');
-  }, [currentUser, guestName, stage, runStats, money, gameMode]);
+  }, [currentUser, guestName, stage, runStats, money, gameMode, team]);
 
   const handleReturnToLogin = useCallback(() => {
     // Reset all run state
@@ -3205,6 +3251,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     setClassChoiceData(null);
     setEngineerChoicePending(null);
     setEngineerChoiceMap({});
+    setLockedStarterOptions([]);
   }, []);
 
   // ═══════════════════════════════════════════════════════════
@@ -4744,7 +4791,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       <div className="bg-black/80 rounded-2xl p-8 flex flex-col items-center gap-6 max-w-md w-full mx-4 backdrop-blur">
         <img src="/jn/logojn.png" alt="JN" className="w-36 h-auto"
           onError={(e) => { e.target.style.display='none'; }} />
-        <h2 className="text-white text-xl font-bold">Olá, {currentUser?.username}!</h2>
+        <h2 className="text-white text-lg sm:text-xl font-bold">Olá, {currentUser?.username}!</h2>
         <p className="text-gray-400 text-sm">Escolha o modo de jogo:</p>
         <div className="flex flex-col gap-3 w-full">
           {GAME_MODES.map((mode) => {
@@ -4784,7 +4831,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center py-8 px-4">
-        <h1 className="text-yellow-400 text-2xl font-bold mb-1">Escolha sua Cyber Classe Base</h1>
+        <h1 className="text-yellow-400 text-xl sm:text-2xl font-bold mb-1">Escolha sua Cyber Classe Base</h1>
         <p className="text-gray-400 text-sm mb-1">Modo: <strong className="text-white">{gameMode?.name}</strong></p>
         <p className="text-gray-500 text-xs mb-6">Classes avançadas são desbloqueadas ao longo da jornada.</p>
 
@@ -4812,7 +4859,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // ── Starter Select ───────────────────────────────────────────
   const renderStarterSelect = () => (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center py-8 px-4">
-      <h1 className="text-yellow-400 text-2xl font-bold mb-1">Escolha seu Starter</h1>
+      <h1 className="text-yellow-400 text-xl sm:text-2xl font-bold mb-1">Escolha seu Starter</h1>
       <p className="text-gray-400 text-sm mb-2">
         Classe: <strong className="text-white">{playerClasses[0]?.name}</strong> — {playerClasses[0]?.powerDesc}
       </p>
@@ -4859,11 +4906,11 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       <div className="relative w-full overflow-hidden rounded-t-xl"
         style={{ backgroundImage:"url('/jn/bgpath.png')", backgroundSize:'cover', backgroundPosition:'center', minHeight:'200px' }}>
         <div className="absolute inset-0 bg-black/50" />
-        <div className="relative z-10 p-4 flex flex-col gap-3">
+        <div className="relative z-10 p-3 sm:p-4 flex flex-col gap-2 sm:gap-3">
           {/* Stage header */}
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-yellow-400 font-bold text-lg">Estágio {stage}</span>
+              <span className="text-yellow-400 font-bold text-base sm:text-lg">Estágio {stage}</span>
               <span className="text-gray-400 text-sm ml-2">/ {stageMax}</span>
               {isSpecial && <span className="ml-2 text-red-400 text-xs font-bold uppercase">Especial</span>}
             </div>
@@ -4887,7 +4934,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                 : [];
               return (
                 <button key={i} disabled={!canVisit || phase === 'battle'} onClick={() => handleSelectEncounter(i)}
-                  className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl border transition-all
+                  className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 sm:py-3 rounded-xl border transition-all
                     ${visited
                       ? 'border-gray-700 bg-black/40 opacity-40 cursor-not-allowed'
                       : phase === 'battle'
@@ -5418,20 +5465,56 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       {/* Top: Stage Map */}
       {renderMapTop()}
 
+      {/* Mobile panel toggles — only visible on small screens */}
+      <div className="flex md:hidden items-center justify-between px-3 py-1.5 bg-gray-800 border-b border-gray-700 shrink-0">
+        <button onClick={() => setMobilePanel(mobilePanel === 'left' ? null : 'left')}
+          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors
+            ${mobilePanel === 'left' ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-yellow-300 hover:bg-gray-600'}`}>
+          👤 Treinador
+        </button>
+        <button onClick={() => setMobilePanel(mobilePanel === 'right' ? null : 'right')}
+          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors
+            ${mobilePanel === 'right' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-blue-300 hover:bg-gray-600'}`}>
+          Pokémon 🔍
+        </button>
+      </div>
+
+      {/* Mobile left panel overlay */}
+      {mobilePanel === 'left' && (
+        <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobilePanel(null)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute left-0 top-0 h-full w-72 bg-gray-900 border-r border-gray-800 p-3 overflow-y-auto z-50"
+            onClick={(e) => e.stopPropagation()}>
+            {renderTrainerPanel()}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile right panel overlay */}
+      {mobilePanel === 'right' && (
+        <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobilePanel(null)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute right-0 top-0 h-full w-72 bg-gray-900 border-l border-gray-800 p-3 overflow-y-auto z-50"
+            onClick={(e) => e.stopPropagation()}>
+            {renderPokemonProfile()}
+          </div>
+        </div>
+      )}
+
       {/* Bottom: 3-column layout */}
       <div className="flex flex-1 gap-0 overflow-hidden" style={{ minHeight: '420px' }}>
-        {/* Left panel */}
-        <div className="w-52 shrink-0 bg-gray-900 border-r border-gray-800 p-3 overflow-y-auto">
+        {/* Left panel — hidden on mobile, shown as overlay */}
+        <div className="hidden md:flex md:flex-col md:w-52 shrink-0 bg-gray-900 border-r border-gray-800 p-3 overflow-y-auto">
           {renderTrainerPanel()}
         </div>
 
         {/* Center content */}
-        <div className="flex-1 bg-gray-900 overflow-y-auto p-4">
+        <div className="flex-1 bg-gray-900 overflow-y-auto p-3 sm:p-4">
           {centerContent}
         </div>
 
-        {/* Right panel */}
-        <div className="w-52 shrink-0 bg-gray-900 border-l border-gray-800 p-3 overflow-y-auto">
+        {/* Right panel — hidden on mobile, shown as overlay */}
+        <div className="hidden md:flex md:flex-col md:w-52 shrink-0 bg-gray-900 border-l border-gray-800 p-3 overflow-y-auto">
           {renderPokemonProfile()}
         </div>
       </div>
@@ -6373,8 +6456,8 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center py-10 px-4">
         {won
-          ? <p className="text-yellow-400 text-4xl font-bold mb-2">🏆 VITÓRIA!</p>
-          : <p className="text-red-400   text-4xl font-bold mb-2">💀 DERROTA</p>
+          ? <p className="text-yellow-400 text-3xl sm:text-4xl font-bold mb-2">🏆 VITÓRIA!</p>
+          : <p className="text-red-400   text-3xl sm:text-4xl font-bold mb-2">💀 DERROTA</p>
         }
         <p className="text-gray-400 text-sm mb-6">{gameMode?.name} · {currentUser?.username}</p>
 
@@ -6434,17 +6517,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           </div>
         )}
 
-        {currentUser?.isGuest && (
-          <input value={guestName} onChange={(e) => setGuestName(e.target.value)}
-            placeholder="Seu nome para o ranking..."
-            className="w-full max-w-sm px-4 py-2 mb-4 rounded-lg bg-gray-800 text-white border border-gray-600 focus:outline-none focus:border-yellow-400 text-sm" />
-        )}
-
         <div className="flex gap-3">
-          <button onClick={() => handleEndRun(won)}
-            className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg">
-            Salvar Score
-          </button>
           <button onClick={handleReturnToLogin}
             className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg">
             Menu Principal
@@ -6715,7 +6788,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     ];
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-green-500 rounded-2xl p-6 w-80 flex flex-col gap-4 shadow-2xl">
+        <div className="bg-gray-900 border border-green-500 rounded-2xl p-5 sm:p-6 w-full max-w-[95vw] sm:max-w-sm mx-4 flex flex-col gap-4 shadow-2xl">
           <h3 className="text-green-400 font-bold text-center text-lg">🥚 Cyber Incubador</h3>
           <p className="text-gray-300 text-sm text-center">
             <span className="text-white font-bold">{pkm?.nome ?? '?'}</span> chocou! Escolha um atributo para receber <span className="text-green-300 font-bold">+10</span>:
@@ -6738,7 +6811,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     if (!showAlimentarModal) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-orange-500 rounded-2xl p-5 w-80 flex flex-col gap-4 shadow-2xl">
+        <div className="bg-gray-900 border border-orange-500 rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm mx-4 flex flex-col gap-4 shadow-2xl">
           <h3 className="text-orange-400 font-bold text-center text-lg">🍽️ Alimentar ({cozinheiroCharges} cargas)</h3>
           <p className="text-gray-300 text-sm text-center">Escolha como alimentar:</p>
           <button onClick={() => handleCozinheiroAlimentar('all')}
@@ -6772,7 +6845,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     ];
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-pink-500 rounded-2xl p-5 w-80 flex flex-col gap-4 shadow-2xl">
+        <div className="bg-gray-900 border border-pink-500 rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm mx-4 flex flex-col gap-4 shadow-2xl">
           <h3 className="text-pink-400 font-bold text-center text-lg">🤗 Mimar ({cuidadorCharges} cargas)</h3>
           <p className="text-gray-300 text-sm text-center">
             Escolha o atributo de <span className="text-white font-bold">{activePkm?.nome ?? '?'}</span> para receber <span className="text-pink-300 font-bold">+2d</span> no próximo encontro:
@@ -6796,7 +6869,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     if (!showEscudoModal) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-blue-500 rounded-2xl p-6 w-80 flex flex-col gap-4 shadow-2xl">
+        <div className="bg-gray-900 border border-blue-500 rounded-2xl p-5 sm:p-6 w-full max-w-[95vw] sm:max-w-sm mx-4 flex flex-col gap-4 shadow-2xl">
           <h3 className="text-blue-400 font-bold text-center text-lg">🛡️ Escudo</h3>
           <p className="text-gray-300 text-sm text-center">Escolha um atributo para receber <span className="text-blue-300 font-bold">+1 dado</span> nesta batalha:</p>
           <div className="flex gap-3 justify-center">
@@ -6821,7 +6894,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     const legPool = _basePool().filter((p) => isLegendary(p.nome));
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-6 w-96 flex flex-col gap-4 shadow-2xl" style={{ maxHeight: '80vh' }}>
+        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-5 sm:p-6 w-full max-w-[95vw] sm:max-w-md mx-4 flex flex-col gap-4 shadow-2xl" style={{ maxHeight: '80vh' }}>
           <h3 className="text-yellow-400 font-bold text-center text-lg">📣 Clamor do Orador</h3>
           <p className="text-gray-300 text-sm text-center">
             Sacrifique <span className="text-red-300 font-bold">{team.length} pokémon(s)</span> e receba um lendário Nv.90 com{' '}
@@ -6846,7 +6919,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     if (!showCientistModal) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-green-500 rounded-2xl p-6 w-72 flex flex-col gap-4 shadow-2xl">
+        <div className="bg-gray-900 border border-green-500 rounded-2xl p-5 sm:p-6 w-full max-w-[95vw] sm:max-w-xs mx-4 flex flex-col gap-4 shadow-2xl">
           <h3 className="text-green-400 font-bold text-center text-lg">🧪 Criar Poção</h3>
           <p className="text-gray-300 text-sm text-center">Escolha a poção a criar (vai direto ao inventário):</p>
           <div className="flex flex-col gap-2">
@@ -6881,7 +6954,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       : '👻';
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-6 w-96 flex flex-col gap-4 shadow-2xl" style={{ maxHeight: '85vh' }}>
+        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-5 sm:p-6 w-full max-w-[95vw] sm:max-w-md mx-4 flex flex-col gap-4 shadow-2xl" style={{ maxHeight: '85vh' }}>
           <h3 className="text-yellow-400 font-bold text-center text-lg">{icon} Time Cheio!</h3>
           <p className="text-gray-300 text-sm text-center">
             <span className="text-yellow-300 font-bold">{pkm.nome}{pkm.isShiny ? ' ✨' : ''}</span> quer se juntar, mas o time está cheio.
@@ -6926,7 +6999,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     const inactives = team.filter((p, i) => i !== activeIdx && p?.vidasAtual > 0);
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-5 w-80 flex flex-col gap-3 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm mx-4 flex flex-col gap-3 shadow-2xl max-h-[90vh] overflow-y-auto">
           <h3 className="text-yellow-400 font-bold text-center text-lg">📚 Tutoria</h3>
           <p className="text-gray-300 text-sm text-center">Escolha o pokémon e o golpe a emprestar:</p>
           {inactives.map((p) => {
@@ -6967,7 +7040,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     ];
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-6 w-80 flex flex-col gap-4 shadow-2xl">
+        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-5 sm:p-6 w-full max-w-[95vw] sm:max-w-sm mx-4 flex flex-col gap-4 shadow-2xl">
           <h3 className="text-yellow-400 font-bold text-center text-lg">✨ Pedra Evolutiva</h3>
           <p className="text-gray-300 text-sm text-center">
             Escolha o atributo de <span className="text-white font-bold">{targetPkm?.nome ?? '?'}</span> para receber <span className="text-yellow-300 font-bold">+{hasClassPower('evolucionista') ? 5 : 3}</span>:
@@ -7002,7 +7075,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     };
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-green-600 rounded-2xl p-5 w-96 flex flex-col gap-4 shadow-2xl">
+        <div className="bg-gray-900 border border-green-600 rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-md mx-4 flex flex-col gap-4 shadow-2xl">
           <h3 className="text-green-300 font-bold text-center text-sm">{titleMap[effect]}</h3>
           {multiType && <p className="text-gray-400 text-xs text-center">Selecione até 2 tipos</p>}
           <div className="grid grid-cols-3 gap-1.5">
@@ -7068,7 +7141,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     };
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-        <div className="bg-gray-900 border border-green-500 rounded-2xl p-5 w-80 flex flex-col gap-3 shadow-2xl">
+        <div className="bg-gray-900 border border-green-500 rounded-2xl p-5 w-full max-w-[95vw] sm:max-w-sm mx-4 flex flex-col gap-3 shadow-2xl">
           <h3 className="text-green-400 font-bold text-center text-lg">🌿 Forrageamento</h3>
           <div className="flex flex-col items-center gap-1 bg-gray-800 rounded-xl p-3">
             <img src={berry.img ?? `/frutas/${berry.id}.png`} alt={berry.name} onError={safeImg} className="w-12 h-12 object-contain" />
