@@ -254,7 +254,7 @@ export const ITEMS_DATA = [
   { id:'pocao_suprema',category:'consumivel', tier:'S', name:'Poção Suprema',price:6000,
     img:'/pokeballs/hiperpotion.png', healVidas:3,
     desc:'Restaura 3 vidas de um Pokémon.' },
-  { id:'foto', category:'consumivel', tier:'C', name:'Fotografia', price:2600,
+  { id:'foto', category:'consumivel', name:'Fotografia', price:2600,
     img:'/jn/items/foto.png', effect:'foto_fotografo',
     desc:'Fotografia de pokémon. Venda no Pokémart por 2d12×100.' },
   { id:'pokedoll',     category:'consumivel', tier:'A', name:'Pokédoll',     price:3000,
@@ -613,7 +613,7 @@ export const JN_PASSWORD = 'DnD7MarPkm';
 // ==================== GAME MODES ====================
 export const GAME_MODES = [
   { id: 'pocket',   name: 'Pocket',  desc: 'Modo padrão — 12 estágios (0–11)', stageCount: 12 },
-  { id: 'jornada',  name: 'Jornada', desc: 'Modo longo — 24 estágios',          stageCount: 24 },
+  { id: 'jornada',  name: 'Jornada', desc: 'Modo longo — 101 estágios (0–100)', stageCount: 101 },
   { id: 'endless',  name: 'Endless', desc: 'Infinito — estágios crescentes',   stageCount: Infinity },
 ];
 
@@ -667,6 +667,26 @@ export const addToJNCyberdex = async (username, dexNumber) => {
   } catch {
     // silent fail — offline or AppCheck issue
   }
+};
+
+// ==================== JORNADA SAVE ====================
+const JN_SAVE_PATH = (username) => `jnSave/${username}`;
+
+export const saveJNRun = async (username, data) => {
+  try { await set(ref(database, JN_SAVE_PATH(username)), data); }
+  catch (e) { console.error('[JN Save] Error saving run:', e); }
+};
+
+export const loadJNRun = async (username) => {
+  try {
+    const snap = await get(ref(database, JN_SAVE_PATH(username)));
+    return snap.exists() ? snap.val() : null;
+  } catch { return null; }
+};
+
+export const deleteJNRun = async (username) => {
+  try { await remove(ref(database, JN_SAVE_PATH(username))); }
+  catch { /* silent */ }
 };
 
 // ==================== RANKING ====================
@@ -840,7 +860,7 @@ export const getPokemonImageUrl = (dexNumber, shiny = false) =>
  * @param {object}  opts     - { context, forceShiny, heldItem }
  */
 export const generateJNPokemon = (species, level, opts = {}) => {
-  const { context = 'wild', forceShiny = false, heldItem = null } = opts;
+  const { context = 'wild', forceShiny = false, heldItem = null, baseOverride = null } = opts;
 
   const baseJN   = mapStatsToJN(species.statusBasais);
   const hierarchy = _getStatHierarchy(baseJN);
@@ -851,7 +871,7 @@ export const generateJNPokemon = (species, level, opts = {}) => {
   const isLegendarySpecies = isLegendary(species.nome);
 
   // Vida: base por contexto + bônus de tipo (Pedra) + bônus lendário/shiny
-  let vidasMax = calcBaseVidas(species, context, { isLeg: isLegendarySpecies, isShn: isShiny });
+  let vidasMax = calcBaseVidas(species, context, { isLeg: isLegendarySpecies, isShn: isShiny, baseOverride });
   const vidasAtual = vidasMax;
 
   const diceBase = {
@@ -913,6 +933,13 @@ export const pickRandomSpecies = (blacklist = new Set()) => {
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
+/** Pick a random non-legendary species (for wild and trainer encounters) */
+const pickRandomNonLegendarySpecies = (blacklist = new Set()) => {
+  const pool = _basePool().filter((p) => !blacklist.has(p.dexNumber) && !isLegendary(p.nome));
+  if (pool.length === 0) return pickRandomSpecies(blacklist);
+  return pool[Math.floor(Math.random() * pool.length)];
+};
+
 // ── CTnpc combat class pool (powerKeys with meaningful battle effects) ──────
 const CTNPC_COMBAT_CLASS_KEYS = [
   'guerreiro_base', 'artista_marcial',                       // passive +atk
@@ -928,7 +955,7 @@ const CTNPC_COMBAT_CLASS_KEYS = [
 /** Generate a single wild Pokémon for the given stage */
 export const generateWild = (stage) => {
   const level   = getStageLevel(stage);
-  const species = pickRandomSpecies();
+  const species = pickRandomNonLegendarySpecies();
   return generateJNPokemon(species, level, { context: 'wild' });
 };
 
@@ -952,7 +979,7 @@ export const generateCTNpcTeam = (stage) => {
 
   const used = new Set();
   const team = Array.from({ length: size }, () => {
-    const species = pickRandomSpecies(used);
+    const species = pickRandomNonLegendarySpecies(used);
     used.add(species.dexNumber);
     return generateJNPokemon(species, level, { context: 'ctnpc' });
   });
@@ -1579,6 +1606,196 @@ export const getMartStock = (stage) => {
   return stock;
 };
 
+// ============================================================
+// JORNADA MODE — Constants, Generators, Encounter Builder
+// ============================================================
+
+// ── Stage structure ──────────────────────────────────────────
+export const JORNADA_STAGE_COUNT = 101; // stages 0–100
+// Stages that force a single CTnpc encounter
+export const JORNADA_CTNPC_STAGES = new Set([5, 15, 25]);
+// Stages that force a Gym Leader (Líder de Ginásio) encounter
+export const JORNADA_GYM_STAGES   = new Set([10, 20, 30, 40, 50, 60, 70, 80]);
+export const JORNADA_MINIBOSS_STAGE = 99;
+export const JORNADA_BOSS_STAGE     = 100;
+// All stages with a single forced encounter (no location choice)
+export const JORNADA_ALL_SPECIAL_STAGES = new Set([
+  0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 99, 100
+]);
+
+/** Enemy level = stage number in Jornada (minimum 1) */
+export const getJornadaStageLevel = (stage) => Math.max(1, stage);
+
+// ── Money rewards ──────────────────────────────────────────
+/** Stage completion money bonus in Jornada */
+export const getJornadaStageMoneyReward = (stage) => {
+  if (stage === JORNADA_BOSS_STAGE)     return 5000;
+  if (stage === JORNADA_MINIBOSS_STAGE) return 3000;
+  if (JORNADA_GYM_STAGES.has(stage))   return stage * 20;
+  if (JORNADA_CTNPC_STAGES.has(stage)) return stage * 30;
+  return 0;
+};
+/** Per-encounter money reward during a Jornada stage */
+export const getJornadaEncounterMoney = (stage) => Math.max(50, stage * 60);
+
+// ── Tier chances (function-based for 101 stages) ─────────────
+export const getJornadaMartTierChances = (stage) => {
+  if (stage <= 5)  return { C:0.94, B:0.05, A:0.01, S:0.00 };
+  if (stage <= 15) return { C:0.85, B:0.12, A:0.03, S:0.00 };
+  if (stage <= 25) return { C:0.72, B:0.20, A:0.07, S:0.01 };
+  if (stage <= 40) return { C:0.58, B:0.27, A:0.12, S:0.03 };
+  if (stage <= 55) return { C:0.43, B:0.30, A:0.21, S:0.06 };
+  if (stage <= 70) return { C:0.28, B:0.34, A:0.28, S:0.10 };
+  if (stage <= 85) return { C:0.18, B:0.30, A:0.35, S:0.17 };
+  return            { C:0.08, B:0.20, A:0.42, S:0.30 };
+};
+export const getJornadaWildRewardTierChances = (stage) => {
+  if (stage <= 5)  return { C:0.95, B:0.04, A:0.01, S:0.00 };
+  if (stage <= 15) return { C:0.87, B:0.11, A:0.02, S:0.00 };
+  if (stage <= 25) return { C:0.74, B:0.19, A:0.06, S:0.01 };
+  if (stage <= 40) return { C:0.60, B:0.26, A:0.12, S:0.02 };
+  if (stage <= 55) return { C:0.46, B:0.30, A:0.19, S:0.05 };
+  if (stage <= 70) return { C:0.32, B:0.35, A:0.25, S:0.08 };
+  if (stage <= 85) return { C:0.21, B:0.31, A:0.33, S:0.15 };
+  return            { C:0.10, B:0.22, A:0.40, S:0.28 };
+};
+
+/** Generate wild reward items for a Jornada stage */
+export const generateJornadaWildRewardItems = (stage) => {
+  const chances = getJornadaWildRewardTierChances(stage);
+  const pool = ITEMS_DATA.filter((i) => i.category !== 'pokeball' && i.category !== 'ballmod');
+  const picks = [];
+  const used = new Set();
+  let attempts = 0;
+  while (picks.length < 3 && attempts < 50) {
+    attempts++;
+    const tier = pickTier(chances);
+    const tierPool = pool.filter((i) => i.tier === tier && !used.has(i.id));
+    if (tierPool.length === 0) continue;
+    const item = tierPool[Math.floor(Math.random() * tierPool.length)];
+    used.add(item.id);
+    picks.push(item);
+  }
+  return picks;
+};
+
+/** Get mart stock for a Jornada stage */
+export const getMartStockJornada = (stage) => {
+  const chances = getJornadaMartTierChances(stage);
+  const pool = ITEMS_DATA;
+  const stock = [];
+  const used = new Set();
+  let attempts = 0;
+  while (stock.length < 12 && attempts < 100) {
+    attempts++;
+    const tier = pickTier(chances);
+    const tierPool = pool.filter((i) => i.tier === tier && !used.has(i.id));
+    if (tierPool.length === 0) continue;
+    const item = tierPool[Math.floor(Math.random() * tierPool.length)];
+    used.add(item.id);
+    stock.push(item);
+  }
+  return stock;
+};
+
+// ── Enemy generators ─────────────────────────────────────────
+/** Generate a wild Pokémon for a Jornada stage (level = stage) */
+export const generateJornadaWild = (stage) => {
+  const level   = getJornadaStageLevel(stage);
+  const species = pickRandomNonLegendarySpecies();
+  return generateJNPokemon(species, level, { context: 'wild' });
+};
+
+/** Generate a CTnpc team for Jornada (stages 5, 15, 25) */
+export const generateJornadaCTNpcTeam = (stage) => {
+  const level      = getJornadaStageLevel(stage);
+  const size       = stage === 5 ? 1 : stage === 15 ? 2 : 3;
+  const classCount = stage === 5 ? 1 : stage === 15 ? 2 : 3;
+  const classPool  = CLASSES_DATA.flatMap((g) => g.classes).filter((c) => CTNPC_COMBAT_CLASS_KEYS.includes(c.powerKey));
+  const usedClassIds = new Set();
+  const classes = [];
+  for (let i = 0; i < classCount && classes.length < classPool.length; i++) {
+    const avail = classPool.filter((c) => !usedClassIds.has(c.id));
+    if (!avail.length) break;
+    const cls = avail[Math.floor(Math.random() * avail.length)];
+    usedClassIds.add(cls.id);
+    classes.push(cls);
+  }
+  const used = new Set();
+  const team = Array.from({ length: size }, () => {
+    const species = pickRandomNonLegendarySpecies(used);
+    used.add(species.dexNumber);
+    return generateJNPokemon(species, level, { context: 'ctnpc' });
+  });
+  return { team, classes };
+};
+
+/** Generate a Gym Leader team for Jornada (stages 10, 20, 30, 40, 50, 60, 70, 80) */
+export const generateJornadaGymLeader = (stage) => {
+  const level = getJornadaStageLevel(stage);
+  const classPool = CLASSES_DATA.flatMap((g) => g.classes).filter((c) => CTNPC_COMBAT_CLASS_KEYS.includes(c.powerKey));
+  const usedClassIds = new Set();
+  const classes = [];
+  for (let i = 0; i < 3 && classes.length < classPool.length; i++) {
+    const avail = classPool.filter((c) => !usedClassIds.has(c.id));
+    if (!avail.length) break;
+    const cls = avail[Math.floor(Math.random() * avail.length)];
+    usedClassIds.add(cls.id);
+    classes.push(cls);
+  }
+  // Gym Leader team: 3 Pokémon (last one is the ace — gets extra atrib bonus)
+  const used = new Set();
+  const team = Array.from({ length: 3 }, (_, i) => {
+    const species = pickRandomNonLegendarySpecies(used);
+    used.add(species.dexNumber);
+    const pkm = generateJNPokemon(species, level, { context: 'ctnpc', baseOverride: 3 });
+    // Ace (last Pokémon) gets extra atrib bonus (floor(stage/10) extra points)
+    const aceBonus = i === 2 ? Math.floor(stage / 10) : 0;
+    return aceBonus > 0 ? _addContextAtribBonus(pkm, aceBonus) : pkm;
+  });
+  return { team, classes, isGymLeader: true };
+};
+
+/** Generate the miniboss for Jornada stage 99 (18 HP) */
+export const generateJornadaMiniBoss = () => {
+  const level   = getJornadaStageLevel(JORNADA_MINIBOSS_STAGE);
+  const pool    = _basePool().filter((p) => (p.catchRate ?? 45) < 75);
+  const species = pool[Math.floor(Math.random() * pool.length)] ?? _basePool()[0];
+  const pkm     = generateJNPokemon(species, level, { context: 'miniboss', baseOverride: 18 });
+  return _addContextAtribBonus(pkm, Math.floor(level / 2));
+};
+
+/** Generate the boss for Jornada stage 100 (23 HP, resistance-ignore every 4 turns) */
+export const generateJornadaBoss = () => {
+  const level   = getJornadaStageLevel(JORNADA_BOSS_STAGE);
+  const pool    = _basePool().filter((p) => isLegendary(p.nome) || (p.catchRate ?? 45) < 30);
+  const species = pool[Math.floor(Math.random() * pool.length)] ?? _basePool()[0];
+  const pkm     = generateJNPokemon(species, level, { context: 'boss', baseOverride: 23 });
+  return _addContextAtribBonus(pkm, Math.floor(level / 2) * 2);
+};
+
+/** Build the encounter list for a given Jornada stage */
+export const buildJornadaEncounters = (stage) => {
+  if (stage === 0) return [{ type: ENCOUNTER_TYPES.SELVAGEM, enemy: [generateJornadaWild(stage)], name: 'Matinho' }];
+  if (stage === JORNADA_BOSS_STAGE)     return [{ type: ENCOUNTER_TYPES.BOSS,      enemy: [generateJornadaBoss()],         name: 'Núcleo Ômega' }];
+  if (stage === JORNADA_MINIBOSS_STAGE) return [{ type: ENCOUNTER_TYPES.MINIBOSS,  enemy: [generateJornadaMiniBoss()],     name: 'Santuário da Fronteira' }];
+  if (JORNADA_GYM_STAGES.has(stage)) {
+    const { team: t, classes: c, isGymLeader } = generateJornadaGymLeader(stage);
+    return [{ type: ENCOUNTER_TYPES.TREINADOR, enemy: t, ctnpcClasses: c, isGymLeader, name: `Ginásio — Estágio ${stage}` }];
+  }
+  if (JORNADA_CTNPC_STAGES.has(stage)) {
+    const { team: t, classes: c } = generateJornadaCTNpcTeam(stage);
+    return [{ type: ENCOUNTER_TYPES.TREINADOR, enemy: t, ctnpcClasses: c, name: `Arena do Treinador — Estágio ${stage}` }];
+  }
+  // Normal stage: Matinho + Centro Pokémon + Pokémart
+  const locationPool = [
+    { type: ENCOUNTER_TYPES.SELVAGEM,   enemy: [generateJornadaWild(stage)], name: 'Matinho' },
+    { type: ENCOUNTER_TYPES.POKECENTER, enemy: null,                         name: 'Centro Pokémon' },
+    { type: ENCOUNTER_TYPES.POKEMART,   enemy: null,                         name: 'Pokémart' },
+  ];
+  return locationPool;
+};
+
 // ── Auto-use fruta from held items ───────────────────────────
 // trigger: 'vida' (pkm reached 1 vida) | 'condition' (pkm got a condition)
 const applyAutoFruta = (pkm, log, trigger) => {
@@ -1901,6 +2118,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   const [rollTooltip,  setRollTooltip]  = useState(null); // { idx, side, x, y, breakdown }
   const [bonusTooltip, setBonusTooltip] = useState(null); // { key, x, y, sources }
   const [dragInfo,      setDragInfo]      = useState(null);  // { type:'item'|'pokemon', ... }
+  const [selectedItem,  setSelectedItem]  = useState(null);  // { itemId, cat, def } — item selecionado para uso
   const [classInfoOpen, setClassInfoOpen] = useState(null);  // class slot index showing desc
   const [selectedBall,  setSelectedBall]  = useState(null);  // pokeball id selected for capture
 
@@ -1963,6 +2181,13 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // ── Ranking ────────────────────────────────────────────────
   const [rankingData, setRankingData]   = useState({ pocket: [], jornada: [], endless: [] });
   const [showRanking, setShowRanking]   = useState(false);
+  // ── Jornada Save ────────────────────────────────────────────
+  const [jornadaSavePrompt, setJornadaSavePrompt] = useState(null); // saved run data shown when entering Jornada
+  const [saveFlash, setSaveFlash] = useState(false); // brief visual feedback on save
+  const [adminModal,         setAdminModal]         = useState(false);  // false | 'password' | 'actions'
+  const [adminPassword,      setAdminPassword]      = useState('');
+  const [adminPasswordError, setAdminPasswordError] = useState(false);
+  const [adminRankingMenu,   setAdminRankingMenu]   = useState(false);
   const [showEnciclopedia, setShowEnciclopedia]   = useState(false);
   const [enciclopediaTab, setEnciclopediaTab]     = useState('classes');
   const [activeKeyword, setActiveKeyword]         = useState(null); // { word, rect }
@@ -2051,10 +2276,15 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // ═══════════════════════════════════════════════════════════
   // GAME SETUP HANDLERS
   // ═══════════════════════════════════════════════════════════
-  const handleSelectMode = useCallback((modeId) => {
-    setGameMode(GAME_MODES.find((m) => m.id === modeId));
+  const handleSelectMode = useCallback(async (modeId) => {
+    const mode = GAME_MODES.find((m) => m.id === modeId);
+    setGameMode(mode);
+    if (modeId === 'jornada' && !currentUser?.isGuest) {
+      const saved = await loadJNRun(currentUser.username);
+      if (saved) { setJornadaSavePrompt(saved); return; }
+    }
     setPhase('classSelect');
-  }, []);
+  }, [currentUser]);
 
   const handleSelectClass = useCallback((classObj) => {
     setPlayerClasses([{ ...classObj, levelBaselines: {} }]);
@@ -2111,20 +2341,23 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // STAGE / ENCOUNTER HANDLERS
   // ═══════════════════════════════════════════════════════════
   const _beginStage = useCallback((stageNum, keepPhase = false) => {
-    const encounters = buildStageEncounters(stageNum);
+    const isJornada = gameMode?.id === 'jornada';
+    const encounters = isJornada ? buildJornadaEncounters(stageNum) : buildStageEncounters(stageNum);
+    const isSpecialStage = isJornada ? JORNADA_ALL_SPECIAL_STAGES.has(stageNum) : (SPECIAL_STAGES.has(stageNum) || stageNum === 0);
     // Cyber Pesquisador: +1 Matinho em estágios não especiais
-    if (playerClasses.some((c) => c.powerKey === 'pesquisador_base') && !SPECIAL_STAGES.has(stageNum) && stageNum !== 0) {
-      encounters.push({ type: ENCOUNTER_TYPES.SELVAGEM, enemy: [generateWild(stageNum)], name: 'Matinho' });
+    if (playerClasses.some((c) => c.powerKey === 'pesquisador_base') && !isSpecialStage) {
+      const wildPkm = isJornada ? generateJornadaWild(stageNum) : generateWild(stageNum);
+      encounters.push({ type: ENCOUNTER_TYPES.SELVAGEM, enemy: [wildPkm], name: 'Matinho' });
     }
     setStageEncounters(encounters);
     setVisitedEncounters([]);
     setCurrentEncounter(null);
     setBattle(null);
     setBattleLog([]);
-    setMartStock(getMartStock(stageNum));
+    setMartStock(isJornada ? getMartStockJornada(stageNum) : getMartStock(stageNum));
     setWildRewardItems([]);
     if (!keepPhase) setPhase('map');
-  }, [playerClasses]);
+  }, [playerClasses, gameMode]);
 
   const handleSelectStarter = useCallback((pkm) => {
     const starterVidas = calcBaseVidas(
@@ -2193,7 +2426,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
     // Wild encounter: apply legendary/shiny modifiers from class powers and incenso items
     if (enc.type === ENCOUNTER_TYPES.SELVAGEM) {
-      const level = getStageLevel(stage);
+      const level = gameMode?.id === 'jornada' ? getJornadaStageLevel(stage) : getStageLevel(stage);
       const pClassKeys = playerClasses.map((c) => c.powerKey);
       const hasMistico    = pClassKeys.includes('mistico_base');
       const hasObservador = pClassKeys.includes('observador');
@@ -2202,7 +2435,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       const incGlitter = inventory.consumiveis?.incenso_glitter ?? 0;
       const activeShinyBonus = activeIncense?.effect === 'incenso_shiny_tipo' ? (activeIncense.bonus ?? 0.10) : 0;
 
-      const legShinyChance = 0.005 + (hasMistico ? 0.05 : 0);
+      const legShinyChance = 0.005 + (hasMistico ? 0.01 : 0);
       const legChance      = 0.01 + (incLend > 0 ? 0.10 : 0) + (hasMistico ? 0.05 : 0);
       const shinyChance = 0.01 + (hasObservador ? 0.10 : 0) + (incGlitter > 0 ? 0.10 : 0) + activeShinyBonus;
 
@@ -2222,6 +2455,13 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         if (isLeg) {
           const legPool = _basePool().filter((p) => isLegendary(p.nome));
           species = legPool.length > 0 ? legPool[Math.floor(Math.random() * legPool.length)] : pickRandomSpecies();
+        } else if (isShiny && activeIncense?.effect === 'incenso_shiny_tipo' && activeIncense.types?.length > 0) {
+          // porpurina: shiny deve ser do tipo escolhido
+          const typedPool = _basePool().filter((p) => {
+            const pTypes = (p.tipos ?? []).map(normalizeType);
+            return activeIncense.types.some((t) => pTypes.includes(t));
+          });
+          species = typedPool.length > 0 ? typedPool[Math.floor(Math.random() * typedPool.length)] : pickRandomSpecies();
         } else {
           species = pickRandomSpecies();
         }
@@ -2245,7 +2485,8 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           });
           if (typePool.length > 0) {
             const species = typePool[Math.floor(Math.random() * typePool.length)];
-            const newPkm = generateJNPokemon(species, level, { context: 'wild' });
+            const forceShinyType = activeIncense.effect === 'incenso_shiny_tipo';
+            const newPkm = generateJNPokemon(species, level, { context: 'wild', forceShiny: forceShinyType });
             enc = { ...enc, enemy: [newPkm] };
           }
         }
@@ -2363,7 +2604,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
             const autoJoinBase = getPlayerBaseVidasByStage(stage);
             const autoJoinVidas = calcBaseVidas({ tipos: autoEnemy.tipos ?? [] }, 'player', { isLeg: autoIsLeg, isShn: autoEnemy.isShiny ?? false, baseOverride: autoJoinBase });
             const joinPkm = { ...autoEnemy, vidasMax: autoJoinVidas, vidasAtual: autoJoinVidas, conditions: [] };
-            setTeam((prev) => [...prev, joinPkm]);
+            setTeam((prev) => prev.some((p) => p.uid === joinPkm.uid) ? prev : [...prev, joinPkm]);
             if (!currentUser?.isGuest && autoEnemy.dexNumber) {
               setCyberdex((prev) => new Set([...prev, autoEnemy.dexNumber]));
               addToJNCyberdex(currentUser.username, autoEnemy.dexNumber);
@@ -2491,7 +2732,9 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     }
 
     // Stage 0 has 1 local; special stages have 1 forced encounter; others need 2 (3 with Cavaleiro)
-    const maxEncounters = (stage === 0 || SPECIAL_STAGES.has(stage)) ? 1 : (playerClasses.some((c) => c.powerKey === 'cavaleiro') ? 3 : 2);
+    const isJornadaMode = gameMode?.id === 'jornada';
+    const isCurrentSpecial = isJornadaMode ? JORNADA_ALL_SPECIAL_STAGES.has(stage) : (stage === 0 || SPECIAL_STAGES.has(stage));
+    const maxEncounters = isCurrentSpecial ? 1 : (playerClasses.some((c) => c.powerKey === 'cavaleiro') ? 3 : 2);
     const newVisited = visitedEncounters.length; // already incremented before battle
     const headingToReward = newVisited >= maxEncounters;
 
@@ -2784,13 +3027,30 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   };
 
   const handleStageComplete = useCallback(() => {
-    const stageMoney = STAGE_MONEY_REWARDS[Math.min(stage, STAGE_MONEY_REWARDS.length - 1)];
+    const isJornada = gameMode?.id === 'jornada';
+    const stageMoney = isJornada
+      ? getJornadaStageMoneyReward(stage)
+      : STAGE_MONEY_REWARDS[Math.min(stage, STAGE_MONEY_REWARDS.length - 1)];
     if (stageMoney > 0) setMoney((m) => m + stageMoney);
+
+    // Evo stone reward after Jornada Gym Leader stages
+    if (isJornada && JORNADA_GYM_STAGES.has(stage)) {
+      const evoStones = ITEMS_DATA.filter((i) => i.effect === 'evo_stone');
+      const stone = evoStones[Math.floor(Math.random() * evoStones.length)];
+      if (stone) {
+        setInventory((inv) => ({
+          ...inv,
+          consumiveis: { ...inv.consumiveis, [stone.id]: (inv.consumiveis?.[stone.id] ?? 0) + 1 },
+        }));
+      }
+    }
+
+    const isSpecialNow = isJornada ? JORNADA_ALL_SPECIAL_STAGES.has(stage) : SPECIAL_STAGES.has(stage);
     setRunStats((rs) => ({
       ...rs,
       stagesCleared: rs.stagesCleared + 1,
-      normalStagesCleared:  !SPECIAL_STAGES.has(stage) ? rs.normalStagesCleared + 1 : rs.normalStagesCleared,
-      specialStagesCleared:  SPECIAL_STAGES.has(stage)  ? rs.specialStagesCleared + 1 : rs.specialStagesCleared,
+      normalStagesCleared:  !isSpecialNow ? rs.normalStagesCleared + 1 : rs.normalStagesCleared,
+      specialStagesCleared:  isSpecialNow  ? rs.specialStagesCleared + 1 : rs.specialStagesCleared,
     }));
     setCapturedInEncounter(null);
 
@@ -2798,7 +3058,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     setTeam((prev) => {
       // 1. Compute new levels first
       let leveled;
-      if (stage === 0) {
+      if (isJornada) {
+        // Jornada: +1 level per stage completed (stage 0 → 1 is free, no level-up)
+        leveled = prev.map((p) => stage === 0 ? p : _levelUpPokemon(p, 1));
+      } else if (stage === 0) {
         leveled = prev.map((p) => _levelUpPokemon(p, 4));
       } else if (stage === 1) {
         leveled = prev.map((p) => _levelUpPokemon(p, 5));
@@ -2861,8 +3124,9 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           p = { ...p, vidasMax: p.vidasMax + 1 };
         }
 
-        // Every 3 stages (completing stage 3, 6, 9 → indices 2, 5, 8): +1 vidasMax retroactive
-        if ((stage + 1) % 3 === 0) {
+        // Every N stages: +1 vidasMax (Pocket: every 3; Jornada: every 10)
+        const vidaInterval = isJornada ? 10 : 3;
+        if ((stage + 1) % vidaInterval === 0) {
           p = { ...p, vidasMax: p.vidasMax + 1, vidasAtual: p.vidasAtual + 1 };
         }
 
@@ -2879,9 +3143,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         ? (guestName.trim() || 'Visitante')
         : (currentUser?.username ?? 'Jogador');
       const modeId = gameMode?.id ?? 'jornada';
-      const score = modeId === 'pocket'
-        ? calcPocketScore({ runStats, team, money })
-        : calcScore({ stage, captures: runStats.captures, money, turnsTotal: runStats.turnsTotal });
+      const score = calcPocketScore({ runStats, team, money });
       const teamSnap = team.map((p) => ({
         nome: p.nome, dexNumber: p.dexNumber, level: p.level,
         types: p.types, isShiny: p.isShiny ?? false,
@@ -2891,22 +3153,24 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       setPhase('victory');
     } else {
       setStage(nextStage);
-      // artifice recharge at stages 3, 5, 8
+      // artifice recharge at CTnpc stages (Pocket: 3,5,8 / Jornada: 5,15,25)
+      const artificeStages = isJornada ? [5, 15, 25] : [3, 5, 8];
       const triggerArtificeStage = playerClasses.some((c) => c.powerKey === 'artifice')
-        && [3, 5, 8].includes(nextStage);
+        && artificeStages.includes(nextStage);
       _beginStage(nextStage, triggerArtificeStage);
       if (triggerArtificeStage) {
         setArtificeCredits((c) => c + 1);
         setPhase('artifice_stage_choice');
       }
     }
-  }, [stage, gameMode, _beginStage, playerClasses, currentUser, guestName, runStats, team, money]);
+  }, [stage, gameMode, _beginStage, playerClasses, currentUser, guestName, runStats, team, money, inventory]);
 
   // ═══════════════════════════════════════════════════════════
   // TEAM MANAGEMENT
   // ═══════════════════════════════════════════════════════════
-  // Compute max team size based on classes
-  const maxTeamSize = 2
+  // Compute max team size based on classes (Jornada: base 3; Pocket: base 2)
+  const _teamBaseSlots = gameMode?.id === 'jornada' ? 3 : 2;
+  const maxTeamSize = _teamBaseSlots
     + (hasClassPower('captor_base')  ? 1 : 0)
     + (hasClassPower('colecionador') ? 1 : 0)
     + (hasClassPower('professor')    ? 1 : 0);
@@ -2914,11 +3178,13 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   /** Add captured Pokémon to team (default 2 slots, expanded by classes). */
   const handleAddToTeam = useCallback((pkm) => {
     setTeam((prev) => {
-      const curMax = 2
+      const baseSlots = gameMode?.id === 'jornada' ? 3 : 2;
+      const curMax = baseSlots
         + (playerClasses.some((c) => c.powerKey === 'captor_base')  ? 1 : 0)
         + (playerClasses.some((c) => c.powerKey === 'colecionador') ? 1 : 0)
         + (playerClasses.some((c) => c.powerKey === 'professor')    ? 1 : 0);
       if (prev.length >= curMax) return prev;
+      if (prev.some((p) => p.uid === pkm.uid)) return prev; // prevent duplicate adds
       const isLeg = isLegendary(pkm.nome);
       const isShn = pkm.isShiny ?? false;
       const baseVidas = calcBaseVidas({ tipos: pkm.tipos ?? [] }, 'player', { isLeg, isShn, baseOverride: getPlayerBaseVidasByStage(stage) });
@@ -2987,7 +3253,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     // ── Pokédoll: pula CTnpc e concede recompensas ───────────
     if (itemDef.effect === 'pokedoll') {
       if (phase === 'map' && stageEncounters[0]?.type === ENCOUNTER_TYPES.TREINADOR) {
-        const reward = CTNPC_MONEY_REWARD[stage] ?? 0;
+        const isJornadaD = gameMode?.id === 'jornada';
+        const reward = isJornadaD
+          ? (JORNADA_GYM_STAGES.has(stage) ? stage * 20 : JORNADA_CTNPC_STAGES.has(stage) ? stage * 30 : 0)
+          : (CTNPC_MONEY_REWARD[stage] ?? 0);
         setMoney((m) => m + reward);
         setVisitedEncounters([0]);
         setPhase('reward');
@@ -3076,27 +3345,31 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     const itemDef = ITEMS_DATA.find((i) => i.id === itemId);
     if (!itemDef) return;
     const amount = hasClassPower('evolucionista') ? 5 : (itemDef.evoAtrib ?? 3);
+    const targetPkm = team[targetIdx];
+    let pkmPatch;
+    if (stat === 'vidasMax') {
+      const newMax = (targetPkm.vidasMax ?? 3) + amount;
+      pkmPatch = { vidasMax: newMax, vidasAtual: Math.min(newMax, (targetPkm.vidasAtual ?? newMax) + amount) };
+    } else {
+      const db = { ...(targetPkm.diceBonus ?? { atk: 0, def: 0, atkEsp: 0, defEsp: 0, vel: 0 }) };
+      db[stat] = (db[stat] ?? 0) + amount;
+      pkmPatch = { diceBonus: db };
+    }
     setTeam((prev) => {
       const next = [...prev];
-      const p = { ...next[targetIdx] };
-      if (stat === 'vidasMax') {
-        p.vidasMax = (p.vidasMax ?? 3) + amount;
-        p.vidasAtual = Math.min(p.vidasMax, (p.vidasAtual ?? p.vidasMax) + amount);
-      } else {
-        const db = { ...(p.diceBonus ?? { atk: 0, def: 0, atkEsp: 0, defEsp: 0, vel: 0 }) };
-        db[stat] = (db[stat] ?? 0) + amount;
-        p.diceBonus = db;
-      }
-      next[targetIdx] = p;
+      next[targetIdx] = { ...next[targetIdx], ...pkmPatch };
       return next;
     });
     setInventory((inv) => ({
       ...inv,
       consumiveis: { ...inv.consumiveis, [itemId]: Math.max(0, (inv.consumiveis[itemId] ?? 1) - 1) },
     }));
-    if (battle) setBattle((b) => b ? { ...b, itemUsedThisTurn: true } : b);
+    if (battle) {
+      const isActive = targetPkm?.uid === battle.playerPkm?.uid;
+      setBattle((b) => b ? { ...b, ...(isActive ? { playerPkm: { ...b.playerPkm, ...pkmPatch } } : {}), itemUsedThisTurn: true } : b);
+    }
     setPendingEvoStone(null);
-  }, [pendingEvoStone, battle]);
+  }, [pendingEvoStone, battle, team]);
 
   const handleActivateIncense = useCallback((types) => {
     if (!pendingIncense) return;
@@ -3121,6 +3394,21 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     if (money < price) return;
     if (itemId === 'masterball' && (inventory.pokebolas.masterball ?? 0) >= 1) return;
     if (itemDef.category === 'pokeball' && (inventory.pokebolas[itemId] ?? 0) + qty > 10) return;
+    if (['consumivel', 'fruta', 'held'].includes(itemDef.category)) {
+      const STACK_MAX = 3;
+      const pClassKeys = playerClasses.map((c) => c.powerKey);
+      const mochilaBonus = (inventory.consumiveis?.mochila ?? 0) * 2;
+      const guiaBonus = pClassKeys.includes('guia') ? 2 : 0;
+      const maxSlots = 5 + mochilaBonus + guiaBonus;
+      const usedSlots = ['consumiveis', 'frutas', 'held'].reduce((acc, cat) => {
+        return acc + Object.entries(inventory[cat] || {}).filter(([, q]) => q > 0)
+          .reduce((a, [, q]) => a + Math.ceil(q / STACK_MAX), 0);
+      }, 0);
+      const invCat = itemDef.category === 'consumivel' ? 'consumiveis' : itemDef.category === 'fruta' ? 'frutas' : 'held';
+      const currentQty = inventory[invCat][itemId] ?? 0;
+      const slotsNeeded = Math.ceil((currentQty + qty) / STACK_MAX) - (currentQty > 0 ? Math.ceil(currentQty / STACK_MAX) : 0);
+      if (usedSlots + slotsNeeded > maxSlots) return;
+    }
     setMoney((m) => m - price);
 
     setInventory((inv) => {
@@ -3161,9 +3449,10 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     setTeam((prev) => {
       const updated = [...prev];
       const pkm = { ...updated[pokemonIdx] };
-      // Virtuose: can hold 2 items; Guia: +2 held slots for all pokémon; Pokécinto adds +1 per use
+      // Base held slots: 2 in Jornada, 1 in Pocket; Virtuose +1; Guia +2; Pokécinto +1 per use
       const guiaHeldBonus = playerClasses.some((c) => c.powerKey === 'guia') ? 2 : 0;
-      const maxHeld = (hasClassPower('virtuose') ? 2 : 1) + guiaHeldBonus + (pkm.extraHeldSlots ?? 0);
+      const _baseHeld = gameMode?.id === 'jornada' ? 2 : 1;
+      const maxHeld = _baseHeld + (hasClassPower('virtuose') ? 1 : 0) + guiaHeldBonus + (pkm.extraHeldSlots ?? 0);
       const currentHeld = Array.isArray(pkm.heldItem) ? pkm.heldItem : (pkm.heldItem ? [pkm.heldItem] : []);
       if (currentHeld.length >= maxHeld) return prev;
       pkm.heldItem = maxHeld === 1 ? itemDef : [...currentHeld, itemDef];
@@ -3204,6 +3493,54 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   }, [dragInfo, handleUseItem, handleEquipItem]);
 
   // ═══════════════════════════════════════════════════════════
+  // JORNADA SAVE / LOAD
+  // ═══════════════════════════════════════════════════════════
+  const handleSaveRun = useCallback(() => {
+    if (!currentUser || currentUser.isGuest || gameMode?.id !== 'jornada') return;
+    const data = {
+      gameModeId: gameMode.id,
+      playerClasses,
+      stage,
+      team,
+      activeIdx,
+      inventory,
+      money,
+      runStats,
+      stageEncounters,
+      visitedEncounters,
+      savedAt: new Date().toISOString(),
+    };
+    saveJNRun(currentUser.username, data);
+    setSaveFlash(true);
+    setTimeout(() => setSaveFlash(false), 1500);
+  }, [currentUser, gameMode, playerClasses, stage, team, activeIdx, inventory, money, runStats, stageEncounters, visitedEncounters]);
+
+  const handleContinueSave = useCallback((saved) => {
+    const mode = GAME_MODES.find((m) => m.id === saved.gameModeId);
+    setGameMode(mode);
+    setPlayerClasses(saved.playerClasses ?? []);
+    setStage(saved.stage ?? 0);
+    setTeam(saved.team ?? []);
+    setActiveIdx(saved.activeIdx ?? 0);
+    setInventory(saved.inventory ?? INITIAL_INVENTORY);
+    setMoney(saved.money ?? 1000);
+    setRunStats(saved.runStats ?? { captures: 0, turnsTotal: 0, stagesCleared: 0, shinyCaptured: 0, legendaryCaptured: 0, legendaryShinyCapture: 0, normalStagesCleared: 0, specialStagesCleared: 0, bossWon: false, minibossWon: false });
+    setStageEncounters(saved.stageEncounters ?? []);
+    setVisitedEncounters(saved.visitedEncounters ?? []);
+    setCurrentEncounter(null);
+    setBattle(null);
+    setBattleLog([]);
+    setJornadaSavePrompt(null);
+    setPhase('map');
+  }, []);
+
+  const handleDiscardSave = useCallback(() => {
+    if (currentUser && !currentUser.isGuest) deleteJNRun(currentUser.username);
+    setJornadaSavePrompt(null);
+    setPhase('classSelect');
+  }, [currentUser]);
+
+  // ═══════════════════════════════════════════════════════════
   // END RUN
   // ═══════════════════════════════════════════════════════════
   const handleEndRun = useCallback((won) => {
@@ -3212,9 +3549,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       : (currentUser?.username ?? 'Jogador');
 
     const modeId = gameMode?.id ?? 'jornada';
-    const score = modeId === 'pocket'
-      ? calcPocketScore({ runStats, team, money })
-      : calcScore({ stage, captures: runStats.captures, money, turnsTotal: runStats.turnsTotal });
+    const score = calcPocketScore({ runStats, team, money });
 
     const teamSnap = team.map((p) => ({
       nome: p.nome, dexNumber: p.dexNumber, level: p.level,
@@ -3222,6 +3557,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     }));
     const entry = { name, score, stages: stage, won, team: teamSnap, date: new Date().toLocaleDateString('pt-BR') };
     pushRanking(modeId, entry);
+    if (!currentUser?.isGuest && modeId === 'jornada') deleteJNRun(currentUser.username);
     setLockedStarterOptions([]);
     setPhase(won ? 'victory' : 'gameover');
   }, [currentUser, guestName, stage, runStats, money, gameMode, team]);
@@ -3346,16 +3682,6 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       },
     });
     setBattleLog([`⚔️ Encontro com ${enemy0.nome} (Nv.${enemy0.level})!`, ...velLog]);
-    // Save all encountered pokémon to cyberdex (named users only)
-    if (!currentUser?.isGuest) {
-      const allEnemies = encounter.enemy ?? [enemy0];
-      allEnemies.forEach((ep) => {
-        if (ep?.dexNumber) {
-          setCyberdex((prev) => new Set([...prev, ep.dexNumber]));
-          addToJNCyberdex(currentUser.username, ep.dexNumber);
-        }
-      });
-    }
   }, [team, activeIdx, playerClasses, videnteChoice]);
 
   /** Save game state snapshot before a roll, for Azarão undo. */
@@ -3482,38 +3808,56 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
     // CTnpc money reward (last pokémon defeated)
     if (enemyFainted && isCTNpc) {
-      const ctnpcMoney = CTNPC_MONEY_REWARD[stage] ?? 0;
+      const isJornadaC = gameMode?.id === 'jornada';
+      const ctnpcMoney = isJornadaC
+        ? (JORNADA_GYM_STAGES.has(stage) ? stage * 20 : JORNADA_CTNPC_STAGES.has(stage) ? stage * 30 : 0)
+        : (CTNPC_MONEY_REWARD[stage] ?? 0);
       if (ctnpcMoney > 0) {
         setMoney((m) => m + ctnpcMoney);
         setBattleLog((prev) => [...prev, `💰 +${ctnpcMoney}₩ (CTnpc derrotado!)`]);
       }
     }
 
-    // Class reward (CTnpc stages 3/5/8)
+    // Class reward (CTnpc stages)
     let classRewardCls = null;
-    if (enemyFainted && isCTNpc && [3, 5, 8].includes(stage)) {
+    let classRewardCandidates = null;
+    const isJornadaForClass = gameMode?.id === 'jornada';
+    const classRewardStages = isJornadaForClass ? [5, 15, 25] : [3, 5, 8];
+    if (enemyFainted && isCTNpc && classRewardStages.includes(stage)) {
       const ownedGroupIds = playerClasses.map((c) => {
         const g = CLASSES_DATA.find((gr) => gr.classes.some((cl) => cl.id === c.id));
         return g?.groupId;
       }).filter(Boolean);
-      if (stage === 3) {
+      const isBaseStage = isJornadaForClass ? stage === 5 : stage === 3;
+      if (isBaseStage) {
         const candidates = CLASSES_DATA.filter((g) => !ownedGroupIds.includes(g.groupId)).map((g) => g.classes.find((c) => c.isBase)).filter(Boolean);
-        if (candidates.length > 0) classRewardCls = candidates[Math.floor(Math.random() * candidates.length)];
+        if (isJornadaForClass) {
+          if (candidates.length > 0) classRewardCandidates = candidates;
+        } else {
+          if (candidates.length > 0) classRewardCls = candidates[Math.floor(Math.random() * candidates.length)];
+        }
       } else {
         const candidates = CLASSES_DATA.filter((g) => ownedGroupIds.includes(g.groupId)).flatMap((g) => g.classes.filter((c) => !c.isBase && !playerClasses.some((pc) => pc.id === c.id)));
-        if (candidates.length > 0) classRewardCls = candidates[Math.floor(Math.random() * candidates.length)];
+        if (isJornadaForClass) {
+          if (candidates.length > 0) classRewardCandidates = candidates;
+        } else {
+          if (candidates.length > 0) classRewardCls = candidates[Math.floor(Math.random() * candidates.length)];
+        }
       }
     }
 
     // Wild money/items
     if (enemyFainted && !isCTNpc && !isBoss && !isMiniboss) {
-      const encMoney = STAGE_ENCOUNTER_MONEY[Math.min(stage, STAGE_ENCOUNTER_MONEY.length - 1)];
+      const isJornadaB = gameMode?.id === 'jornada';
+      const encMoney = isJornadaB
+        ? getJornadaEncounterMoney(stage)
+        : STAGE_ENCOUNTER_MONEY[Math.min(stage, STAGE_ENCOUNTER_MONEY.length - 1)];
       if (encMoney > 0) setMoney((m) => m + encMoney);
-      setWildRewardItems(generateWildRewardItems(stage));
+      setWildRewardItems(isJornadaB ? generateJornadaWildRewardItems(stage) : generateWildRewardItems(stage));
     }
 
     const newPhase = ghostLastStand ? 'result_lose'
-      : classRewardCls ? 'classReward'
+      : (classRewardCls || classRewardCandidates) ? 'classReward'
       : (enemyFainted && isMiniboss) ? 'minibossReward'
       : enemyFainted ? 'result_win'
       : (playerFainted && newTeam.filter((p) => p.vidasAtual > 0).length === 0) ? 'result_lose'
@@ -3528,6 +3872,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       ...b, playerPkm, enemyPkm, turnNum: newTurnNum, metalCoatUsedThisTurn,
       itemUsedThisTurn: false,
       phase: newPhase, classRewardCls: classRewardCls ?? b.classRewardCls ?? null,
+      classRewardCandidates: classRewardCandidates ?? b.classRewardCandidates ?? null,
       minibossItems: minibossItems ?? b.minibossItems ?? null,
       pendingDefense: nextPendingDefense,
       enemySa: newEnemySa ?? b.enemySa,
@@ -3740,7 +4085,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     } else {
       // ── Player went first → enemy counter-attacked → finalize ──
       _finalizeTurn({
-        playerPkm, enemyPkm, playerFainted, enemyFainted: false,
+        playerPkm, enemyPkm, playerFainted, enemyFainted: enemyPkm.vidasAtual <= 0,
         log: [], newTurnNum: (battle.turnNum ?? 0) + 1,
         metalCoatUsedThisTurn, sa, actionType: null, enemyAction, team, activeIdx,
         newEnemySa,
@@ -3790,7 +4135,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       setPendingAtkType(null);
       _finalizeTurn({
         playerPkm, enemyPkm,
-        playerFainted: false, enemyFainted: false,
+        playerFainted: false, enemyFainted: enemyPkm.vidasAtual <= 0,
         log, newTurnNum: turnNum + 1,
         metalCoatUsedThisTurn: battle.metalCoatUsedThisTurn ?? false,
         sa: sa ?? {},
@@ -4132,7 +4477,8 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         const activePkm = battle.playerPkm;
         if (activePkm) {
           const guiaHeldBonus = playerClasses.some((c) => c.powerKey === 'guia') ? 2 : 0;
-          const maxHeldF = (playerClasses.some((c) => c.powerKey === 'virtuose') ? 2 : 1) + guiaHeldBonus + (activePkm.extraHeldSlots ?? 0);
+          const _baseHeldF = gameMode?.id === 'jornada' ? 2 : 1;
+          const maxHeldF = _baseHeldF + (playerClasses.some((c) => c.powerKey === 'virtuose') ? 1 : 0) + guiaHeldBonus + (activePkm.extraHeldSlots ?? 0);
           const currentHeld = Array.isArray(activePkm.heldItem) ? activePkm.heldItem : (activePkm.heldItem ? [activePkm.heldItem] : []);
           if (currentHeld.length < maxHeldF) {
             // Equip directly
@@ -4339,8 +4685,13 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
            : cls.powerKey === 'artifice'       ? 'artifice_choice'
            : 'result_win',
       classRewardCls: null,
+      classRewardCandidates: null,
     }));
   }, [battle, team, playerClasses, classChoiceData, videnteChoice]);
+
+  const handleSelectClassCandidate = useCallback((cls) => {
+    setBattle((b) => ({ ...b, classRewardCls: cls, classRewardCandidates: null }));
+  }, []);
 
   /** Apply artífice armor/sword bonus to a chosen pokémon. */
   const handleApplyArtificeChoice = useCallback((uid, itemType) => {
@@ -4465,7 +4816,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     handleEndRun, handleReturnToLogin,
     // battle
     initBattle, handlePlayerAction, handleCapture, handleBattleSwitch,
-    handleAcceptClassReward,
+    handleAcceptClassReward, handleSelectClassCandidate,
     handleApplyEngineerChoices,
     engineerChoicePending,
     handleApplyArtificeChoice,
@@ -4726,10 +5077,90 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   };
 
   // ── Login Screen ─────────────────────────────────────────────
+  const renderAdminModal = () => {
+    if (!adminModal) return null;
+    const closeAdmin = () => { setAdminModal(false); setAdminPassword(''); setAdminPasswordError(false); setAdminRankingMenu(false); };
+    const handleAdminPasswordSubmit = () => {
+      if (adminPassword === 'Charchar2') {
+        setAdminModal('actions');
+        setAdminPassword('');
+        setAdminPasswordError(false);
+      } else {
+        setAdminPasswordError(true);
+      }
+    };
+    const handleClearCyberdex = async () => {
+      if (!window.confirm('Limpar Cyberdex de TODOS os usuários?')) return;
+      await Promise.all(CYBERDEX_USERS.map((u) => remove(ref(database, `jnCyberdex/${u}`))));
+      closeAdmin();
+    };
+    const handleClearRanking = async (modeId) => {
+      const label = modeId === 'all' ? 'todos os modos' : modeId;
+      if (!window.confirm(`Limpar ranking de ${label}?`)) return;
+      if (modeId === 'all') {
+        await Promise.all(GAME_MODES.map((m) => remove(ref(database, JN_RANKING_PATH(m.id)))));
+      } else {
+        await remove(ref(database, JN_RANKING_PATH(modeId)));
+      }
+      setAdminRankingMenu(false);
+    };
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={closeAdmin}>
+        <div className="bg-gray-900 border border-gray-600 rounded-2xl p-6 w-full max-w-[95vw] sm:max-w-xs mx-4 flex flex-col gap-4 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-gray-300 font-bold text-center text-sm">⚙️ Configurações</h3>
+          {adminModal === 'password' ? (
+            <>
+              <input type="password" placeholder="Senha..." value={adminPassword}
+                onChange={(e) => { setAdminPassword(e.target.value); setAdminPasswordError(false); }}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdminPasswordSubmit()}
+                autoFocus
+                className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-600 focus:outline-none focus:border-gray-400 text-sm" />
+              {adminPasswordError && <p className="text-red-400 text-xs text-center">Senha incorreta.</p>}
+              <button onClick={handleAdminPasswordSubmit}
+                className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-colors text-sm">
+                Confirmar
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <button onClick={handleClearCyberdex}
+                className="w-full py-2 px-4 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm">
+                🗑️ Limpar Cyberdex
+              </button>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => setAdminRankingMenu((v) => !v)}
+                  className="w-full py-2 px-4 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-sm">
+                  🗑️ Limpar Ranking {adminRankingMenu ? '▲' : '▼'}
+                </button>
+                {adminRankingMenu && (
+                  <div className="flex flex-col gap-1.5 pl-2">
+                    {GAME_MODES.map((m) => (
+                      <button key={m.id} onClick={() => handleClearRanking(m.id)}
+                        className="w-full py-1.5 px-3 bg-gray-700 hover:bg-red-700 text-gray-200 text-xs font-bold rounded-lg transition-colors text-left">
+                        {m.name}
+                      </button>
+                    ))}
+                    <button onClick={() => handleClearRanking('all')}
+                      className="w-full py-1.5 px-3 bg-gray-700 hover:bg-red-700 text-gray-200 text-xs font-bold rounded-lg transition-colors text-left">
+                      Todos os modos
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <button onClick={closeAdmin} className="text-gray-600 hover:text-gray-400 text-xs text-center">Fechar</button>
+        </div>
+      </div>
+    );
+  };
+
   const renderLogin = () => (
     <div className="min-h-screen flex flex-col items-center justify-center relative"
       style={{ backgroundImage:"url('/pokesitebg1.png')", backgroundSize:'cover', backgroundPosition:'center' }}>
       {showRanking && renderRanking()}
+      {renderAdminModal()}
       <div className="bg-black/70 rounded-2xl p-8 flex flex-col items-center gap-5 w-full max-w-sm mx-4 backdrop-blur">
         <img src="/jn/logojn.png" alt="JN" className="w-44 h-auto"
           onError={(e) => { e.target.style.display='none'; }} />
@@ -4772,9 +5203,11 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           👤 Visitante
         </button>
 
-        <div className="flex gap-4 mt-1">
+        <div className="flex gap-4 mt-1 items-center">
           <button onClick={() => setShowRanking(true)}
             className="text-yellow-400 hover:text-yellow-300 text-xs underline">🏆 Ranking</button>
+          <button onClick={() => { setAdminModal('password'); setAdminPassword(''); setAdminPasswordError(false); setAdminRankingMenu(false); }}
+            className="text-gray-500 hover:text-gray-300 text-xs">⚙️</button>
           {onExit && (
             <button onClick={onExit}
               className="text-gray-500 hover:text-gray-300 text-xs">← Niaypeta Corp</button>
@@ -4795,7 +5228,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
         <p className="text-gray-400 text-sm">Escolha o modo de jogo:</p>
         <div className="flex flex-col gap-3 w-full">
           {GAME_MODES.map((mode) => {
-            const wip = mode.id === 'jornada' || mode.id === 'endless';
+            const wip = mode.id === 'endless';
             return (
               <button key={mode.id} onClick={() => !wip && handleSelectMode(mode.id)}
                 disabled={wip}
@@ -4898,7 +5331,9 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
 
   // ── TOP: Stage Map & Location Selection ─────────────────────
   const renderMapTop = () => {
-    const isSpecial     = SPECIAL_STAGES.has(stage);
+    const isJornadaMap  = gameMode?.id === 'jornada';
+    const isSpecial     = isJornadaMap ? JORNADA_ALL_SPECIAL_STAGES.has(stage) : SPECIAL_STAGES.has(stage);
+    const isGymStage    = isJornadaMap && JORNADA_GYM_STAGES.has(stage);
     const hasCavaleiro  = playerClasses.some((c) => c.powerKey === 'cavaleiro');
     const stageMax      = gameMode?.stageCount === Infinity ? '∞' : ((gameMode?.stageCount ?? 12) - 1);
     const normalMaxVisits = hasCavaleiro ? 3 : 2;
@@ -4912,11 +5347,12 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
             <div>
               <span className="text-yellow-400 font-bold text-base sm:text-lg">Estágio {stage}</span>
               <span className="text-gray-400 text-sm ml-2">/ {stageMax}</span>
-              {isSpecial && <span className="ml-2 text-red-400 text-xs font-bold uppercase">Especial</span>}
+              {isGymStage && <span className="ml-2 text-purple-400 text-xs font-bold uppercase">🏅 Ginásio</span>}
+              {isSpecial && !isGymStage && <span className="ml-2 text-red-400 text-xs font-bold uppercase">Especial</span>}
             </div>
             <div className="text-right">
               <p className="text-yellow-300 font-bold text-sm">💰 {money}</p>
-              <p className="text-gray-400 text-xs">{visitedEncounters.length}/{isSpecial ? 1 : normalMaxVisits} encontros</p>
+              <p className="text-gray-400 text-xs">{visitedEncounters.length}/{isSpecial ? 1 : normalMaxVisits} encontro{isSpecial ? '' : 's'}</p>
             </div>
           </div>
 
@@ -4963,6 +5399,19 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                 {activeIncense.effect === 'incenso_shiny_tipo' && `+Shiny + tipo ${activeIncense.types.join('/')}`}
               </span>
               <span className="text-green-500">(próximo encontro selvagem)</span>
+            </div>
+          )}
+
+          {/* Save button (Jornada, non-guest, outside battle) */}
+          {phase === 'map' && isJornadaMap && !currentUser?.isGuest && (
+            <div className="flex justify-end">
+              <button onClick={handleSaveRun}
+                className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all
+                  ${saveFlash
+                    ? 'border-green-400 bg-green-700 text-white'
+                    : 'border-blue-600 bg-blue-900/60 hover:bg-blue-800 text-blue-300'}`}>
+                {saveFlash ? '✓ Salvo' : '💾 Salvar'}
+              </button>
             </div>
           )}
 
@@ -5114,7 +5563,15 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                           handlePanelDrop('pokemon_image', i);
                         }
                       }}
-                      onClick={() => { setActiveIdx(i); if (battle?.phase === 'switchPokemon') handleBattleSwitch(i); }}
+                      onClick={() => {
+                        if (selectedItem && ['consumivel', 'fruta'].includes(selectedItem.def?.category)) {
+                          handleUseItem(selectedItem.itemId, i);
+                          setSelectedItem(null);
+                        } else {
+                          setActiveIdx(i);
+                          if (battle?.phase === 'switchPokemon') handleBattleSwitch(i);
+                        }
+                      }}
                       className="relative w-10 h-10 shrink-0 cursor-grab active:cursor-grabbing"
                       title="Arrastar para reordenar · Soltar consumível aqui para usar">
                       {pkm.isShiny && (
@@ -5145,7 +5602,8 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                   {/* Held item sub-slots (base 1, +1 Virtuose, +2 Guia, +extraHeldSlots) */}
                   {(() => {
                     const guiaHeld = hasClassPower('guia') ? 2 : 0;
-                    const maxHeldDisplay = (hasClassPower('virtuose') ? 2 : 1) + guiaHeld + (pkm.extraHeldSlots ?? 0);
+                    const _baseHeldD = gameMode?.id === 'jornada' ? 2 : 1;
+                    const maxHeldDisplay = _baseHeldD + (hasClassPower('virtuose') ? 1 : 0) + guiaHeld + (pkm.extraHeldSlots ?? 0);
                     return (
                   <div className="flex gap-1 mt-1.5">
                     {Array.from({ length: Math.max(maxHeldDisplay, heldArr.length) }).map((_, hi) => {
@@ -5154,10 +5612,25 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                         <div key={hi}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => { e.stopPropagation(); handlePanelDrop('held_slot', i); }}
-                          onClick={() => held && handleUnequipHeld(i, hi)}
+                          onClick={() => {
+                            if (selectedItem && ['held', 'fruta'].includes(selectedItem.def?.category)) {
+                              handleEquipItem(selectedItem.itemId, i);
+                              setSelectedItem(null);
+                            } else if (held) {
+                              handleUnequipHeld(i, hi);
+                            }
+                          }}
                           className={`w-8 h-8 rounded border flex items-center justify-center cursor-pointer transition-all
-                            ${held ? 'border-blue-600 bg-blue-900/20 hover:border-red-500' : 'border-gray-700 border-dashed hover:border-gray-500'}`}
-                          title={held ? `${held.name} (clique para desequipar)` : 'Soltar held item aqui'}>
+                            ${selectedItem && ['held', 'fruta'].includes(selectedItem.def?.category)
+                              ? held
+                                ? 'border-yellow-400 bg-yellow-900/20'
+                                : 'border-yellow-400 border-dashed hover:bg-yellow-900/20'
+                              : held
+                                ? 'border-blue-600 bg-blue-900/20 hover:border-red-500'
+                                : 'border-gray-700 border-dashed hover:border-gray-500'}`}
+                          title={selectedItem && ['held', 'fruta'].includes(selectedItem.def?.category)
+                            ? `Equipar ${selectedItem.def.name} aqui`
+                            : held ? `${held.name} (clique para desequipar)` : 'Soltar held item aqui'}>
                           {held
                             ? <img src={held.img} alt={held.name} onError={safeImg} className="w-6 h-6 object-contain" />
                             : <span className="text-gray-700 text-xs">+</span>}
@@ -5190,8 +5663,21 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
                   draggable={!!item}
                   onDragStart={() => item && setDragInfo({ type: 'item', itemId: item.id, cat: item.cat, def: item.def })}
                   onDragEnd={() => setDragInfo(null)}
+                  onClick={() => {
+                    if (!item) return;
+                    setSelectedItem((prev) => prev?.itemId === item.id ? null : { itemId: item.id, cat: item.cat, def: item.def });
+                  }}
+                  onDoubleClick={() => {
+                    if (!item || !item.def?.effect?.startsWith('incenso_')) return;
+                    handleUseItem(item.id, activeIdx);
+                    setSelectedItem(null);
+                  }}
                   className={`relative w-9 h-9 rounded border flex items-center justify-center transition-all
-                    ${item ? 'border-gray-600 bg-gray-700 cursor-grab hover:border-gray-400' : 'border-gray-700 border-dashed'}`}
+                    ${item
+                      ? selectedItem?.itemId === item.id
+                        ? 'border-yellow-400 bg-yellow-900/30 cursor-pointer ring-1 ring-yellow-400'
+                        : 'border-gray-600 bg-gray-700 cursor-grab hover:border-gray-400'
+                      : 'border-gray-700 border-dashed'}`}
                   title={item?.def?.name}>
                   {item && (
                     <>
@@ -5529,6 +6015,36 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   const renderBattleCenter = () => {
     if (!battle) return <div className="flex items-center justify-center h-full text-gray-500">Carregando batalha...</div>;
     const { phase: bp, enemyPkm, playerPkm, canCapture, capturedPkm } = battle;
+
+    // Class reward — candidate picker (Jornada mode: player chooses)
+    if (bp === 'classReward' && battle.classRewardCandidates && !battle.classRewardCls) {
+      const isBase = battle.classRewardCandidates[0]?.isBase ?? true;
+      return (
+        <div className="flex flex-col items-center gap-4 py-6 px-2">
+          <p className="text-yellow-400 text-xl font-bold">
+            🎓 {isBase ? 'Escolha sua Classe Base' : 'Escolha sua Classe Avançada'}
+          </p>
+          <p className="text-gray-400 text-sm">Selecione uma das opções abaixo:</p>
+          <div className="grid grid-cols-2 gap-3 max-w-lg w-full">
+            {battle.classRewardCandidates.map((cls) => {
+              const g = CLASSES_DATA.find((gr) => gr.classes.some((c) => c.id === cls.id));
+              return (
+                <button key={cls.id} onClick={() => handleSelectClassCandidate(cls)}
+                  className="bg-gray-800 hover:bg-gray-700 border border-gray-600 hover:border-yellow-400 rounded-xl p-4 text-left transition-all">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-2xl">{g?.icon}</span>
+                    <span className="text-white font-bold text-sm">{cls.name}</span>
+                  </div>
+                  <p className="text-gray-500 text-xs">{g?.groupName}</p>
+                  <hr className="my-2 border-gray-700" />
+                  <p className="text-yellow-300 text-xs leading-snug">{cls.powerDesc}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
 
     // Class reward screen (stages 3 / 5 / 8)
     if (bp === 'classReward' && battle.classRewardCls) {
@@ -5917,15 +6433,29 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
               <div className="flex gap-3 justify-center flex-wrap">
                 {wildRewardItems.map((item) => (
                   <button key={item.id} onClick={() => {
-                    // Add item to inventory
-                    setInventory((inv) => {
-                      let cat;
-                      if (item.category === 'fruta') cat = 'frutas';
-                      else if (item.category === 'held') cat = 'held';
-                      else if (item.category === 'ballmod') cat = 'ballmods';
-                      else cat = 'consumiveis';
-                      return { ...inv, [cat]: { ...inv[cat], [item.id]: (inv[cat][item.id] ?? 0) + 1 } };
-                    });
+                    let cat;
+                    if (item.category === 'fruta') cat = 'frutas';
+                    else if (item.category === 'held') cat = 'held';
+                    else if (item.category === 'ballmod') cat = 'ballmods';
+                    else cat = 'consumiveis';
+                    const slotCats = ['consumiveis', 'frutas', 'held'];
+                    if (slotCats.includes(cat)) {
+                      const STACK_MAX = 3;
+                      const pClassKeys = playerClasses.map((c) => c.powerKey);
+                      const mochilaBonus = (inventory.consumiveis?.mochila ?? 0) * 2;
+                      const guiaBonus = pClassKeys.includes('guia') ? 2 : 0;
+                      const maxSlots = 5 + mochilaBonus + guiaBonus;
+                      const usedSlots = slotCats.reduce((acc, c) => {
+                        return acc + Object.entries(inventory[c] || {}).filter(([, q]) => q > 0)
+                          .reduce((a, [, q]) => a + Math.ceil(q / STACK_MAX), 0);
+                      }, 0);
+                      if (usedSlots >= maxSlots) {
+                        setWildRewardItems([]);
+                        handleEncounterComplete(null);
+                        return;
+                      }
+                    }
+                    setInventory((inv) => ({ ...inv, [cat]: { ...inv[cat], [item.id]: (inv[cat][item.id] ?? 0) + 1 } }));
                     setWildRewardItems([]);
                     handleEncounterComplete(null);
                   }}
@@ -6450,9 +6980,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   // ── End Run Screens ───────────────────────────────────────────
   const renderEndScreen = (won) => {
     const modeId = gameMode?.id ?? 'jornada';
-    const score = modeId === 'pocket'
-      ? calcPocketScore({ runStats, team, money })
-      : calcScore({ stage, captures: runStats.captures, money, turnsTotal: runStats.turnsTotal });
+    const score = calcPocketScore({ runStats, team, money });
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center py-10 px-4">
         {won
@@ -6959,6 +7487,27 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           <p className="text-gray-300 text-sm text-center">
             <span className="text-yellow-300 font-bold">{pkm.nome}{pkm.isShiny ? ' ✨' : ''}</span> quer se juntar, mas o time está cheio.
           </p>
+          {context === 'criador' && (
+            <div className="bg-gray-800 rounded-xl p-3 flex gap-3 items-center border border-green-700">
+              <img src={pkm.imageUrl} alt={pkm.nome} onError={safeImg} className="w-14 h-14 object-contain shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {(pkm.tipos ?? []).map((t) => (
+                    <span key={t} className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-700 text-gray-200">{t}</span>
+                  ))}
+                  <span className="text-xs text-gray-400 ml-1">Nv.{pkm.level ?? '?'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 text-xs text-gray-300">
+                  <span>❤️ <b>{pkm.vidasMax}</b></span>
+                  <span>⚔️ <b>{pkm.atk}</b></span>
+                  <span>🛡️ <b>{pkm.def}</b></span>
+                  <span>✨ <b>{pkm.atkEsp}</b></span>
+                  <span>🔮 <b>{pkm.defEsp}</b></span>
+                  <span>💨 <b>{pkm.vel}</b></span>
+                </div>
+              </div>
+            </div>
+          )}
           {autoJoinSwapStep === 'choice' ? (
             <div className="flex flex-col gap-3 mt-1">
               <button
@@ -7063,6 +7612,34 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
   };
 
   // ── Incense type selector modal ───────────────────────────────
+  const renderJornadaSavePromptModal = () => {
+    if (!jornadaSavePrompt) return null;
+    const saved = jornadaSavePrompt;
+    const savedAt = saved.savedAt ? new Date(saved.savedAt).toLocaleString('pt-BR') : '?';
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+        <div className="bg-gray-900 border border-yellow-500 rounded-2xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4 shadow-2xl">
+          <h3 className="text-yellow-400 font-bold text-center text-base">Run Salva Encontrada</h3>
+          <div className="text-gray-300 text-sm text-center flex flex-col gap-1">
+            <span>Estágio <strong className="text-white">{saved.stage}</strong></span>
+            <span>{saved.team?.length ?? 0} Pokémon no time</span>
+            <span className="text-gray-500 text-xs">Salvo em {savedAt}</span>
+          </div>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => handleContinueSave(saved)}
+              className="w-full py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-lg transition-colors">
+              Continuar Run
+            </button>
+            <button onClick={handleDiscardSave}
+              className="w-full py-2 bg-red-800 hover:bg-red-700 text-white text-sm rounded-lg transition-colors">
+              Descartar e Nova Run
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderIncenseModal = () => {
     if (!pendingIncense) return null;
     const { effect, multiType, selectedTypes } = pendingIncense;
@@ -7197,6 +7774,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       {phase === 'artifice_stage_choice' && renderGameScreen(renderArtificeStageChoice())}
       {phase === 'gameover' && renderEndScreen(false)}
       {phase === 'victory'  && renderEndScreen(true)}
+      {renderJornadaSavePromptModal()}
       {renderEvoStoneModal()}
       {renderIncenseModal()}
       {renderIncubadorModal()}
