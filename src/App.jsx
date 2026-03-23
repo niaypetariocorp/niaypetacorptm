@@ -3317,6 +3317,7 @@ function App() {
   const [mapaContinentalPins, setMapaContinentalPins] = useState({})
   const [lastPokezapMsgId, setLastPokezapMsgId] = useState(null)
   const [periciasExpanded, setPericiasExpanded] = useState(false)
+  const [pokebolasChatExpanded, setPokebolasChatExpanded] = useState(false)
   const [chatCaracSearch, setChatCaracSearch] = useState('')
   const [chatCaracSelected, setChatCaracSelected] = useState(null)
   const [chatCaracDropdownOpen, setChatCaracDropdownOpen] = useState(false)
@@ -4192,6 +4193,8 @@ function App() {
   // Apricorn Trees
   const [generatedApricornTrees, setGeneratedApricornTrees] = useState([])
   const [plantedTrees, setPlantedTrees] = useState([])
+  const [allTrainersPlantedTrees, setAllTrainersPlantedTrees] = useState({})
+  const [expandedPlantedTrainers, setExpandedPlantedTrainers] = useState({})
   const [showPlantTreeModal, setShowPlantTreeModal] = useState(false)
   const [plantLocation, setPlantLocation] = useState('')
   const [selectedTreeToPlant, setSelectedTreeToPlant] = useState(null)
@@ -14073,6 +14076,22 @@ function App() {
     }
   }, [currentUser])
 
+  // Load all trainers' planted trees for master view
+  useEffect(() => {
+    if (!useFirebase || currentUser?.type !== 'mestre') return
+    const trainers = users.filter(u => u.type === 'treinador')
+    Promise.all(
+      trainers.map(async (t) => {
+        const data = await loadTrainerData(t.username)
+        return { username: t.username, trees: data?.plantedTrees || [] }
+      })
+    ).then(results => {
+      const obj = {}
+      results.forEach(r => { obj[r.username] = r.trees })
+      setAllTrainersPlantedTrees(obj)
+    })
+  }, [currentUser])
+
   useEffect(() => {
     const saveNpcs = async () => {
       if (currentUser) {
@@ -14942,20 +14961,24 @@ function App() {
 
   const handleSaveAnotacao = () => {
     if (!anotacaoForm.titulo.trim() || !currentUser) return
+    let next
     if (editingAnotacao) {
-      const updated = anotacoes.map(a => a.id === editingAnotacao.id ? { ...a, titulo: anotacaoForm.titulo.trim(), descricao: anotacaoForm.descricao.trim() } : a)
-      setAnotacoes(updated)
+      next = anotacoes.map(a => a.id === editingAnotacao.id ? { ...a, titulo: anotacaoForm.titulo.trim(), descricao: anotacaoForm.descricao.trim() } : a)
     } else {
       const nova = { id: `anot-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, titulo: anotacaoForm.titulo.trim(), descricao: anotacaoForm.descricao.trim() }
-      setAnotacoes(prev => [...prev, nova])
+      next = [...anotacoes, nova]
     }
+    setAnotacoes(next)
+    if (useFirebase && !currentUser.isGuest) saveAnotacoes(currentUser.username, next)
     setShowAddAnotacaoModal(false)
     setEditingAnotacao(null)
     setAnotacaoForm({ titulo: '', descricao: '' })
   }
 
   const handleDeleteAnotacao = (id) => {
-    setAnotacoes(prev => prev.filter(a => a.id !== id))
+    const next = anotacoes.filter(a => a.id !== id)
+    setAnotacoes(next)
+    if (useFirebase && currentUser && !currentUser.isGuest) saveAnotacoes(currentUser.username, next)
   }
 
   const handleEnviarAnotacaoPokezap = (anotacao) => {
@@ -18542,6 +18565,48 @@ function App() {
           )}
         </div>
       )}
+      {/* Pokébolas */}
+      {currentUser.type === 'treinador' && (
+        <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <button
+            onClick={() => setPokebolasChatExpanded(v => !v)}
+            className={`w-full text-left text-[10px] font-semibold flex items-center justify-between ${pokebolasChatExpanded ? 'mb-1.5' : ''} ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <span>Pokébolas</span>
+            <span className="text-[8px]">{pokebolasChatExpanded ? '▲' : '▼'}</span>
+          </button>
+          {pokebolasChatExpanded && (
+            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+              {/* Customball sempre aparece */}
+              <button
+                onClick={() => handleOpenCaptureModal('Customball')}
+                className={`relative flex items-center justify-center w-9 h-9 rounded-lg border-2 border-dashed transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700 border-gray-600' : 'bg-white hover:bg-gray-100 border-gray-300'}`}
+                title="Customball"
+              >
+                <img src="/pokeballs/custompokeball.png" alt="Customball" className="w-7 h-7 object-contain" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                <span className="hidden w-7 h-7 items-center justify-center text-base">❓</span>
+              </button>
+              {/* Pokébolas do inventário */}
+              {keyItems
+                .filter(item => POKEBALL_MODIFIERS[item.name] && item.name !== 'Customball' && item.quantity > 0)
+                .map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleOpenCaptureModal(item.name)}
+                    className={`relative flex items-center justify-center w-9 h-9 rounded-lg transition-all ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-100 border'}`}
+                    title={`${item.name} (${item.quantity})`}
+                  >
+                    <img src={getPokeballImage(item.name)} alt={item.name} className="w-7 h-7 object-contain" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                    <span className="hidden w-7 h-7 items-center justify-center text-base">⚪</span>
+                    <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${darkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'}`}>
+                      {item.quantity}
+                    </div>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
       {/* Rolagem Rápida */}
       <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <p className={`text-[10px] font-semibold mb-1.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Rolagem Rápida:</p>
@@ -19279,6 +19344,104 @@ function App() {
         </div>
       )
     })()}
+
+    {/* Modal de Captura — Global */}
+    {showCaptureModal && selectedPokeball && (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999] p-4"
+        onClick={() => setShowCaptureModal(false)}
+      >
+        <div
+          className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 sm:p-5 md:p-6 max-w-md w-full`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className={`text-lg sm:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              {selectedPokeball}
+            </h3>
+            <button
+              onClick={() => setShowCaptureModal(false)}
+              className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {(() => {
+            const pokeballData = POKELOJA_DATA['Captura']?.find(item => item.name === selectedPokeball)
+            if (pokeballData?.description) {
+              return (
+                <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <span className="font-semibold">Descrição:</span> {pokeballData.description}
+                  </p>
+                </div>
+              )
+            }
+            return null
+          })()}
+
+          <div className="space-y-4">
+            {selectedPokeball === 'Customball' ? (
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Modificador de Captura
+                </label>
+                <input
+                  type="text"
+                  value={customPokeballModifier}
+                  onChange={(e) => setCustomPokeballModifier(e.target.value)}
+                  className={`w-full px-3 py-2 sm:px-4 rounded-lg border-2 text-sm sm:text-base ${
+                    darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-800'
+                  } focus:outline-none focus:border-blue-500`}
+                  placeholder="Ex: +15, -5, @MA, 1d6+@MAE"
+                />
+                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Suporta comandos @ e expressões
+                </p>
+              </div>
+            ) : POKEBALL_MODIFIERS[selectedPokeball]?.length > 1 ? (
+              <div>
+                <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Modificador de Captura
+                </label>
+                <select
+                  value={selectedPokeballModifier}
+                  onChange={(e) => setSelectedPokeballModifier(e.target.value)}
+                  className={`w-full px-3 py-2 sm:px-4 rounded-lg border-2 text-sm sm:text-base ${
+                    darkMode
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-800'
+                  } focus:outline-none focus:border-blue-500`}
+                >
+                  {POKEBALL_MODIFIERS[selectedPokeball].map((mod, idx) => (
+                    <option key={idx} value={mod}>
+                      {mod === 'auto' ? 'Captura Automática' : mod}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Modificador: <span className="font-bold">{POKEBALL_MODIFIERS[selectedPokeball]?.[0]}</span>
+                </p>
+              </div>
+            )}
+
+            <button
+              onClick={handleThrowPokeball}
+              className="w-full bg-blue-600 text-white px-3 sm:px-5 md:px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={selectedPokeball === 'Customball' && !customPokeballModifier}
+            >
+              Pokébolaaa, vaaai!
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   )
 
@@ -48093,104 +48256,6 @@ function App() {
           </div>
         )}
 
-        {/* Modal de Captura */}
-        {showCaptureModal && selectedPokeball && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowCaptureModal(false)}
-          >
-            <div
-              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 sm:p-5 md:p-6 max-w-md w-full`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className={`text-lg sm:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  {selectedPokeball}
-                </h3>
-                <button
-                  onClick={() => setShowCaptureModal(false)}
-                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              {(() => {
-                const pokeballData = POKELOJA_DATA['Captura']?.find(item => item.name === selectedPokeball)
-                if (pokeballData?.description) {
-                  return (
-                    <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        <span className="font-semibold">Descrição:</span> {pokeballData.description}
-                      </p>
-                    </div>
-                  )
-                }
-                return null
-              })()}
-
-              <div className="space-y-4">
-                {selectedPokeball === 'Customball' ? (
-                  <div>
-                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Modificador de Captura
-                    </label>
-                    <input
-                      type="text"
-                      value={customPokeballModifier}
-                      onChange={(e) => setCustomPokeballModifier(e.target.value)}
-                      className={`w-full px-3 py-2 sm:px-4 rounded-lg border-2 text-sm sm:text-base ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-800'
-                      } focus:outline-none focus:border-blue-500`}
-                      placeholder="Ex: +15, -5, @MA, 1d6+@MAE"
-                    />
-                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Suporta comandos @ e expressões
-                    </p>
-                  </div>
-                ) : POKEBALL_MODIFIERS[selectedPokeball]?.length > 1 ? (
-                  <div>
-                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Modificador de Captura
-                    </label>
-                    <select
-                      value={selectedPokeballModifier}
-                      onChange={(e) => setSelectedPokeballModifier(e.target.value)}
-                      className={`w-full px-3 py-2 sm:px-4 rounded-lg border-2 text-sm sm:text-base ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-800'
-                      } focus:outline-none focus:border-blue-500`}
-                    >
-                      {POKEBALL_MODIFIERS[selectedPokeball].map((mod, idx) => (
-                        <option key={idx} value={mod}>
-                          {mod === 'auto' ? 'Captura Automática' : mod}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Modificador: <span className="font-bold">{POKEBALL_MODIFIERS[selectedPokeball]?.[0]}</span>
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleThrowPokeball}
-                  className="w-full bg-blue-600 text-white px-3 sm:px-5 md:px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={selectedPokeball === 'Customball' && !customPokeballModifier}
-                >
-                  Pokébolaaa, vaaai!
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Modal de Cura em Batalha */}
         {showHealingModal && selectedHealingItem && (
           <div
@@ -51192,104 +51257,6 @@ function App() {
           </div>
         </div>
 
-        {/* Modal de Captura - Interlúdio */}
-        {showCaptureModal && selectedPokeball && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowCaptureModal(false)}
-          >
-            <div
-              className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg p-3 sm:p-5 md:p-6 max-w-md w-full`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className={`text-lg sm:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  {selectedPokeball}
-                </h3>
-                <button
-                  onClick={() => setShowCaptureModal(false)}
-                  className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              {(() => {
-                const pokeballData = POKELOJA_DATA['Captura']?.find(item => item.name === selectedPokeball)
-                if (pokeballData?.description) {
-                  return (
-                    <div className={`mb-4 p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        <span className="font-semibold">Descrição:</span> {pokeballData.description}
-                      </p>
-                    </div>
-                  )
-                }
-                return null
-              })()}
-
-              <div className="space-y-4">
-                {selectedPokeball === 'Customball' ? (
-                  <div>
-                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Modificador de Captura
-                    </label>
-                    <input
-                      type="text"
-                      value={customPokeballModifier}
-                      onChange={(e) => setCustomPokeballModifier(e.target.value)}
-                      className={`w-full px-3 py-2 sm:px-4 rounded-lg border-2 text-sm sm:text-base ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-800'
-                      } focus:outline-none focus:border-blue-500`}
-                      placeholder="Ex: +15, -5, @MA, 1d6+@MAE"
-                    />
-                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Suporta comandos @ e expressões
-                    </p>
-                  </div>
-                ) : POKEBALL_MODIFIERS[selectedPokeball]?.length > 1 ? (
-                  <div>
-                    <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Modificador de Captura
-                    </label>
-                    <select
-                      value={selectedPokeballModifier}
-                      onChange={(e) => setSelectedPokeballModifier(e.target.value)}
-                      className={`w-full px-3 py-2 sm:px-4 rounded-lg border-2 text-sm sm:text-base ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-800'
-                      } focus:outline-none focus:border-blue-500`}
-                    >
-                      {POKEBALL_MODIFIERS[selectedPokeball].map((mod, idx) => (
-                        <option key={idx} value={mod}>
-                          {mod === 'auto' ? 'Captura Automática' : mod}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Modificador: <span className="font-bold">{POKEBALL_MODIFIERS[selectedPokeball]?.[0]}</span>
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleThrowPokeball}
-                  className="w-full bg-blue-600 text-white px-3 sm:px-5 md:px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={selectedPokeball === 'Customball' && !customPokeballModifier}
-                >
-                  Pokébolaaa, vaaai!
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Modal de Cura em Interlúdio */}
         {showHealingModal && selectedHealingItem && (
           <div
@@ -53114,6 +53081,66 @@ function App() {
                     <p className="col-span-3 text-center text-gray-400">Nenhuma árvore gerada ainda</p>
                   )}
                 </div>
+              </div>
+
+              <div className={`${darkMode ? 'bg-gray-700' : 'bg-gray-100'} p-3 sm:p-4 rounded-lg mt-4`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className={`font-bold text-base sm:text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>Árvores Plantadas pelos Treinadores</h4>
+                  <button
+                    onClick={() => {
+                      const trainers = users.filter(u => u.type === 'treinador')
+                      Promise.all(trainers.map(async (t) => {
+                        const data = await loadTrainerData(t.username)
+                        return { username: t.username, trees: data?.plantedTrees || [] }
+                      })).then(results => {
+                        const obj = {}
+                        results.forEach(r => { obj[r.username] = r.trees })
+                        setAllTrainersPlantedTrees(obj)
+                      })
+                    }}
+                    className={`text-xs px-3 py-1 rounded-lg ${darkMode ? 'bg-gray-600 text-gray-300 hover:bg-gray-500' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                  >
+                    🔄 Atualizar
+                  </button>
+                </div>
+                {users.filter(u => u.type === 'treinador').map(trainer => {
+                  const trees = allTrainersPlantedTrees[trainer.username] || []
+                  if (trees.length === 0) return null
+                  const isExpanded = !!expandedPlantedTrainers[trainer.username]
+                  return (
+                    <div key={trainer.username} className="mb-2">
+                      <button
+                        onClick={() => setExpandedPlantedTrainers(prev => ({ ...prev, [trainer.username]: !prev[trainer.username] }))}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-yellow-300' : 'bg-gray-200 hover:bg-gray-300 text-yellow-700'}`}
+                      >
+                        <span className="font-semibold text-sm">🌱 {trainer.username} ({trees.length})</span>
+                        <span className="text-xs">{isExpanded ? '▲' : '▼'}</span>
+                      </button>
+                      {isExpanded && (
+                        <div className="flex flex-col gap-2 mt-2 pl-2">
+                          {trees.map(tree => (
+                            <div key={tree.id} className={`${darkMode ? 'bg-gray-600' : 'bg-white'} p-2 sm:p-3 rounded-lg flex items-center gap-3 shadow`}>
+                              {tree.image && <img src={tree.image} alt={tree.name} className="w-10 h-10 object-contain flex-shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                <p className={`font-semibold text-xs sm:text-sm truncate ${darkMode ? 'text-white' : 'text-gray-800'}`}>{tree.name}</p>
+                                <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} truncate`}>📍 {tree.location || '—'}</p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                {tree.isMatured
+                                  ? <span className="text-green-400 text-xs font-semibold">🍎 Madura</span>
+                                  : <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>⏳ {tree.daysRemaining ?? '?'}d</span>
+                                }
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {users.filter(u => u.type === 'treinador').every(t => (allTrainersPlantedTrees[t.username] || []).length === 0) && (
+                  <p className="text-center text-gray-400 text-sm">Nenhum treinador plantou árvores ainda</p>
+                )}
               </div>
             </div>
           </div>

@@ -2601,7 +2601,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
           const guiaBonus = pClassKeys.includes('guia') ? 2 : 0;
           const maxSlots = 5 + mochilaBonus + guiaBonus;
           if (team.length < maxSlots) {
-            const autoJoinBase = getPlayerBaseVidasByStage(stage);
+            const autoJoinBase = gameMode?.id === 'jornada' ? 2 + Math.floor(stage / 10) : getPlayerBaseVidasByStage(stage);
             const autoJoinVidas = calcBaseVidas({ tipos: autoEnemy.tipos ?? [] }, 'player', { isLeg: autoIsLeg, isShn: autoEnemy.isShiny ?? false, baseOverride: autoJoinBase });
             const joinPkm = { ...autoEnemy, vidasMax: autoJoinVidas, vidasAtual: autoJoinVidas, conditions: [] };
             setTeam((prev) => prev.some((p) => p.uid === joinPkm.uid) ? prev : [...prev, joinPkm]);
@@ -2623,7 +2623,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
             setPendingAutoJoinResult({ pkm: joinPkm });
             return;
           } else {
-            const swapBase = getPlayerBaseVidasByStage(stage);
+            const swapBase = gameMode?.id === 'jornada' ? 2 + Math.floor(stage / 10) : getPlayerBaseVidasByStage(stage);
             const swapVidas = calcBaseVidas({ tipos: autoEnemy.tipos ?? [] }, 'player', { isLeg: autoIsLeg, isShn: autoEnemy.isShiny ?? false, baseOverride: swapBase });
             const swapPkm = { ...autoEnemy, vidasMax: swapVidas, vidasAtual: swapVidas };
             setPendingAutoJoin({ pkm: swapPkm, idx });
@@ -2799,7 +2799,7 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
     if (pool.length === 0) pool = _basePool();
     const species = pool[Math.floor(Math.random() * pool.length)];
     const newPkm = generateJNPokemon(species, level, { context: 'player' });
-    const criadorBase = getPlayerBaseVidasByStage(stage);
+    const criadorBase = gameMode?.id === 'jornada' ? 2 + Math.floor(stage / 10) : getPlayerBaseVidasByStage(stage);
     const criadorVidas = calcBaseVidas({ tipos: species.tipos ?? [] }, 'player', { isLeg: isLegendary(species.nome), isShn: newPkm.isShiny ?? false, baseOverride: criadorBase });
     const pkmWithCtx = { ...newPkm, vidasMax: criadorVidas, vidasAtual: criadorVidas, conditions: [] };
 
@@ -3187,7 +3187,8 @@ export default function JornadaNiaypeta({ onExit, userPokedex = [], onChatMessag
       if (prev.some((p) => p.uid === pkm.uid)) return prev; // prevent duplicate adds
       const isLeg = isLegendary(pkm.nome);
       const isShn = pkm.isShiny ?? false;
-      const baseVidas = calcBaseVidas({ tipos: pkm.tipos ?? [] }, 'player', { isLeg, isShn, baseOverride: getPlayerBaseVidasByStage(stage) });
+      const jornadaBase = gameMode?.id === 'jornada' ? 2 + Math.floor(stage / 10) : getPlayerBaseVidasByStage(stage);
+      const baseVidas = calcBaseVidas({ tipos: pkm.tipos ?? [] }, 'player', { isLeg, isShn, baseOverride: jornadaBase });
       const pactuarioBonus = playerClasses.some((c) => c.powerKey === 'pactuario')
         ? (isLeg ? 2 : 1) : 0;
       const added = {
