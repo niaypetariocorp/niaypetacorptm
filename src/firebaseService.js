@@ -835,6 +835,22 @@ export const subscribeToSmartPokefoneMessages = (username, callback) => {
   })
 }
 
+// --- POKEDEX VERDADES ---
+
+export const savePokedexVerdadesForSpecies = async (sanitizedSpecies, verdades) => {
+  return saveToFirebase(`pokedexVerdades/${sanitizedSpecies}`, verdades)
+}
+
+export const deletePokedexVerdadesForSpecies = async (sanitizedSpecies) => {
+  await remove(ref(database, `pokedexVerdades/${sanitizedSpecies}`))
+}
+
+export const subscribeToPokedexVerdades = (callback) => {
+  return subscribeToFirebase('pokedexVerdades', (data) => {
+    callback(data || {})
+  })
+}
+
 // --- TRIUNFOS ---
 
 export const saveTriunfosGerais = async (triunfos) => {

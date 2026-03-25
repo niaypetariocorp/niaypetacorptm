@@ -46,7 +46,8 @@ import {
   saveCursorConfig, subscribeToCursorConfig,
   saveUserCursorPref, subscribeToUserCursorPref,
   saveMundoKnowledge, subscribeToMundoKnowledge,
-  saveMapaPin, deleteMapaPin, subscribeToMapaPins
+  saveMapaPin, deleteMapaPin, subscribeToMapaPins,
+  savePokedexVerdadesForSpecies, subscribeToPokedexVerdades
 } from './firebaseService'
 import { database } from './firebase'
 import { ref, set, get } from 'firebase/database'
@@ -3317,6 +3318,7 @@ function App() {
   const [mapaContinentalPins, setMapaContinentalPins] = useState({})
   const [lastPokezapMsgId, setLastPokezapMsgId] = useState(null)
   const [periciasExpanded, setPericiasExpanded] = useState(false)
+  const [modsChatExpanded, setModsChatExpanded] = useState(false)
   const [pokebolasChatExpanded, setPokebolasChatExpanded] = useState(false)
   const [chatCaracSearch, setChatCaracSearch] = useState('')
   const [chatCaracSelected, setChatCaracSelected] = useState(null)
@@ -3471,6 +3473,8 @@ function App() {
   const [pokemonRound, setPokemonRound] = useState(1) // Rodada atual dos pokémon
   const [battlePokemonConditions, setBattlePokemonConditions] = useState({}) // Condições dos pokémons em batalha {pokemonId: [{condition, rounds}, ...]}
   const pokemonBattleRefs = useRef([]) // Refs para os elementos dos pokémons em batalha
+  const floatingPkmDragRef = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 })
+  const floatingTrainerDragRef = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 })
   const [selectedTeamPokemon, setSelectedTeamPokemon] = useState(null) // Pokémon selecionado do time principal para ver detalhes
 
   // Estados para Dano/Cura Treinador em Batalha
@@ -3523,6 +3527,12 @@ function App() {
   const [pokemonStages, setPokemonStages] = useState({}) // {pokemonId: {ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0}}
   const [trainerStages, setTrainerStages] = useState({}) // {trainerId: {ataque: 0, ataqueEspecial: 0, defesa: 0, defesaEspecial: 0, velocidade: 0, precisao: 0}}
   const [battleTrainerConditions, setBattleTrainerConditions] = useState({}) // {trainerId: [{condition, rounds}, null, null]}
+  // Estados para trackers flutuantes globais
+  const [floatingPkmExpanded, setFloatingPkmExpanded] = useState(false)
+  const [floatingTrainerExpanded, setFloatingTrainerExpanded] = useState(false)
+  const [floatingPkmPos, setFloatingPkmPos] = useState({ x: 310, y: 10 })
+  const [floatingTrainerPos, setFloatingTrainerPos] = useState({ x: 20, y: 10 })
+  const [floatingNpcTrainerCard, setFloatingNpcTrainerCard] = useState(null)
   const [showModifiersSection, setShowModifiersSection] = useState(false) // Controla expansão da seção Modificadores
   const [showCaptureSection, setShowCaptureSection] = useState(false) // Controla expansão da seção Lançar Pokébola
   const [showHealingSection, setShowHealingSection] = useState(false) // Controla expansão da seção Cura em Batalha
@@ -3592,6 +3602,12 @@ function App() {
   const [xpBonus, setXpBonus] = useState('')
   const [showPokedexDetailModal, setShowPokedexDetailModal] = useState(false)
   const [selectedPokedexEntry, setSelectedPokedexEntry] = useState(null)
+  const [pokedexDetailView, setPokedexDetailView] = useState('info') // 'info' | 'verdades'
+  const [pokedexVerdades, setPokedexVerdades] = useState({}) // { [species]: { [id]: { texto, autorNome } } }
+  const [showVerdadesPopup, setShowVerdadesPopup] = useState(null) // species string
+  const [newVerdadeText, setNewVerdadeText] = useState('')
+  const [editingVerdade, setEditingVerdade] = useState(null) // { species, id }
+  const [editingVerdadeText, setEditingVerdadeText] = useState('')
 
   // States para capacidades
   const [selectedCapacityForInfo, setSelectedCapacityForInfo] = useState(null)
@@ -7128,32 +7144,35 @@ function App() {
   }
 
   const adjustPokemonStage = (pokemonId, attribute, delta) => {
-    const current = pokemonStages[pokemonId] || {
-      ataque: 0,
-      ataqueEspecial: 0,
-      defesa: 0,
-      defesaEspecial: 0,
-      velocidade: 0,
-      precisao: 0
-    }
-
-    const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
-
-    const newPokemonStages = {
-      ...pokemonStages,
-      [pokemonId]: {
-        ...current,
-        [attribute]: newValue
+    // Usa functional update para sempre partir do estado mais recente (evita stale closure em cliques rápidos)
+    setPokemonStages(prev => {
+      const current = prev[pokemonId] || {
+        ataque: 0,
+        ataqueEspecial: 0,
+        defesa: 0,
+        defesaEspecial: 0,
+        velocidade: 0,
+        precisao: 0
       }
-    }
 
-    setPokemonStages(newPokemonStages)
+      const newValue = Math.max(-6, Math.min(6, (current[attribute] || 0) + delta))
 
-    // Salvar APENAS os stages no Firebase (path separado para sincronização em tempo real)
-    if (useFirebase) {
-      console.log('[DEBUG] Salvando pokemonStages:', newPokemonStages)
-      savePokemonStages(newPokemonStages)
-    }
+      const newPokemonStages = {
+        ...prev,
+        [pokemonId]: {
+          ...current,
+          [attribute]: newValue
+        }
+      }
+
+      // Salvar APENAS os stages no Firebase (path separado para sincronização em tempo real)
+      if (useFirebase) {
+        console.log('[DEBUG] Salvando pokemonStages:', newPokemonStages)
+        savePokemonStages(newPokemonStages)
+      }
+
+      return newPokemonStages
+    })
   }
 
   const handleShowModifierDetails = (modifier) => {
@@ -8051,12 +8070,14 @@ function App() {
 
   // Função para rolar 1d1365 do Shiny Charm
   const handleShinyCharmRoll = async (luckyNumber) => {
+    // Captura antes de qualquer await para evitar stale closure se usuário deslogar durante async
+    const username = currentUser?.username || 'Desconhecido'
     const roll = Math.floor(Math.random() * 1365) + 1
     const isSuccess = roll === luckyNumber
 
     const text = isSuccess
-      ? `✨ SHINY CHARM ✨ ${currentUser?.username || 'Desconhecido'} rolou ${roll} - SUCESSO! Número da sorte: ${luckyNumber}`
-      : `🎲 SHINY CHARM: ${currentUser?.username || 'Desconhecido'} rolou ${roll} - Fracasso. Número da sorte: ${luckyNumber}`
+      ? `✨ SHINY CHARM ✨ ${username} rolou ${roll} - SUCESSO! Número da sorte: ${luckyNumber}`
+      : `🎲 SHINY CHARM: ${username} rolou ${roll} - Fracasso. Número da sorte: ${luckyNumber}`
 
     const newMessage = {
       id: `${Date.now()}-${Math.random()}`,
@@ -9934,6 +9955,7 @@ function App() {
   const moveToPc = (index) => {
     const pokemon = mainTeam[index]
     locallyRemovedFromTeamRef.current.add(pokemon.id)
+    locallyAddedToPcRef.current.add(pokemon.id) // Evita duplicação no PC caso subscription dispare antes do React commitar o estado
     const newTeam = mainTeam.filter((_, i) => i !== index)
     const newPc = [...pcPokemon, pokemon]
     setMainTeam(newTeam)
@@ -10048,11 +10070,12 @@ function App() {
       weight: newSpeciesData.peso || ''
     }
 
-    // Atualizar no time ou PC
+    // Atualizar no time ou PC usando ID (mais seguro que índice, que pode ficar stale)
+    const evolvedId = selectedPokemonForEvolution.id
     if (evolutionLocation === 'team') {
-      setMainTeam(mainTeam.map((p, i) => i === evolutionPokemonIndex ? updatedPokemon : p))
+      setMainTeam(mainTeam.map(p => p.id === evolvedId ? updatedPokemon : p))
     } else {
-      setPcPokemon(pcPokemon.map((p, i) => i === evolutionPokemonIndex ? updatedPokemon : p))
+      setPcPokemon(pcPokemon.map(p => p.id === evolvedId ? updatedPokemon : p))
     }
 
     // Adicionar nova espécie à Pokédex como escaneada e capturada
@@ -10096,6 +10119,51 @@ function App() {
     if (confirm(`Tem certeza que deseja remover ${species} da Pokédex?`)) {
       setPokedex(pokedex.filter(p => p.species !== species))
     }
+  }
+
+  const sanitizedSpeciesKey = (species) => sanitizeFirebaseKey(species.replace(/ /g, '_'))
+
+  const addVerdade = (species) => {
+    if (!newVerdadeText.trim() || !species) return
+    const key = sanitizedSpeciesKey(species)
+    const id = Date.now().toString()
+    const texto = newVerdadeText.trim()
+    const autorNome = currentUser?.username || '?'
+    // Usa functional update para não depender de pokedexVerdades stale da closure
+    setPokedexVerdades(prev => {
+      const updated = { ...(prev[key] || {}), [id]: { texto, autorNome } }
+      savePokedexVerdadesForSpecies(key, updated)
+      return { ...prev, [key]: updated }
+    })
+    setNewVerdadeText('')
+  }
+
+  const saveEditVerdade = () => {
+    if (!editingVerdadeText.trim() || !editingVerdade?.species || !editingVerdade?.id) return
+    const key = sanitizedSpeciesKey(editingVerdade.species)
+    const entryId = editingVerdade.id
+    const texto = editingVerdadeText.trim()
+    // Usa functional update para não depender de pokedexVerdades stale da closure
+    setPokedexVerdades(prev => {
+      const existing = prev[key]?.[entryId] || {}
+      const updated = { ...(prev[key] || {}), [entryId]: { ...existing, texto } }
+      savePokedexVerdadesForSpecies(key, updated)
+      return { ...prev, [key]: updated }
+    })
+    setEditingVerdade(null)
+    setEditingVerdadeText('')
+  }
+
+  const deleteVerdade = (species, id) => {
+    if (!species || !id) return
+    const key = sanitizedSpeciesKey(species)
+    // Usa functional update para não depender de pokedexVerdades stale da closure
+    setPokedexVerdades(prev => {
+      const updated = { ...(prev[key] || {}) }
+      delete updated[id]
+      savePokedexVerdadesForSpecies(key, Object.keys(updated).length ? updated : null)
+      return { ...prev, [key]: updated }
+    })
   }
 
   // Abrir modal de imagem para Pokémon
@@ -10181,8 +10249,8 @@ function App() {
             try {
               const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5)
               console.log('[Image] Salvando imagem por arquivo para pokemon:', pokemonId, 'safeKey:', safeKey, 'Tamanho:', compressedDataUrl.length)
-              const newPokemonImages = { ...pokemonImages, [safeKey]: compressedDataUrl }
-              setPokemonImages(newPokemonImages)
+              // Usa functional update para evitar stale closure de pokemonImages (callback async)
+              setPokemonImages(prev => ({ ...prev, [safeKey]: compressedDataUrl }))
               const filteredExtras = modalExtraUrls.filter(u => u && u.trim())
               setPokemonExtraImages(prev => ({ ...prev, [safeKey]: filteredExtras }))
               setShowImageModal(false)
@@ -11978,7 +12046,7 @@ function App() {
     // Remove mensagem do chat
     const updated = chatMessages.filter(m => m.id !== msg.id)
     setChatMessages(updated)
-    if (useFirebase) saveChatMessages(updated)
+    if (useFirebase) await saveChatMessages(updated)
   }
 
   // Rolagem de Captura Prestativa (trainer → gmOnly chat)
@@ -12051,7 +12119,7 @@ function App() {
     // Remove mensagem
     const updated = chatMessages.filter(m => m.id !== msg.id)
     setChatMessages(updated)
-    if (useFirebase) saveChatMessages(updated)
+    if (useFirebase) await saveChatMessages(updated)
   }
 
   // Função para enviar pokémon NPC para treinador
@@ -15003,8 +15071,8 @@ function App() {
     if (!useFirebase) return
     const unsubscribe = subscribeToSafari((data) => {
       if (data) {
-        if (data.runAreas) setSafariRunAreas(data.runAreas)
-        if (data.runPermissions) setSafariRunPermissions(data.runPermissions)
+        setSafariRunAreas(data.runAreas || [])
+        setSafariRunPermissions(data.runPermissions || {})
         if (data.runEncounters) setSafariRunEncounters(data.runEncounters)
         if (data.runPaidUsers) setSafariRunPaidUsers(data.runPaidUsers)
         if (data.saltoValues) setSafariSaltoValues(data.saltoValues)
@@ -15031,7 +15099,7 @@ function App() {
       }
     })
     return () => { if (unsubscribe) unsubscribe() }
-  }, [useFirebase])
+  }, [useFirebase, currentUser])
 
   // Sincronizar grids do Safari em tempo real (por run)
   useEffect(() => {
@@ -17376,13 +17444,15 @@ function App() {
 
     // Inscrever para receber atualizações em tempo real da batalha
     const unsubscribe = subscribeToBattle((data) => {
+
       if (data) {
         // Atualizar estados de batalha
         // Usar || [] para garantir que arrays vazios sejam aplicados quando o campo não existe no Firebase
-        setBattleTrainers(Array.isArray(data.battleTrainers) ? data.battleTrainers : [])
-        setBattlePokemon(Array.isArray(data.battlePokemon) ? data.battlePokemon : [])
-        setBattleTrainersList(Array.isArray(data.battleTrainersList) ? data.battleTrainersList : [])
-        setBattlePokemonList(Array.isArray(data.battlePokemonList) ? data.battlePokemonList : [])
+        // Filtra entradas nulas que Firebase pode retornar em arrays com buracos
+        setBattleTrainers(Array.isArray(data.battleTrainers) ? data.battleTrainers.filter(Boolean) : [])
+        setBattlePokemon(Array.isArray(data.battlePokemon) ? data.battlePokemon.filter(Boolean) : [])
+        setBattleTrainersList(Array.isArray(data.battleTrainersList) ? data.battleTrainersList.filter(Boolean) : [])
+        setBattlePokemonList(Array.isArray(data.battlePokemonList) ? data.battlePokemonList.filter(Boolean) : [])
         setCurrentTrainerTurn(data.currentTrainerTurn !== undefined ? data.currentTrainerTurn : 0)
         setCurrentPokemonTurn(data.currentPokemonTurn !== undefined ? data.currentPokemonTurn : 0)
         setTrainerRound(data.trainerRound !== undefined ? data.trainerRound : 1)
@@ -17413,7 +17483,15 @@ function App() {
     return () => {
       if (unsubscribe) unsubscribe()
     }
-  }, [currentUser])
+  }, [currentUser, useFirebase])
+
+  // Sincronizar selectedBattlePokemonForMoves quando battlePokemon for atualizado pelo Firebase
+  useEffect(() => {
+    if (!selectedBattlePokemonForMoves) return
+    const updated = battlePokemon.find(p => p.id === selectedBattlePokemonForMoves.id)
+    if (updated) setSelectedBattlePokemonForMoves(updated)
+    else setSelectedBattlePokemonForMoves(null)
+  }, [battlePokemon])
 
   // Sincronizar stages em tempo real (path separado para evitar conflitos)
   useEffect(() => {
@@ -17520,6 +17598,14 @@ function App() {
     return () => unsub()
   }, [])
 
+  // ===== POKEDEX VERDADES: Subscription (global, todos) =====
+  useEffect(() => {
+    const unsub = subscribeToPokedexVerdades((data) => {
+      setPokedexVerdades(data || {})
+    })
+    return () => unsub()
+  }, [])
+
   // ===== SMART POKEFONE: Subscription (somente treinador) =====
   useEffect(() => {
     if (!currentUser || currentUser.type !== 'treinador') return
@@ -17615,6 +17701,40 @@ function App() {
     const unsub = subscribeToUserCursorPref(currentUser.username, (data) => setUserCursorPref(data))
     return () => unsub()
   }, [currentUser, useFirebase])
+
+  // ===== FLOATING TRACKERS: Drag global =====
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (floatingPkmDragRef.current.dragging) {
+        const dx = e.clientX - floatingPkmDragRef.current.startX
+        const dy = e.clientY - floatingPkmDragRef.current.startY
+        const trackerW = 288, trackerH = 40
+        setFloatingPkmPos({
+          x: Math.min(Math.max(0, floatingPkmDragRef.current.originX + dx), window.innerWidth - trackerW),
+          y: Math.min(Math.max(0, floatingPkmDragRef.current.originY + dy), window.innerHeight - trackerH)
+        })
+      }
+      if (floatingTrainerDragRef.current.dragging) {
+        const dx = e.clientX - floatingTrainerDragRef.current.startX
+        const dy = e.clientY - floatingTrainerDragRef.current.startY
+        const trackerW = 288, trackerH = 40
+        setFloatingTrainerPos({
+          x: Math.min(Math.max(0, floatingTrainerDragRef.current.originX + dx), window.innerWidth - trackerW),
+          y: Math.min(Math.max(0, floatingTrainerDragRef.current.originY + dy), window.innerHeight - trackerH)
+        })
+      }
+    }
+    const handleMouseUp = () => {
+      floatingPkmDragRef.current.dragging = false
+      floatingTrainerDragRef.current.dragging = false
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   // ===== CURSOR CONFIG: Aplicação do cursor =====
   useEffect(() => {
@@ -18247,6 +18367,320 @@ function App() {
     <RPSModal onClose={() => setShowRPSModal(false)} darkMode={darkMode} />
   ) : null
 
+  // ===== FLOATING TRACKERS: Painéis flutuantes globais =====
+  const _ftCondIcons = { confusao:'😵', critico:'🍀', paralisia:'⚡', sono:'💤', atordoamento:'🌀', congelamento:'❄️', paixao:'❤️', queimadura:'🔥', veneno:'☠️' }
+  const _ftStr = (v) => typeof v === 'object' && v !== null ? (v.descricao || Object.values(v).filter(x=>typeof x==='string').join(' | ') || '') : (v || '')
+  const _ftStageKeys = [['ataque','ATQ'],['ataqueEspecial','AE'],['defesa','DEF'],['defesaEspecial','DE'],['velocidade','VEL'],['precisao','PRE']]
+  const _ftGetColor = (list, turnIdx, username, isMestre) => {
+    if (!list?.length) return 'blue'
+    if (isMestre) { const cur = list[turnIdx]; return cur?.isNpc ? 'green' : 'blue' }
+    const uIdx = list.findIndex(e => e.nome === username || e.owner === username)
+    if (uIdx === -1) return 'blue'
+    const dist = (uIdx - turnIdx + list.length) % list.length
+    return dist === 0 ? 'green' : dist === 1 ? 'yellow' : dist === 2 ? 'red' : 'blue'
+  }
+  const _ftBorder = { green: 'border-green-500', yellow: 'border-yellow-500', red: 'border-red-500', blue: 'border-blue-500' }
+  const _ftHeader = { green: darkMode ? 'bg-green-900' : 'bg-green-100', yellow: darkMode ? 'bg-yellow-900' : 'bg-yellow-100', red: darkMode ? 'bg-red-900' : 'bg-red-100', blue: darkMode ? 'bg-blue-900/60' : 'bg-blue-50' }
+  const _ftHeaderText = { green: 'text-green-300', yellow: 'text-yellow-300', red: 'text-red-300', blue: darkMode ? 'text-blue-300' : 'text-blue-700' }
+
+  const floatingPkmTracker = (() => {
+    if (!currentUser || battlePokemonList.length === 0) return null
+    const isMestre = currentUser.type === 'mestre'
+    const color = _ftGetColor(battlePokemonList, currentPokemonTurn, currentUser.username, isMestre)
+    return (
+      <div
+        className={`fixed z-[989] ${darkMode ? 'bg-gray-800' : 'bg-white'} border-2 ${_ftBorder[color]} rounded-xl shadow-2xl w-72 select-none`}
+        style={{ left: floatingPkmPos.x, top: floatingPkmPos.y }}
+      >
+        {/* Header / Drag handle */}
+        <div
+          className={`${_ftHeader[color]} px-3 py-2 rounded-t-xl cursor-move flex items-center justify-between gap-2`}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            floatingPkmDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, originX: floatingPkmPos.x, originY: floatingPkmPos.y }
+          }}
+        >
+          <span className={`font-bold text-sm truncate ${_ftHeaderText[color]}`}>⚔️ Tracker Pkm — Rd {pokemonRound}</span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isMestre && (
+              <button onClick={advancePokemonTurn} className="text-[10px] px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold" title="Avançar turno">▶</button>
+            )}
+            <button onClick={() => setFloatingPkmExpanded(p => !p)} className={`text-xs px-1.5 py-0.5 rounded ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}>
+              {floatingPkmExpanded ? '▲' : '▼'}
+            </button>
+          </div>
+        </div>
+        {/* Body */}
+        {floatingPkmExpanded && (
+          <div className="overflow-y-auto" style={{ maxHeight: '450px' }}>
+            <div className="p-2 space-y-2">
+              {battlePokemonList.map((pokemon, idx) => {
+                const isCurrentTurn = idx === currentPokemonTurn
+                const pokemonConditions = battlePokemonConditions[pokemon.id] || [null, null, null]
+                const stages = pokemonStages[pokemon.id] || { ataque:0, ataqueEspecial:0, defesa:0, defesaEspecial:0, velocidade:0, precisao:0 }
+                const evasoes = calcularEvasoes(pokemon.totalAttributes?.defesa||0, pokemon.totalAttributes?.defesaEspecial||0, pokemon.totalAttributes?.velocidade||pokemon.velocidade||0, stages)
+                const isOwnPokemon = pokemon.owner === currentUser?.username
+                const isRevealed = revealedNpcPokemon[pokemon.id] || false
+                const showReal = !pokemon.isNpc || isOwnPokemon || isRevealed
+                const showHP = isMestre || isOwnPokemon
+                return (
+                  <div key={pokemon.id} className={`p-2 rounded-lg border-2 ${isCurrentTurn ? (darkMode ? 'bg-yellow-900/60 border-yellow-500' : 'bg-yellow-50 border-yellow-400') : (darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300')}`}>
+                    <div className="flex items-center justify-between gap-1">
+                      <div className={`font-semibold text-sm truncate ${isCurrentTurn ? 'text-yellow-400' : darkMode ? 'text-white' : 'text-gray-800'}`}>
+                        {isCurrentTurn && '▶ '}
+                        {isMestre && pokemon.isNpc && showReal ? (
+                          <span className="cursor-pointer hover:underline" onClick={() => { const fp = npcPokemon.find(p => p.id === pokemon.npcId); if (fp) { setPrestativoCardPokemon(fp); setShowPrestativoCardModal(true) } }}>{pokemon.nome}</span>
+                        ) : isMestre && !pokemon.isNpc ? (
+                          <span className="cursor-pointer hover:underline hover:text-yellow-300" onClick={() => handleOpenVisordex(pokemon)}>{pokemon.nome}</span>
+                        ) : showReal ? pokemon.nome : (pokemon.nomeFalso || '???')}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <span className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>v{pokemon.velocidade}</span>
+                        {isMestre && <button onClick={() => removePokemonFromBattle(pokemon.id)} className="w-4 h-4 flex items-center justify-center rounded bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold">×</button>}
+                      </div>
+                    </div>
+                    <div className={`text-xs mt-0.5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {showReal ? pokemon.especie : '???'}{showHP ? ` | HP:${pokemon.hp}/${pokemon.maxHP}` : ''}
+                    </div>
+                    <div className="flex gap-0.5 mt-0.5 flex-wrap">
+                      {(showReal ? (pokemon.tipos||[]) : []).map((tipo,i) => (
+                        <span key={i} className="px-1 py-0 rounded text-white text-[9px]" style={{ backgroundColor: TYPE_COLORS[tipo]||'#777' }}>{tipo}</span>
+                      ))}
+                    </div>
+                    <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Ev F:{evasoes.evasaoFisica} E:{evasoes.evasaoEspecial} V:{evasoes.evasaoVeloz}</div>
+                    {/* Revelar (master, NPC) */}
+                    {isMestre && String(pokemon.id).startsWith('npc-pokemon-') && (
+                      <label className="flex items-center gap-1 mt-1 cursor-pointer">
+                        <input type="checkbox" checked={isRevealed} onChange={async (e) => { const nr = {...revealedNpcPokemon,[pokemon.id]:e.target.checked}; setRevealedNpcPokemon(nr); if(useFirebase) saveBattleData({battleTrainers,battlePokemon,battleTrainersList,battlePokemonList,currentTrainerTurn,currentPokemonTurn,trainerRound,pokemonRound,battlePokemonConditions,revealedNpcPokemon:nr,revealedTrainers}) }} className="w-3 h-3" />
+                        <span className={`text-[10px] ${darkMode?'text-gray-300':'text-gray-600'}`}>Revelar</span>
+                      </label>
+                    )}
+                    {/* Condições */}
+                    {(isMestre || isOwnPokemon) && (
+                      <div className={`mt-1 pt-1 border-t ${darkMode?'border-gray-600':'border-gray-300'}`}>
+                        <select className={`w-full text-[10px] px-1 py-0.5 rounded mb-1 border ${darkMode?'bg-gray-600 text-white border-gray-500':'bg-white text-gray-800 border-gray-300'}`} onChange={(e) => { if(e.target.value){const nc=[...pokemonConditions];const sl=nc.findIndex(c=>c===null);if(sl!==-1){nc[sl]={condition:e.target.value,rounds:1};setBattlePokemonConditions({...battlePokemonConditions,[pokemon.id]:nc})};e.target.value=''}}} value="">
+                          <option value="">+ Condição</option>
+                          <option value="confusao">😵 Confusão</option><option value="critico">🍀 Crítico</option><option value="paralisia">⚡ Paralisia</option><option value="sono">💤 Sono</option><option value="atordoamento">🌀 Atordoamento</option><option value="congelamento">❄️ Congelamento</option><option value="paixao">❤️ Paixão</option><option value="queimadura">🔥 Queimadura</option><option value="veneno">☠️ Veneno</option>
+                        </select>
+                        <div className="grid grid-cols-3 gap-0.5">
+                          {pokemonConditions.map((cond,si) => (
+                            <div key={si} className={`relative text-center p-1 rounded border ${cond?(darkMode?'bg-gray-600 border-blue-500':'bg-blue-50 border-blue-400'):(darkMode?'bg-gray-800 border-gray-600':'bg-gray-100 border-gray-300')}`}>
+                              {cond ? (<>
+                                <button onClick={() => {const nc=[...pokemonConditions];nc[si]=null;setBattlePokemonConditions({...battlePokemonConditions,[pokemon.id]:nc})}} className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">×</button>
+                                <div className="text-[10px]">{_ftCondIcons[cond.condition]||'?'}</div>
+                                <div className="flex items-center justify-center gap-0.5">
+                                  <button onClick={() => {const nc=[...pokemonConditions];nc[si]={...cond,rounds:Math.max(1,cond.rounds-1)};setBattlePokemonConditions({...battlePokemonConditions,[pokemon.id]:nc})}} className={`text-[9px] ${darkMode?'text-gray-400 hover:text-white':'text-gray-500 hover:text-gray-800'}`}>-</button>
+                                  <span className="text-[9px] text-yellow-400 font-bold">{cond.rounds}</span>
+                                  <button onClick={() => {const nc=[...pokemonConditions];nc[si]={...cond,rounds:cond.rounds+1};setBattlePokemonConditions({...battlePokemonConditions,[pokemon.id]:nc})}} className={`text-[9px] ${darkMode?'text-gray-400 hover:text-white':'text-gray-500 hover:text-gray-800'}`}>+</button>
+                                </div>
+                              </>) : <span className={`text-[9px] ${darkMode?'text-gray-500':'text-gray-400'}`}>—</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Fases (master only) */}
+                    {isMestre && (
+                      <div className={`mt-1 pt-1 border-t ${darkMode?'border-gray-600':'border-gray-300'}`}>
+                        <div className="grid grid-cols-3 gap-0.5">
+                          {_ftStageKeys.map(([key,label]) => (
+                            <div key={key} className={`flex items-center justify-between px-1 py-0.5 rounded ${darkMode?'bg-gray-700':'bg-gray-100'}`}>
+                              <button onClick={() => adjustPokemonStage(pokemon.id,key,-1)} className="text-red-400 text-[10px] font-bold leading-none">▼</button>
+                              <div className="text-center">
+                                <div className={`text-[8px] ${darkMode?'text-gray-400':'text-gray-500'}`}>{label}</div>
+                                <div className={`text-[10px] font-bold ${stages[key]>0?'text-green-400':stages[key]<0?'text-red-400':darkMode?'text-white':'text-gray-700'}`}>{stages[key]>0?`+${stages[key]}`:stages[key]}</div>
+                              </div>
+                              <button onClick={() => adjustPokemonStage(pokemon.id,key,1)} className="text-green-400 text-[10px] font-bold leading-none">▲</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Dano/Cura NPC (master only) */}
+                    {isMestre && pokemon.isNpc && (
+                      <button onClick={() => {setSelectedNpcPokemonForDamage(pokemon);setShowNpcPokemonBattleDamageModal(true)}} className="w-full mt-1 text-[10px] py-1 rounded bg-gradient-to-r from-red-600 to-green-600 text-white font-semibold">Dano/Cura</button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  })()
+
+  const floatingTrainerTracker = (() => {
+    if (!currentUser || battleTrainersList.length === 0) return null
+    const isMestre = currentUser.type === 'mestre'
+    const color = _ftGetColor(battleTrainersList, currentTrainerTurn, currentUser.username, isMestre)
+    return (
+      <>
+        {/* NPC Trainer card overlay (master click) */}
+        {floatingNpcTrainerCard && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[995] p-3" onClick={() => setFloatingNpcTrainerCard(null)}>
+            <div className={`${darkMode?'bg-gray-800 border-gray-600':'bg-white border-gray-200'} border-2 rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto`} onClick={e=>e.stopPropagation()}>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className={`font-bold text-lg ${darkMode?'text-white':'text-gray-800'}`}>{floatingNpcTrainerCard.name}</h3>
+                    <p className={`text-xs ${darkMode?'text-gray-400':'text-gray-500'}`}>Nível {floatingNpcTrainerCard.level} · {(floatingNpcTrainerCard.classes||[]).join(', ')}</p>
+                  </div>
+                  <button onClick={() => setFloatingNpcTrainerCard(null)} className={`font-bold text-xl ${darkMode?'text-gray-400 hover:text-white':'text-gray-400 hover:text-gray-700'}`}>×</button>
+                </div>
+                {floatingNpcTrainerCard.caracteristicasETalentos && floatingNpcTrainerCard.caracteristicasETalentos.length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className={`font-semibold text-sm mb-2 ${darkMode?'text-purple-400':'text-purple-700'}`}>Características & Talentos ({floatingNpcTrainerCard.caracteristicasETalentos.length})</h4>
+                    {floatingNpcTrainerCard.caracteristicasETalentos.map((item, idx) => {
+                      const isCarac = item.tipo === 'caracteristica'
+                      return (
+                        <div key={idx} className={`p-3 rounded-lg border-2 ${isCarac?(darkMode?'bg-blue-900/30 border-blue-500':'bg-blue-50 border-blue-300'):(darkMode?'bg-purple-900/30 border-purple-500':'bg-purple-50 border-purple-300')}`}>
+                          <div className="flex items-start justify-between mb-1">
+                            <h5 className={`font-bold text-xs ${darkMode?'text-white':'text-gray-800'}`}>{item.nome}</h5>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ml-2 flex-shrink-0 ${isCarac?(darkMode?'bg-blue-700 text-blue-200':'bg-blue-200 text-blue-800'):(darkMode?'bg-purple-700 text-purple-200':'bg-purple-200 text-purple-800')}`}>{item.classe}</span>
+                          </div>
+                          <div className="space-y-0.5 text-[10px]">
+                            {item.requisitos && <p className={darkMode?'text-gray-300':'text-gray-700'}><span className="font-semibold">Req:</span> {_ftStr(item.requisitos)}</p>}
+                            <p className={darkMode?'text-gray-300':'text-gray-700'}><span className="font-semibold">Freq:</span> {_ftStr(item.frequencia)}</p>
+                            <p className={darkMode?'text-gray-300':'text-gray-700'}><span className="font-semibold">Ref:</span> {_ftStr(item.referencia)}</p>
+                            {item.alvo && <p className={darkMode?'text-gray-300':'text-gray-700'}><span className="font-semibold">Alvo:</span> {_ftStr(item.alvo)}</p>}
+                            {item.gatilho && <p className={darkMode?'text-gray-300':'text-gray-700'}><span className="font-semibold">Gatilho:</span> {_ftStr(item.gatilho)}</p>}
+                            <p className={`mt-1 ${darkMode?'text-gray-300':'text-gray-700'}`}><span className="font-semibold">Efeito:</span> {_ftStr(item.efeito)}</p>
+                            {item.especial && <p className={`italic mt-0.5 ${darkMode?'text-gray-400':'text-gray-600'}`}>{_ftStr(item.especial)}</p>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className={`text-sm text-center ${darkMode?'text-gray-400':'text-gray-500'}`}>Sem características e talentos registrados.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Floating panel */}
+        <div
+          className={`fixed z-[989] ${darkMode?'bg-gray-800':'bg-white'} border-2 ${_ftBorder[color]} rounded-xl shadow-2xl w-72 select-none`}
+          style={{ left: floatingTrainerPos.x, top: floatingTrainerPos.y }}
+        >
+          <div
+            className={`${_ftHeader[color]} px-3 py-2 rounded-t-xl cursor-move flex items-center justify-between gap-2`}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              floatingTrainerDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, originX: floatingTrainerPos.x, originY: floatingTrainerPos.y }
+            }}
+          >
+            <span className={`font-bold text-sm truncate ${_ftHeaderText[color]}`}>🧢 Tracker Treinadores — Rd {trainerRound}</span>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {isMestre && (
+                <button onClick={advanceTrainerTurn} className="text-[10px] px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold" title="Avançar turno">▶</button>
+              )}
+              <button onClick={() => setFloatingTrainerExpanded(p => !p)} className={`text-xs px-1.5 py-0.5 rounded ${darkMode?'text-gray-300 hover:bg-gray-700':'text-gray-600 hover:bg-gray-200'}`}>
+                {floatingTrainerExpanded ? '▲' : '▼'}
+              </button>
+            </div>
+          </div>
+          {floatingTrainerExpanded && (
+            <div className="overflow-y-auto" style={{ maxHeight: '450px' }}>
+              <div className="p-2 space-y-2">
+                {battleTrainersList.map((trainer, idx) => {
+                  const isCurrentTurn = idx === currentTrainerTurn
+                  const trainerConditions = battleTrainerConditions[trainer.id] || [null, null, null]
+                  const stages = trainerStages[trainer.id] || { ataque:0, ataqueEspecial:0, defesa:0, defesaEspecial:0, velocidade:0, precisao:0 }
+                  const evasoes = calcularEvasoes(trainer.baseAttributes?.defesa||0, trainer.baseAttributes?.defesaEspecial||0, trainer.baseAttributes?.velocidade||trainer.velocidade||0, stages, true)
+                  const isOwn = trainer.nome === currentUser?.username
+                  const isRevealed = revealedTrainers[trainer.id] || false
+                  const showReal = !trainer.isNpc || isOwn || isRevealed
+                  const displayName = showReal ? trainer.nome : (trainer.nomeFalso || 'NPC')
+                  return (
+                    <div key={trainer.id} className={`p-2 rounded-lg border-2 ${isCurrentTurn?(darkMode?'bg-yellow-900/60 border-yellow-500':'bg-yellow-50 border-yellow-400'):(darkMode?'bg-gray-700 border-gray-600':'bg-gray-50 border-gray-300')}`}>
+                      <div className="flex items-center justify-between gap-1">
+                        <div className={`font-semibold text-sm truncate ${isCurrentTurn?'text-yellow-400':darkMode?'text-white':'text-gray-800'}`}>
+                          {isCurrentTurn && '▶ '}
+                          {isMestre && trainer.isNpc && showReal ? (
+                            <span className="cursor-pointer hover:underline" onClick={() => { const ft = npcTrainers.find(n => n.id === trainer.npcId); if(ft) setFloatingNpcTrainerCard(ft) }}>{displayName}</span>
+                          ) : displayName}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className={`text-[10px] ${darkMode?'text-gray-400':'text-gray-500'}`}>v{trainer.velocidade}</span>
+                          {isMestre && <button onClick={() => removeTrainerFromBattle(trainer.id)} className="w-4 h-4 flex items-center justify-center rounded bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold">×</button>}
+                        </div>
+                      </div>
+                      <div className={`text-xs mt-0.5 ${darkMode?'text-gray-300':'text-gray-600'}`}>
+                        HP: {isOwn || isMestre ? `${trainer.hp}/${trainer.maxHP}` : '???'}
+                      </div>
+                      <div className={`text-[10px] mt-0.5 ${darkMode?'text-gray-400':'text-gray-500'}`}>Ev F:{evasoes.evasaoFisica} E:{evasoes.evasaoEspecial} V:{evasoes.evasaoVeloz}</div>
+                      {/* Revelar (master, NPC) */}
+                      {isMestre && trainer.isNpc && (
+                        <label className="flex items-center gap-1 mt-1 cursor-pointer">
+                          <input type="checkbox" checked={isRevealed} onChange={async (e) => { const nr={...revealedTrainers,[trainer.id]:e.target.checked}; setRevealedTrainers(nr); if(useFirebase) saveBattleData({battleTrainers,battlePokemon,battleTrainersList,battlePokemonList,currentTrainerTurn,currentPokemonTurn,trainerRound,pokemonRound,battlePokemonConditions,revealedNpcPokemon,revealedTrainers:nr}) }} className="w-3 h-3" />
+                          <span className={`text-[10px] ${darkMode?'text-gray-300':'text-gray-600'}`}>Revelar</span>
+                        </label>
+                      )}
+                      {/* NPC Trainer rolls (master only) */}
+                      {isMestre && trainer.isNpc && (
+                        <div className="flex gap-1 mt-1">
+                          <button onClick={() => { const d20=Math.floor(Math.random()*20)+1; const ps=trainerStages[trainer.id]?.precisao||0; const total=d20+ps; const displayN=revealedTrainers[trainer.id]?trainer.nome:(trainer.nomeFalso||'NPC'); addChatMessage({username:'Mestre',text:`🎲 Acurácia ${displayN}\n1d20=${d20}${ps!==0?` | Fase Prec:${ps>=0?'+':''}${ps}`:''}\nTotal:${total}`,timestamp:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),isDiceRoll:true,diceResult:total}) }} className={`flex-1 text-[10px] py-1 rounded font-semibold ${darkMode?'bg-purple-700 hover:bg-purple-600':'bg-purple-500 hover:bg-purple-600'} text-white`}>Acu</button>
+                          <button onClick={() => { const ts=trainerStages[trainer.id]||{}; const lvl=trainer.level||1; const atqBase=trainer.baseAttributes?.ataque||trainer.ataque||0; const atqMult=getStageMultiplier(ts.ataque||0); const atqTotal=Math.floor(atqBase*atqMult); let dr,db,dt; if(lvl<=6){dr=Math.floor(Math.random()*10)+1;db=4;dt='1d10+4'}else if(lvl<=14){dr=Math.floor(Math.random()*12)+1;db=6;dt='1d12+6'}else{const d1=Math.floor(Math.random()*8)+1;const d2=Math.floor(Math.random()*8)+1;dr=d1+d2;db=6;dt='2d8+6'} const totalDmg=dr+db+atqTotal; const displayN=revealedTrainers[trainer.id]?trainer.nome:(trainer.nomeFalso||'NPC'); addChatMessage({username:'Mestre',text:`⚔️ ${displayN} atacou!\n${dt}=${dr}+${db}+${atqTotal}(ATQ)${ts.ataque?` [Fase ATQ:${ts.ataque>0?'+':''}${ts.ataque}→${atqBase}→${atqTotal}]`:''}=${totalDmg} de dano`,timestamp:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),isDiceRoll:true,diceResult:totalDmg}) }} className={`flex-1 text-[10px] py-1 rounded font-semibold ${darkMode?'bg-orange-700 hover:bg-orange-600':'bg-orange-500 hover:bg-orange-600'} text-white`}>Dano</button>
+                        </div>
+                      )}
+                      {/* Condições */}
+                      {(isMestre || isOwn) && (
+                        <div className={`mt-1 pt-1 border-t ${darkMode?'border-gray-600':'border-gray-300'}`}>
+                          <select className={`w-full text-[10px] px-1 py-0.5 rounded mb-1 border ${darkMode?'bg-gray-600 text-white border-gray-500':'bg-white text-gray-800 border-gray-300'}`} onChange={(e) => { if(e.target.value){const nc=[...trainerConditions];const sl=nc.findIndex(c=>c===null);if(sl!==-1){nc[sl]={condition:e.target.value,rounds:1};setBattleTrainerConditions({...battleTrainerConditions,[trainer.id]:nc})};e.target.value=''}}} value="">
+                            <option value="">+ Condição</option>
+                            <option value="confusao">😵 Confusão</option><option value="critico">🍀 Crítico</option><option value="paralisia">⚡ Paralisia</option><option value="sono">💤 Sono</option><option value="atordoamento">🌀 Atordoamento</option><option value="congelamento">❄️ Congelamento</option><option value="paixao">❤️ Paixão</option><option value="queimadura">🔥 Queimadura</option><option value="veneno">☠️ Veneno</option>
+                          </select>
+                          <div className="grid grid-cols-3 gap-0.5">
+                            {trainerConditions.map((cond,si) => (
+                              <div key={si} className={`relative text-center p-1 rounded border ${cond?(darkMode?'bg-gray-600 border-blue-500':'bg-blue-50 border-blue-400'):(darkMode?'bg-gray-800 border-gray-600':'bg-gray-100 border-gray-300')}`}>
+                                {cond ? (<>
+                                  <button onClick={() => {const nc=[...trainerConditions];nc[si]=null;setBattleTrainerConditions({...battleTrainerConditions,[trainer.id]:nc})}} className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">×</button>
+                                  <div className="text-[10px]">{_ftCondIcons[cond.condition]||'?'}</div>
+                                  <div className="flex items-center justify-center gap-0.5">
+                                    <button onClick={() => {const nc=[...trainerConditions];nc[si]={...cond,rounds:Math.max(1,cond.rounds-1)};setBattleTrainerConditions({...battleTrainerConditions,[trainer.id]:nc})}} className={`text-[9px] ${darkMode?'text-gray-400 hover:text-white':'text-gray-500 hover:text-gray-800'}`}>-</button>
+                                    <span className="text-[9px] text-yellow-400 font-bold">{cond.rounds}</span>
+                                    <button onClick={() => {const nc=[...trainerConditions];nc[si]={...cond,rounds:cond.rounds+1};setBattleTrainerConditions({...battleTrainerConditions,[trainer.id]:nc})}} className={`text-[9px] ${darkMode?'text-gray-400 hover:text-white':'text-gray-500 hover:text-gray-800'}`}>+</button>
+                                  </div>
+                                </>) : <span className={`text-[9px] ${darkMode?'text-gray-500':'text-gray-400'}`}>—</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Fases (master only) */}
+                      {isMestre && (
+                        <div className={`mt-1 pt-1 border-t ${darkMode?'border-gray-600':'border-gray-300'}`}>
+                          <div className="grid grid-cols-3 gap-0.5">
+                            {_ftStageKeys.map(([key,label]) => (
+                              <div key={key} className={`flex items-center justify-between px-1 py-0.5 rounded ${darkMode?'bg-gray-700':'bg-gray-100'}`}>
+                                <button onClick={() => adjustTrainerStage(trainer.id,key,-1)} className="text-red-400 text-[10px] font-bold leading-none">▼</button>
+                                <div className="text-center">
+                                  <div className={`text-[8px] ${darkMode?'text-gray-400':'text-gray-500'}`}>{label}</div>
+                                  <div className={`text-[10px] font-bold ${stages[key]>0?'text-green-400':stages[key]<0?'text-red-400':darkMode?'text-white':'text-gray-700'}`}>{stages[key]>0?`+${stages[key]}`:stages[key]}</div>
+                                </div>
+                                <button onClick={() => adjustTrainerStage(trainer.id,key,1)} className="text-green-400 text-[10px] font-bold leading-none">▲</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Dano/Cura NPC trainer (master only) */}
+                      {isMestre && trainer.isNpc && (
+                        <button onClick={() => {setSelectedNpcTrainerForDamage(trainer);setShowNpcTrainerBattleDamageModal(true)}} className="w-full mt-1 text-[10px] py-1 rounded bg-gradient-to-r from-red-600 to-green-600 text-white font-semibold">Dano/Cura</button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </>
+    )
+  })()
+
   const batalhaChatPanel = (
     <>
     {pokezapNotifGif && currentUser && (
@@ -18327,10 +18761,10 @@ function App() {
                     Contido ✅
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       const updated = chatMessages.filter(m => m.id !== msg.id)
                       setChatMessages(updated)
-                      if (useFirebase) saveChatMessages(updated)
+                      if (useFirebase) await saveChatMessages(updated)
                     }}
                     className={`flex-1 text-[10px] font-semibold py-1.5 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                   >
@@ -18348,10 +18782,10 @@ function App() {
                     Capturar Pkm Prestativo 🎱
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       const updated = chatMessages.filter(m => m.id !== msg.id)
                       setChatMessages(updated)
-                      if (useFirebase) saveChatMessages(updated)
+                      if (useFirebase) await saveChatMessages(updated)
                     }}
                     className={`flex-1 text-[10px] font-semibold py-1.5 rounded ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                   >
@@ -18527,7 +18961,7 @@ function App() {
         <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <button
             onClick={() => setPericiasExpanded(v => !v)}
-            className={`w-full text-left text-[10px] font-semibold flex items-center justify-between ${periciasExpanded ? 'mb-1.5' : ''} ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`w-full text-left text-[10px] font-semibold flex items-center justify-between ${periciasExpanded ? 'mb-1.5' : ''} text-orange-500 hover:text-orange-400`}
           >
             <span>Perícias</span>
             <span className="text-[8px]">{periciasExpanded ? '▲' : '▼'}</span>
@@ -18565,6 +18999,34 @@ function App() {
           )}
         </div>
       )}
+      {/* Mods! */}
+      {getUserModifiers().length > 0 && (
+        <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <button
+            onClick={() => setModsChatExpanded(v => !v)}
+            className={`w-full text-left text-[10px] font-semibold flex items-center justify-between ${modsChatExpanded ? 'mb-1.5' : ''} ${darkMode ? 'text-yellow-400 hover:text-yellow-200' : 'text-yellow-600 hover:text-yellow-800'}`}
+          >
+            <span>Mods!</span>
+            <span className="text-[8px]">{modsChatExpanded ? '▲' : '▼'}</span>
+          </button>
+          {modsChatExpanded && (
+            <div className="flex flex-col gap-1 pb-1">
+              {getUserModifiers().map((modifier, idx) => (
+                <label key={idx} className={`flex items-center gap-2 px-1 py-1 rounded cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                  <input
+                    type="checkbox"
+                    checked={getUserActiveModifiers().includes(idx)}
+                    onChange={() => handleToggleModifier(idx)}
+                    className="w-3 h-3 cursor-pointer flex-shrink-0"
+                  />
+                  <span className={`text-[10px] truncate flex-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{modifier.nome}</span>
+                  <span className={`text-[9px] flex-shrink-0 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{modifier.mod}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {/* Pokébolas */}
       {currentUser.type === 'treinador' && (
         <div className={`px-3 pt-2 pb-1 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -18572,7 +19034,7 @@ function App() {
             onClick={() => setPokebolasChatExpanded(v => !v)}
             className={`w-full text-left text-[10px] font-semibold flex items-center justify-between ${pokebolasChatExpanded ? 'mb-1.5' : ''} ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            <span>Pokébolas</span>
+            <span><span className="text-red-500">Poké</span><span className="text-gray-400">b</span><span className="text-white">olas</span></span>
             <span className="text-[8px]">{pokebolasChatExpanded ? '▲' : '▼'}</span>
           </button>
           {pokebolasChatExpanded && (
@@ -18725,9 +19187,9 @@ function App() {
                 )}
                 <div>
                   <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito:</span>
-                  <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>
-                    {moveData.efeito}
-                  </p>
+                  <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap text-sm`}>
+                    {renderGolpeEfeito(moveData.efeito, darkMode)}
+                  </div>
                 </div>
               </div>
             )
@@ -18940,44 +19402,44 @@ function App() {
               {selectedCaracTalento.frequencia && (
                 <div>
                   <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência:</span>
-                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCaracTalento.frequencia}</p>
+                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{_ftStr(selectedCaracTalento.frequencia)}</p>
                 </div>
               )}
               {selectedCaracTalento.referencia && (
                 <div>
                   <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Referência:</span>
-                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCaracTalento.referencia}</p>
+                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{_ftStr(selectedCaracTalento.referencia)}</p>
                 </div>
               )}
             </div>
             {selectedCaracTalento.requisitos && (
               <div>
                 <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Requisitos:</span>
-                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCaracTalento.requisitos}</p>
+                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{_ftStr(selectedCaracTalento.requisitos)}</p>
               </div>
             )}
             {selectedCaracTalento.alvo && (
               <div>
                 <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alvo:</span>
-                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCaracTalento.alvo}</p>
+                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{_ftStr(selectedCaracTalento.alvo)}</p>
               </div>
             )}
             {selectedCaracTalento.gatilho && (
               <div>
                 <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Gatilho:</span>
-                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCaracTalento.gatilho}</p>
+                <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{_ftStr(selectedCaracTalento.gatilho)}</p>
               </div>
             )}
             {selectedCaracTalento.efeito && (
               <div>
                 <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito:</span>
-                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>{selectedCaracTalento.efeito}</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-wrap`}>{_ftStr(selectedCaracTalento.efeito)}</p>
               </div>
             )}
             {selectedCaracTalento.especial && (
               <div>
                 <span className={`text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Especial:</span>
-                <p className={`text-sm italic ${darkMode ? 'text-gray-400' : 'text-gray-600'} whitespace-pre-wrap`}>{selectedCaracTalento.especial}</p>
+                <p className={`text-sm italic ${darkMode ? 'text-gray-400' : 'text-gray-600'} whitespace-pre-wrap`}>{_ftStr(selectedCaracTalento.especial)}</p>
               </div>
             )}
           </div>
@@ -19761,7 +20223,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -19901,7 +20363,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -19989,7 +20451,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -20549,7 +21011,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -21127,31 +21589,31 @@ function App() {
                             <div className="space-y-1 text-xs">
                               {item.requisitos && (
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                  <span className="font-semibold">Requisitos:</span> {item.requisitos}
+                                  <span className="font-semibold">Requisitos:</span> {_ftStr(item.requisitos)}
                                 </p>
                               )}
                               <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                <span className="font-semibold">Frequência:</span> {item.frequencia}
+                                <span className="font-semibold">Frequência:</span> {_ftStr(item.frequencia)}
                               </p>
                               <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                <span className="font-semibold">Referência:</span> {item.referencia}
+                                <span className="font-semibold">Referência:</span> {_ftStr(item.referencia)}
                               </p>
                               {item.alvo && (
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                  <span className="font-semibold">Alvo:</span> {item.alvo}
+                                  <span className="font-semibold">Alvo:</span> {_ftStr(item.alvo)}
                                 </p>
                               )}
                               {item.gatilho && (
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                  <span className="font-semibold">Gatilho:</span> {item.gatilho}
+                                  <span className="font-semibold">Gatilho:</span> {_ftStr(item.gatilho)}
                                 </p>
                               )}
                               <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                                <span className="font-semibold">Efeito:</span> {item.efeito}
+                                <span className="font-semibold">Efeito:</span> {_ftStr(item.efeito)}
                               </p>
                               {item.especial && (
                                 <p className={`mt-2 italic ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                  {item.especial}
+                                  {_ftStr(item.especial)}
                                 </p>
                               )}
                             </div>
@@ -21247,7 +21709,7 @@ function App() {
                             </div>
                           </div>
                           <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            <span className="font-semibold">Efeito:</span> {talento.efeito}
+                            <span className="font-semibold">Efeito:</span> {_ftStr(talento.efeito)}
                           </p>
                         </div>
                       ))}
@@ -21314,14 +21776,14 @@ function App() {
                                 <div className="space-y-1 text-xs">
                                   {talento.requisitos && (
                                     <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                      <span className="font-semibold">Req:</span> {talento.requisitos}
+                                      <span className="font-semibold">Req:</span> {_ftStr(talento.requisitos)}
                                     </p>
                                   )}
                                   <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                    <span className="font-semibold">Freq:</span> {talento.frequencia}
+                                    <span className="font-semibold">Freq:</span> {_ftStr(talento.frequencia)}
                                   </p>
                                   <p className={`mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                    {talento.efeito.substring(0, 80)}{talento.efeito.length > 80 ? '...' : ''}
+                                    {_ftStr(talento.efeito).substring(0, 80)}{_ftStr(talento.efeito).length > 80 ? '...' : ''}
                                   </p>
                                 </div>
                               </div>
@@ -21378,14 +21840,14 @@ function App() {
                               <div className="space-y-1 text-xs">
                                 {talento.requisitos && (
                                   <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                    <span className="font-semibold">Req:</span> {talento.requisitos}
+                                    <span className="font-semibold">Req:</span> {_ftStr(talento.requisitos)}
                                   </p>
                                 )}
                                 <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                                  <span className="font-semibold">Freq:</span> {talento.frequencia}
+                                  <span className="font-semibold">Freq:</span> {_ftStr(talento.frequencia)}
                                 </p>
                                 <p className={`mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                  {talento.efeito.substring(0, 80)}{talento.efeito.length > 80 ? '...' : ''}
+                                  {_ftStr(talento.efeito).substring(0, 80)}{_ftStr(talento.efeito).length > 80 ? '...' : ''}
                                 </p>
                               </div>
                             </div>
@@ -21422,7 +21884,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -22629,7 +23091,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -23087,7 +23549,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -24619,7 +25081,7 @@ function App() {
                     <p className="text-center text-gray-500 text-xs mt-4">Nenhum golpe registrado</p>
                   ) : (
                     <div className="space-y-1">
-                      {selectedBattlePokemonForMoves.golpes.filter(g => g).map((golpe, idx) => {
+                      {(selectedBattlePokemonForMoves.golpes || []).filter(g => g).map((golpe, idx) => {
                         const golpeNome = typeof golpe === 'string' ? golpe : golpe?.nome
                         if (!golpeNome) return null
                         const golpeData = GOLPES_DATA[golpeNome]
@@ -26633,7 +27095,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -27599,7 +28061,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -28850,7 +29312,7 @@ function App() {
 
         {accountDataModal}{transformacaoModal}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
         </div>
       </>
     )
@@ -28983,7 +29445,7 @@ function App() {
 
                     {/* Botão Sortear Encontro */}
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const availablePokemon = capturaGeralList.filter(p => !p.status)
                         if (availablePokemon.length === 0) {
                           alert('Não há pokémons disponíveis para sortear!')
@@ -29003,7 +29465,7 @@ function App() {
                         const updatedMessages = [...chatMessages, newMessage]
                         setChatMessages(updatedMessages)
                         if (useFirebase) {
-                          saveChatMessages(updatedMessages)
+                          await saveChatMessages(updatedMessages)
                         }
 
                         alert(`Encontro sorteado: ${sortedPokemon.species} (Nv. ${sortedPokemon.level})\nCaptura: ${sortedPokemon.captureValue}\nTreinador: ${sortedPokemon.trainer}`)
@@ -29504,15 +29966,15 @@ function App() {
                   {/* Botões */}
                   <div className="space-y-3">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         if (!gridRows || !gridCols || !gridTrainer) {
                           alert('Preencha todos os campos!')
                           return
                         }
 
                         // Validar números
-                        const rows = parseInt(gridRows)
-                        const cols = parseInt(gridCols)
+                        const rows = parseInt(gridRows, 10)
+                        const cols = parseInt(gridCols, 10)
                         if (isNaN(rows) || isNaN(cols) || rows < 1 || cols < 1 || rows > 10 || cols > 10) {
                           alert('Linhas e Colunas devem ser números entre 1 e 10!')
                           return
@@ -29562,21 +30024,14 @@ function App() {
                         setRevealedCards([])
                         setGridCardStates({})
                         if (useFirebase) {
-                          saveToFirebase('mestre/gridCaptura', gridConfig)
-                            .then((success) => {
-                              console.log('Firebase save gridCaptura:', success)
-                            })
-                          saveToFirebase('mestre/gridCapturaRevealed', [])
-                            .then((success) => {
-                              console.log('Firebase save gridCapturaRevealed:', success)
-                            })
-                          saveToFirebase('mestre/gridCardStates', {})
-                            .then((success) => {
-                              console.log('Firebase save gridCardStates:', success)
-                            })
+                          await Promise.all([
+                            saveToFirebase('mestre/gridCaptura', gridConfig),
+                            saveToFirebase('mestre/gridCapturaRevealed', []),
+                            saveToFirebase('mestre/gridCardStates', {}),
+                          ])
                         }
 
-                        // Limpar e fechar
+                        // Limpar e fechar (após saves confirmados)
                         setShowGridModal(false)
                         setGridRows('')
                         setGridCols('')
@@ -29617,7 +30072,7 @@ function App() {
           {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
           {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
         </div>
       </>
     )
@@ -30704,7 +31159,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -34575,7 +35030,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -34873,7 +35328,7 @@ function App() {
                           </button>
                           <button
                             onClick={() => {
-                              setNameRaterPCIndex(originalIdx)
+                              setNameRaterPCIndex(pokemon.id) // Usa ID em vez de índice para evitar acesso stale
                               setNameRaterPCNickname(pokemon.nickname)
                               setShowNameRaterPCModal(true)
                             }}
@@ -36243,7 +36698,7 @@ function App() {
         )}
 
         {/* MODAL NAME RATER PC */}
-        {showNameRaterPCModal && nameRaterPCIndex !== null && pcPokemon[nameRaterPCIndex] && (
+        {showNameRaterPCModal && nameRaterPCIndex !== null && pcPokemon.some(p => p.id === nameRaterPCIndex) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowNameRaterPCModal(false)}>
             <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 sm:p-5 md:p-8 rounded-2xl shadow-2xl max-w-md w-full`} onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4">
@@ -36268,12 +36723,9 @@ function App() {
               <button
                 onClick={() => {
                   if (nameRaterPCNickname.trim()) {
-                    const updatedPC = [...pcPokemon]
-                    updatedPC[nameRaterPCIndex] = {
-                      ...updatedPC[nameRaterPCIndex],
-                      nickname: nameRaterPCNickname.trim()
-                    }
-                    setPcPokemon(updatedPC)
+                    setPcPokemon(prev => prev.map(p =>
+                      p.id === nameRaterPCIndex ? { ...p, nickname: nameRaterPCNickname.trim() } : p
+                    ))
                     setShowNameRaterPCModal(false)
                     setNameRaterPCIndex(null)
                     setNameRaterPCNickname('')
@@ -36609,16 +37061,18 @@ function App() {
                       setMainTeam(newMainTeam)
                       setPcPokemon(newPcPokemon)
 
-                      // Salvar no Firebase e aguardar ambas as operações
-                      if (useFirebase && currentUser?.type === 'treinador') {
-                        await Promise.all([
-                          saveToFirebase(`trainers/${currentUser.username}/mainTeam`, newMainTeam),
-                          saveToFirebase(`trainers/${currentUser.username}/pcPokemon`, newPcPokemon),
-                        ])
+                      try {
+                        // Salvar no Firebase e aguardar ambas as operações
+                        if (useFirebase && currentUser?.type === 'treinador') {
+                          await Promise.all([
+                            saveToFirebase(`trainers/${currentUser.username}/mainTeam`, newMainTeam),
+                            saveToFirebase(`trainers/${currentUser.username}/pcPokemon`, newPcPokemon),
+                          ])
+                        }
+                      } finally {
+                        // Sempre reativar subscription, mesmo em caso de erro
+                        swapInProgressRef.current = false
                       }
-
-                      // Reativar subscription após as saves confirmadas
-                      swapInProgressRef.current = false
                     }}
                     disabled={!selectedSwapMainTeam || !selectedSwapPc}
                     className="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -37061,7 +37515,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
 
         {/* Modal de Edição de Aptidões — PC */}
         {showAptidoesModal && aptidoesEditingPokemon && (
@@ -37249,6 +37703,13 @@ function App() {
                       >
                         <Trash2 size={12} className="sm:w-[14px] sm:h-[14px]" />
                       </button>
+                      <button
+                        onClick={() => { setShowVerdadesPopup(entry.species); setNewVerdadeText(''); setEditingVerdade(null); setEditingVerdadeText('') }}
+                        className="absolute top-1 left-1 p-0.5 sm:p-1 rounded-full transition-all hover:scale-110"
+                        title="Verdades"
+                      >
+                        <img src="/vdd/vddicon.png" alt="Verdades" className="w-6 h-6 sm:w-7 sm:h-7" />
+                      </button>
                       <div className="flex flex-col items-center gap-1 sm:gap-2">
                         <button
                           onClick={() => !entry.isCaptured && openCaptureModal(entry.species)}
@@ -37286,85 +37747,118 @@ function App() {
 
         {/* MODAL DE DETALHES DA POKÉDEX */}
         {showPokedexDetailModal && selectedPokedexEntry && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2" onClick={() => setShowPokedexDetailModal(false)}>
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2" onClick={() => { setShowPokedexDetailModal(false); setPokedexDetailView('info') }}>
             <div className="relative" style={{ width: 'min(92vw, 1060px)' }} onClick={e => e.stopPropagation()}>
               <img src="/dexcerta.png" alt="" className="w-full h-auto block relative z-10" style={{ pointerEvents: 'none' }} draggable={false} />
               <button
-                onClick={() => setShowPokedexDetailModal(false)}
+                onClick={() => { setShowPokedexDetailModal(false); setPokedexDetailView('info') }}
                 className="absolute z-20 rounded-full p-0.5 transition-colors"
                 style={{ top: '3%', right: '3%', background: 'rgba(255,255,255,0.65)' }}
               >
                 <X size={12} className="text-gray-800" />
               </button>
-              {/* Painel esquerdo: informações da Pokédex */}
+
+              {/* Botões direcionais A (◄) e B (►) */}
+              {(() => {
+                const views = ['info', 'verdades']
+                const currentIdx = views.indexOf(pokedexDetailView)
+                const prevView = views[(currentIdx - 1 + views.length) % views.length]
+                const nextView = views[(currentIdx + 1) % views.length]
+                return <>
+                  <button
+                    onClick={() => setPokedexDetailView(prevView)}
+                    className="absolute z-20 flex items-center justify-center rounded font-bold text-white shadow-lg"
+                    style={{ top: '79%', left: '32%', width: 28, height: 28, background: '#c53030', fontSize: 14, opacity: 0 }}
+                    title="Anterior"
+                  >◄</button>
+                  <button
+                    onClick={() => setPokedexDetailView(nextView)}
+                    className="absolute z-20 flex items-center justify-center rounded font-bold text-white shadow-lg"
+                    style={{ top: '79%', left: '42%', width: 28, height: 28, background: '#c53030', fontSize: 14, opacity: 0 }}
+                    title="Próximo"
+                  >►</button>
+                </>
+              })()}
+
+              {/* Painel esquerdo: info ou verdades */}
               <div
                 className="absolute overflow-y-auto overflow-x-hidden"
                 style={{ top: '28%', left: '7%', right: '55%', bottom: '40%', background: '#c0d8f0' }}
               >
-                <div className="p-1.5 text-xs text-gray-800">
-                  {/* Nome e número */}
-                  <div className="text-center font-bold text-sm mb-1">
-                    {selectedPokedexEntry.fullData ? `#${String(selectedPokedexEntry.fullData.dexNumber).padStart(3, '0')} ` : ''}{selectedPokedexEntry.species}
-                  </div>
-                  {selectedPokedexEntry.fullData ? (
-                    <>
-                      {/* Tipos */}
-                      <div className="flex flex-wrap gap-1 mb-2 justify-center">
-                        {selectedPokedexEntry.fullData.tipos.map((tipo, i) => (
-                          <span key={i} className="px-1.5 py-0.5 rounded-full font-semibold bg-blue-200 text-blue-800" style={{ fontSize: '0.6rem' }}>{tipo}</span>
-                        ))}
-                      </div>
-                      {/* Dados gerais */}
-                      <div className="font-semibold border-b border-gray-300 mb-1">Dados</div>
-                      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mb-2">
-                        <div><span className="font-semibold">Altura:</span> {selectedPokedexEntry.fullData.altura}m</div>
-                        <div><span className="font-semibold">Peso:</span> {selectedPokedexEntry.fullData.peso}kg</div>
-                        <div><span className="font-semibold">Catch Rate:</span> {selectedPokedexEntry.fullData.catchRate}</div>
-                        <div><span className="font-semibold">XP Base:</span> {selectedPokedexEntry.fullData.baseExp}</div>
-                      </div>
-                      {/* Habitats */}
-                      <div className="mb-2">
-                        <span className="font-semibold">Habitats: </span>{selectedPokedexEntry.fullData.habitats.join(', ')}
-                      </div>
-                      {/* Status Base */}
-                      <div className="font-semibold border-b border-gray-300 mb-1">Status Base</div>
-                      <div className="grid grid-cols-3 gap-x-1 gap-y-0.5 mb-2">
-                        <div><span className="font-semibold">Saúde:</span> {selectedPokedexEntry.fullData.statusBasais.saude}</div>
-                        <div><span className="font-semibold">Ataque:</span> {selectedPokedexEntry.fullData.statusBasais.ataque}</div>
-                        <div><span className="font-semibold">Defesa:</span> {selectedPokedexEntry.fullData.statusBasais.defesa}</div>
-                        <div><span className="font-semibold">Atq.E.:</span> {selectedPokedexEntry.fullData.statusBasais.ataqueEspecial}</div>
-                        <div><span className="font-semibold">Def.E.:</span> {selectedPokedexEntry.fullData.statusBasais.defesaEspecial}</div>
-                        <div><span className="font-semibold">Vel.:</span> {selectedPokedexEntry.fullData.statusBasais.velocidade}</div>
-                      </div>
-                      {/* Evolução */}
-                      {selectedPokedexEntry.fullData.evolucao && (
-                        <div className="mb-2">
-                          <span className="font-semibold">Evolução: </span>
-                          {fullPokedexData.find(p => p.dexNumber === selectedPokedexEntry.fullData.evolucao)?.nome || '?'}
-                          {selectedPokedexEntry.fullData.evolucaoNivel && ` (nível ${selectedPokedexEntry.fullData.evolucaoNivel})`}
-                          {selectedPokedexEntry.fullData.evolucaoItem && ` (${selectedPokedexEntry.fullData.evolucaoItem})`}
+                {pokedexDetailView === 'info' ? (
+                  <div className="p-1.5 text-xs text-gray-800">
+                    <div className="text-center font-bold text-sm mb-1">
+                      {selectedPokedexEntry.fullData ? `#${String(selectedPokedexEntry.fullData.dexNumber).padStart(3, '0')} ` : ''}{selectedPokedexEntry.species}
+                    </div>
+                    {selectedPokedexEntry.fullData ? (
+                      <>
+                        <div className="flex flex-wrap gap-1 mb-2 justify-center">
+                          {selectedPokedexEntry.fullData.tipos.map((tipo, i) => (
+                            <span key={i} className="px-1.5 py-0.5 rounded-full font-semibold bg-blue-200 text-blue-800" style={{ fontSize: '0.6rem' }}>{tipo}</span>
+                          ))}
                         </div>
-                      )}
-                      {/* Status de captura */}
-                      <div className={`mb-2 font-semibold ${selectedPokedexEntry.isCaptured ? 'text-green-600' : 'text-gray-500'}`}>
-                        {selectedPokedexEntry.isCaptured ? '✓ Capturado' : '○ Escaneado'}
-                      </div>
-                      {/* Botão capturar */}
-                      {!selectedPokedexEntry.isCaptured && (
-                        <button
-                          onClick={() => { setShowPokedexDetailModal(false); openCaptureModal(selectedPokedexEntry.species) }}
-                          className="w-full bg-green-500 text-white py-1 rounded font-semibold hover:bg-green-600"
-                          style={{ fontSize: '0.7rem' }}
-                        >
-                          Capturar este Pokémon
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-center text-gray-500">Carregando informações...</p>
-                  )}
-                </div>
+                        <div className="font-semibold border-b border-gray-300 mb-1">Dados</div>
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mb-2">
+                          <div><span className="font-semibold">Altura:</span> {selectedPokedexEntry.fullData.altura}m</div>
+                          <div><span className="font-semibold">Peso:</span> {selectedPokedexEntry.fullData.peso}kg</div>
+                          <div><span className="font-semibold">Catch Rate:</span> {selectedPokedexEntry.fullData.catchRate}</div>
+                          <div><span className="font-semibold">XP Base:</span> {selectedPokedexEntry.fullData.baseExp}</div>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-semibold">Habitats: </span>{selectedPokedexEntry.fullData.habitats.join(', ')}
+                        </div>
+                        <div className="font-semibold border-b border-gray-300 mb-1">Status Base</div>
+                        <div className="grid grid-cols-3 gap-x-1 gap-y-0.5 mb-2">
+                          <div><span className="font-semibold">Saúde:</span> {selectedPokedexEntry.fullData.statusBasais.saude}</div>
+                          <div><span className="font-semibold">Ataque:</span> {selectedPokedexEntry.fullData.statusBasais.ataque}</div>
+                          <div><span className="font-semibold">Defesa:</span> {selectedPokedexEntry.fullData.statusBasais.defesa}</div>
+                          <div><span className="font-semibold">Atq.E.:</span> {selectedPokedexEntry.fullData.statusBasais.ataqueEspecial}</div>
+                          <div><span className="font-semibold">Def.E.:</span> {selectedPokedexEntry.fullData.statusBasais.defesaEspecial}</div>
+                          <div><span className="font-semibold">Vel.:</span> {selectedPokedexEntry.fullData.statusBasais.velocidade}</div>
+                        </div>
+                        {selectedPokedexEntry.fullData.evolucao && (
+                          <div className="mb-2">
+                            <span className="font-semibold">Evolução: </span>
+                            {fullPokedexData.find(p => p.dexNumber === selectedPokedexEntry.fullData.evolucao)?.nome || '?'}
+                            {selectedPokedexEntry.fullData.evolucaoNivel && ` (nível ${selectedPokedexEntry.fullData.evolucaoNivel})`}
+                            {selectedPokedexEntry.fullData.evolucaoItem && ` (${selectedPokedexEntry.fullData.evolucaoItem})`}
+                          </div>
+                        )}
+                        <div className={`mb-2 font-semibold ${selectedPokedexEntry.isCaptured ? 'text-green-600' : 'text-gray-500'}`}>
+                          {selectedPokedexEntry.isCaptured ? '✓ Capturado' : '○ Escaneado'}
+                        </div>
+                        {!selectedPokedexEntry.isCaptured && (
+                          <button
+                            onClick={() => { setShowPokedexDetailModal(false); setPokedexDetailView('info'); openCaptureModal(selectedPokedexEntry.species) }}
+                            className="w-full bg-green-500 text-white py-1 rounded font-semibold hover:bg-green-600"
+                            style={{ fontSize: '0.7rem' }}
+                          >
+                            Capturar este Pokémon
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-center text-gray-500">Carregando informações...</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-1.5 text-xs text-gray-800">
+                    <div className="text-center font-bold text-sm mb-2">Verdades — {selectedPokedexEntry.species}</div>
+                    {(() => {
+                      const verdadesObj = pokedexVerdades[sanitizedSpeciesKey(selectedPokedexEntry.species)] || {}
+                      const verdadesList = Object.entries(verdadesObj).sort((a, b) => Number(a[0]) - Number(b[0]))
+                      if (verdadesList.length === 0) return <p className="text-center text-gray-500 text-[10px]">Nenhuma verdade registrada.</p>
+                      return verdadesList.map(([id, v]) => (
+                        <div key={id} className="mb-1.5 p-1 bg-white bg-opacity-60 rounded border border-gray-300" style={{maxWidth:'90%'}}>
+                          <p className="text-xs text-gray-700 leading-snug break-words whitespace-pre-wrap">{v.texto}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">— {v.autorNome}</p>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                )}
               </div>
+
               {/* Painel direito: imagem do Pokémon */}
               <div
                 className="absolute flex items-center justify-center"
@@ -37378,6 +37872,75 @@ function App() {
                     style={{ filter: selectedPokedexEntry.isCaptured ? 'none' : 'grayscale(100%)' }}
                   />
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* POPUP DE VERDADES DO CARD */}
+        {showVerdadesPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setShowVerdadesPopup(null); setEditingVerdade(null); setNewVerdadeText(''); setEditingVerdadeText('') }}>
+            <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-2xl shadow-2xl w-full max-w-md p-5`} onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <img src="/vdd/vddicon.png" alt="Verdades" className="w-5 h-5" />
+                  <h3 className="text-lg font-bold">Verdades — {showVerdadesPopup}</h3>
+                </div>
+                <button onClick={() => { setShowVerdadesPopup(null); setEditingVerdade(null); setNewVerdadeText(''); setEditingVerdadeText('') }} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              </div>
+
+              {/* Lista de verdades */}
+              <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                {(() => {
+                  const verdadesObj = pokedexVerdades[sanitizedSpeciesKey(showVerdadesPopup)] || {}
+                  const verdadesList = Object.entries(verdadesObj).sort((a, b) => Number(a[0]) - Number(b[0]))
+                  if (verdadesList.length === 0) return <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma verdade ainda.</p>
+                  return verdadesList.map(([id, v]) => (
+                    <div key={id} className={`p-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                      {editingVerdade?.id === id ? (
+                        <div className="flex gap-2">
+                          <input
+                            value={editingVerdadeText}
+                            onChange={e => setEditingVerdadeText(e.target.value)}
+                            className={`flex-1 text-sm px-2 py-1 rounded border ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`}
+                            onKeyDown={e => { if (e.key === 'Enter') saveEditVerdade() }}
+                            autoFocus
+                          />
+                          <button onClick={() => saveEditVerdade()} className="text-green-500 hover:text-green-400"><Check size={16} /></button>
+                          <button onClick={() => { setEditingVerdade(null); setEditingVerdadeText('') }} className="text-gray-400 hover:text-gray-300"><X size={16} /></button>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="text-sm leading-snug">{v.texto}</p>
+                            <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>— {v.autorNome}</p>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <button onClick={() => { setEditingVerdade({ species: showVerdadesPopup, id }); setEditingVerdadeText(v.texto) }} className="text-blue-400 hover:text-blue-300"><Pencil size={14} /></button>
+                            <button onClick={() => deleteVerdade(showVerdadesPopup, id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                })()}
+              </div>
+
+              {/* Adicionar nova verdade */}
+              <div className="flex gap-2">
+                <input
+                  value={newVerdadeText}
+                  onChange={e => setNewVerdadeText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addVerdade(showVerdadesPopup) }}
+                  placeholder="Nova verdade..."
+                  className={`flex-1 text-sm px-3 py-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300'}`}
+                />
+                <button
+                  onClick={() => addVerdade(showVerdadesPopup)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
+                >
+                  Adicionar
+                </button>
               </div>
             </div>
           </div>
@@ -37934,7 +38497,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -40057,7 +40620,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
 
         {/* Modal Fazer Puffin */}
         {showFazerPuffinModal && (() => {
@@ -41069,7 +41632,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -41242,7 +41805,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -41401,7 +41964,7 @@ function App() {
                               <span className={`font-bold text-sm sm:text-base md:text-lg ${darkMode ? 'text-white' : 'text-gray-800'}`}>{carac.name}</span>
                               <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 rounded ${darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{carac.className}</span>
                             </div>
-                            <span className={`text-xs sm:text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{carac.frequencia}</span>
+                            <span className={`text-xs sm:text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{_ftStr(carac.frequencia)}</span>
                           </button>
                           <button
                             onClick={() => {
@@ -41419,23 +41982,23 @@ function App() {
                             <div className="mt-2 sm:mt-3 space-y-1 sm:space-y-2 text-xs sm:text-sm">
                               <div>
                                 <span className={`font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>Referência: </span>
-                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{carac.referencia}</span>
+                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(carac.referencia)}</span>
                               </div>
                               {carac.alvo && (
                                 <div>
                                   <span className={`font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>Alvo: </span>
-                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{carac.alvo}</span>
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(carac.alvo)}</span>
                                 </div>
                               )}
                               {carac.gatilho && (
                                 <div>
                                   <span className={`font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>Gatilho: </span>
-                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{carac.gatilho}</span>
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(carac.gatilho)}</span>
                                 </div>
                               )}
                               <div>
                                 <span className={`font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>Efeito: </span>
-                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{carac.efeito}</span>
+                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(carac.efeito)}</span>
                               </div>
                             </div>
                           </div>
@@ -41668,32 +42231,32 @@ function App() {
                               {talentoData.requisitos && (
                                 <div>
                                   <span className={`font-semibold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>Requisitos: </span>
-                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{talentoData.requisitos}</span>
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(talentoData.requisitos)}</span>
                                 </div>
                               )}
                               <div>
                                 <span className={`font-semibold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>Frequência: </span>
-                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{talentoData.frequencia}</span>
+                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(talentoData.frequencia)}</span>
                               </div>
                               <div>
                                 <span className={`font-semibold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>Referência: </span>
-                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{talentoData.referencia}</span>
+                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(talentoData.referencia)}</span>
                               </div>
                               {talentoData.alvo && (
                                 <div>
                                   <span className={`font-semibold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>Alvo: </span>
-                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{talentoData.alvo}</span>
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(talentoData.alvo)}</span>
                                 </div>
                               )}
                               {talentoData.gatilho && (
                                 <div>
                                   <span className={`font-semibold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>Gatilho: </span>
-                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{talentoData.gatilho}</span>
+                                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(talentoData.gatilho)}</span>
                                 </div>
                               )}
                               <div>
                                 <span className={`font-semibold ${darkMode ? 'text-green-400' : 'text-green-700'}`}>Efeito: </span>
-                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{talentoData.efeito}</span>
+                                <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{_ftStr(talentoData.efeito)}</span>
                               </div>
                             </div>
                           </div>
@@ -41937,32 +42500,32 @@ function App() {
                                 {talento.requisitos && (
                                   <div>
                                     <span className="font-semibold">Requisitos: </span>
-                                    <span>{talento.requisitos}</span>
+                                    <span>{_ftStr(talento.requisitos)}</span>
                                   </div>
                                 )}
                                 <div>
                                   <span className="font-semibold">Frequência: </span>
-                                  <span>{talento.frequencia}</span>
+                                  <span>{_ftStr(talento.frequencia)}</span>
                                 </div>
                                 <div>
                                   <span className="font-semibold">Referência: </span>
-                                  <span>{talento.referencia}</span>
+                                  <span>{_ftStr(talento.referencia)}</span>
                                 </div>
                                 {talento.alvo && (
                                   <div>
                                     <span className="font-semibold">Alvo: </span>
-                                    <span>{talento.alvo}</span>
+                                    <span>{_ftStr(talento.alvo)}</span>
                                   </div>
                                 )}
                                 {talento.gatilho && (
                                   <div>
                                     <span className="font-semibold">Gatilho: </span>
-                                    <span>{talento.gatilho}</span>
+                                    <span>{_ftStr(talento.gatilho)}</span>
                                   </div>
                                 )}
                                 <div>
                                   <span className="font-semibold">Efeito: </span>
-                                  <span>{talento.efeito}</span>
+                                  <span>{_ftStr(talento.efeito)}</span>
                                 </div>
                               </div>
                             </div>
@@ -42158,7 +42721,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -43308,7 +43871,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -43975,10 +44538,12 @@ function App() {
                             </button>
                             <button
                               onClick={async () => {
+                                const username = currentUser.username
+                                const currentCapturaList = capturaList
                                 const newList = xpList.filter((_, i) => i !== index)
                                 setXpList(newList)
                                 if (useFirebase) {
-                                  await saveXpCapturas(currentUser.username, { xpList: newList, capturaList })
+                                  await saveXpCapturas(username, { xpList: newList, capturaList: currentCapturaList })
                                 }
                               }}
                               className="text-red-500 hover:text-red-600 p-0.5 sm:p-1"
@@ -44058,10 +44623,12 @@ function App() {
                             </button>
                             <button
                               onClick={async () => {
+                                const username = currentUser.username
+                                const currentXpList = xpList
                                 const newList = capturaList.filter((_, i) => i !== index)
                                 setCapturaList(newList)
                                 if (useFirebase) {
-                                  await saveXpCapturas(currentUser.username, { xpList, capturaList: newList })
+                                  await saveXpCapturas(username, { xpList: currentXpList, capturaList: newList })
                                 }
                               }}
                               className="text-red-500 hover:text-red-600 p-0.5 sm:p-1"
@@ -44467,17 +45034,20 @@ function App() {
 
                   <button
                     onClick={async () => {
-                      if (addXpValue && parseInt(addXpValue) > 0) {
-                        const newXpList = [...xpList, { value: parseInt(addXpValue) }]
+                      if (addXpValue && parseInt(addXpValue, 10) > 0) {
+                        // Captura antes do await para evitar stale closure se currentUser ou capturaList mudar
+                        const username = currentUser.username
+                        const currentCapturaList = capturaList
+                        const newXpList = [...xpList, { value: parseInt(addXpValue, 10) }]
                         setXpList(newXpList)
                         if (useFirebase) {
-                          await saveXpCapturas(currentUser.username, { xpList: newXpList, capturaList })
+                          await saveXpCapturas(username, { xpList: newXpList, capturaList: currentCapturaList })
                         }
                         setAddXpValue('')
                         setShowAddXpModal(false)
                       }
                     }}
-                    disabled={!addXpValue || parseInt(addXpValue) <= 0}
+                    disabled={!addXpValue || parseInt(addXpValue, 10) <= 0}
                     className="w-full bg-cyan-500 text-white py-2.5 sm:py-3 rounded-lg hover:bg-cyan-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     Adicionar XP
@@ -44518,9 +45088,9 @@ function App() {
 
                   <button
                     onClick={async () => {
-                      if (editXpValue && parseInt(editXpValue) > 0 && editingXpIndex !== null) {
+                      if (editXpValue && parseInt(editXpValue, 10) > 0 && editingXpIndex !== null) {
                         const newXpList = xpList.map((xp, i) =>
-                          i === editingXpIndex ? { ...xp, value: parseInt(editXpValue) } : xp
+                          i === editingXpIndex ? { ...xp, value: parseInt(editXpValue, 10) } : xp
                         )
                         setXpList(newXpList)
                         if (useFirebase) {
@@ -44531,7 +45101,7 @@ function App() {
                         setShowEditXpModal(false)
                       }
                     }}
-                    disabled={!editXpValue || parseInt(editXpValue) <= 0}
+                    disabled={!editXpValue || parseInt(editXpValue, 10) <= 0}
                     className="w-full bg-blue-500 text-white py-2.5 sm:py-3 rounded-lg hover:bg-blue-600 font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     Salvar Alterações
@@ -44603,8 +45173,8 @@ function App() {
                           i === editingCapturaIndex ? {
                             ...cap,
                             species: editCapturaData.species,
-                            level: parseInt(editCapturaData.level),
-                            captureValue: parseInt(editCapturaData.captureValue)
+                            level: parseInt(editCapturaData.level, 10),
+                            captureValue: parseInt(editCapturaData.captureValue, 10)
                           } : cap
                         )
                         setCapturaList(newCapturaList)
@@ -45089,7 +45659,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -48703,7 +49273,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -49851,7 +50421,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -50127,7 +50697,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -50366,7 +50936,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -52011,7 +52581,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -52902,7 +53472,7 @@ function App() {
                             <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Alcance:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.alcance}</span></div>
                             <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Frequência:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.frequencia}</span></div>
                             {golpeData.descritores && <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Descritores:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.descritores}</span></div>}
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Efeito:</span> <p className={`mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.efeito}</p></div>
+                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Efeito:</span> <div className={`mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{renderGolpeEfeito(golpeData.efeito, darkMode)}</div></div>
                           </div>
                         </div>
                       </div>
@@ -53017,7 +53587,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -53152,7 +53722,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -54058,7 +54628,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -54178,7 +54748,7 @@ function App() {
           {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
           {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
         </>
       )
     }
@@ -54542,7 +55112,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -54817,7 +55387,7 @@ function App() {
                 <div className="mb-3">
                   <p className={`text-xs font-semibold mb-1.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Pokémon (6):</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {team.pokemon.map((pkmn, slotIdx) => (
+                    {(team.pokemon || []).map((pkmn, slotIdx) => (
                       <div key={slotIdx}>
                         {pkmn ? (
                           <div className={`flex items-center gap-2 p-2 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
@@ -54896,7 +55466,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -55304,7 +55874,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -55563,7 +56133,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -55681,7 +56251,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -55903,7 +56473,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -56086,7 +56656,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -56700,7 +57270,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -56751,7 +57321,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
 
@@ -57240,7 +57810,7 @@ function App() {
         {scenarioPopupOverlay}
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
-        {batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -57755,7 +58325,7 @@ function App() {
         </div>
         {accountDataModal}{transformacaoModal}{cursorSettingsModal}{userCursorModal}
         {scenarioPopupOverlay}{mostrarTriunfosOverlay}
-        {pokezapPanel}{pokeAgendaPanel}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{pokezapPanel}{pokeAgendaPanel}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
@@ -58156,7 +58726,7 @@ function App() {
         </div>
         {accountDataModal}{transformacaoModal}{cursorSettingsModal}{userCursorModal}
         {scenarioPopupOverlay}{mostrarTriunfosOverlay}
-        {pokezapPanel}{pokeAgendaPanel}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {floatingPkmTracker}{floatingTrainerTracker}{pokezapPanel}{pokeAgendaPanel}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
       </>
     )
   }
