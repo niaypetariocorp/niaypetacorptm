@@ -3443,6 +3443,9 @@ function App() {
   const [scenarioDisplay, setScenarioDisplay] = useState(null) // { active, scenarioId, currentImageIndex }
   const [masterPreviewScenario, setMasterPreviewScenario] = useState(null) // preview local do mestre, sem Firebase
   const [playerScenarioPopupOpen, setPlayerScenarioPopupOpen] = useState(false)
+  const [playerScenarioMinimized, setPlayerScenarioMinimized] = useState(false)
+  const [playerScenarioMinPos, setPlayerScenarioMinPos] = useState({ x: 16, y: null }) // null y = bottom-anchored
+  const playerScenarioMinDragRef = useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0, moved: false })
   const sessionScenariosSaveSkipRef = useRef(true)
   const scenarioDisplaySaveSkipRef = useRef(true)
 
@@ -3460,6 +3463,7 @@ function App() {
   // Estados de pesquisa e filtro da Pokédex
   const [pokedexSearchQuery, setPokedexSearchQuery] = useState('') // Busca por espécie na Pokédex
   const [pokedexTypeFilter, setPokedexTypeFilter] = useState('') // Filtro de tipo na Pokédex para ver detalhes
+  const [pokedexVerdadesFilter, setPokedexVerdadesFilter] = useState(false) // Filtro: mostrar só Pokémon com verdades
 
   // Estados para área de Batalha
   const [battleTrainers, setBattleTrainers] = useState([]) // Treinadores enviados para batalha
@@ -3605,6 +3609,9 @@ function App() {
   const [pokedexDetailView, setPokedexDetailView] = useState('info') // 'info' | 'verdades'
   const [pokedexVerdades, setPokedexVerdades] = useState({}) // { [species]: { [id]: { texto, autorNome } } }
   const [showVerdadesPopup, setShowVerdadesPopup] = useState(null) // species string
+  const [trackerVerdadePopup, setTrackerVerdadePopup] = useState(null) // species string for tracker read-only tooltip
+  const [vddPage, setVddPage] = useState(0) // current page in Verdadedex M
+  const [vddExpanded, setVddExpanded] = useState({}) // { [key]: bool } for collapsed cards in Verdadedex M
   const [newVerdadeText, setNewVerdadeText] = useState('')
   const [editingVerdade, setEditingVerdade] = useState(null) // { species, id }
   const [editingVerdadeText, setEditingVerdadeText] = useState('')
@@ -4375,6 +4382,8 @@ function App() {
   const [vttCurrentLayer, setVttCurrentLayer] = useState('players') // Camada atual do mestre: 'map', 'gm', 'players'
   const [selectedToken, setSelectedToken] = useState(null) // Token selecionado (id)
   const [vttContextMenuToken, setVttContextMenuToken] = useState(null) // Token com minimenu de contexto aberto (clique direito)
+  const [vttTokenPermissions, setVttTokenPermissions] = useState({}) // { [permKey]: [username, ...] }
+  const [vttPermMenuToken, setVttPermMenuToken] = useState(null) // Token com painel de permissões aberto
   const [draggingToken, setDraggingToken] = useState(null) // Token sendo arrastado
   const [vttGridSize, setVttGridSize] = useState(50) // Tamanho da grid em pixels
   const [vttShowGrid, setVttShowGrid] = useState(true) // Mostrar/ocultar grid
@@ -4673,7 +4682,7 @@ function App() {
     { username: 'Pedro', type: 'treinador', gradient: 'linear-gradient(135deg, #0000CD, #4169E1, #00CED1, #32CD32)' }
   ]
 
-  const mestreAreas = ['Gerador Pokémon', 'Árvore de Apricorns M', 'Batalha', 'Batalha Game Boy M', 'Bugigangas do Mestre', 'Cassino Staff', 'Cenários da Sessão', 'Central Niaypeta Rio Corp™ M', 'Clima', 'Enciclopédia M', 'Hub de Troca M', 'Interlúdio M', 'Mundo M', 'NPCs Arquivados', 'PokeApp', 'Pokémon NPC', 'Safari Staff', 'Times NPC', 'Treinador NPC', 'Objetivos M', 'Visão do Mestre', 'XP & Capturas M']
+  const mestreAreas = ['Gerador Pokémon', 'Árvore de Apricorns M', 'Batalha', 'Batalha Game Boy M', 'Bugigangas do Mestre', 'Cassino Staff', 'Cenários da Sessão', 'Central Niaypeta Rio Corp™ M', 'Clima', 'Enciclopédia M', 'Hub de Troca M', 'Interlúdio M', 'Mundo M', 'NPCs Arquivados', 'PokeApp', 'Pokémon NPC', 'Safari Staff', 'Times NPC', 'Treinador NPC', 'Objetivos M', 'Verdadedex M', 'Visão do Mestre', 'XP & Capturas M']
   const treinadorAreas = ['Treinador', 'Árvore de Apricorns', 'Batalha Game Boy', 'Batalha Pkm', 'Cassino', 'Características & Talentos', 'Central Niaypeta Rio Corp™', 'Enciclopédia', 'Hub de Troca', 'Insígnias', 'Interlúdio', 'Mochila', 'Mundo', 'PC', 'Pokédex', 'Pokéloja', 'Progressão', 'Safari', 'SmartPokefone']
 
   // ===== CONFIGURACOES SAFARI =====
@@ -13657,6 +13666,7 @@ function App() {
       // Quando o mestre ativa o popup, abrir para jogadores
       if (data?.active && currentUser.type === 'treinador') {
         setPlayerScenarioPopupOpen(true)
+        setPlayerScenarioMinimized(false)
       }
     })
     return () => unsubscribe()
@@ -13735,7 +13745,9 @@ function App() {
           rotinaExercicioValues,
           rotinaEstudosValues,
           pokemonsPrestativos,
-          parceiroPkmIdx
+          parceiroPkmIdx,
+          plantedTrees,
+          pokeoficinaBtnOrder
         }
         try {
           if (useFirebase) {
@@ -13806,7 +13818,7 @@ function App() {
     // Debounce para evitar muitas escritas
     const timeoutId = setTimeout(saveData, 500)
     return () => clearTimeout(timeoutId)
-  }, [level, image, classes, attributes, skills, currentHP, pokemonsCanalizados, golpesCanalizar, mainTeam, pcPokemon, pokedex, pokemonedas, pokecaixinha, keyItems, customItems, pokeovoList, caracteristicasSelected, talentosSelected, pokemonImages, pokemonExtraImages, pokemonImageIndex, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, ciclos, userBattleModifiers, userActiveModifiers, talentinhos, background, limitesUsoPersonalizados, limitesUsoPersonalizadosUsosAtuais, fotografias, talentoContadores, hiddenPokelojaItems, customPrices, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, battlePokemonConditions, battleTrainerConditions, archivedNpcTrainers, archivedNpcPokemon, masterItems, masterItemsSent, talentoInfinitoList, currentUser])
+  }, [level, image, classes, attributes, skills, currentHP, pokemonsCanalizados, golpesCanalizar, mainTeam, pcPokemon, pokedex, pokemonedas, pokecaixinha, keyItems, customItems, pokeovoList, caracteristicasSelected, talentosSelected, pokemonImages, pokemonExtraImages, pokemonImageIndex, badges, estilizadorBattery, estilizadorPolicialBattery, thunderStoneActive, bolsaTalento, otherCapacities, vivencias, conquistas, ciclos, userBattleModifiers, userActiveModifiers, talentinhos, background, limitesUsoPersonalizados, limitesUsoPersonalizadosUsosAtuais, fotografias, talentoContadores, hiddenPokelojaItems, customPrices, npcPokemon, npcPokemonList, battleTrainers, battlePokemon, battleTrainersList, battlePokemonList, currentTrainerTurn, currentPokemonTurn, trainerRound, pokemonRound, npcConditions, expandedNpcCards, revealedNpcPokemon, revealedTrainers, battlePokemonConditions, battleTrainerConditions, archivedNpcTrainers, archivedNpcPokemon, masterItems, masterItemsSent, talentoInfinitoList, plantedTrees, pokeoficinaBtnOrder, currentUser])
 
   // Salvar Hub de Troca separadamente (mestre)
   const tradeHubSaveSkipRef = useRef(true)
@@ -14045,7 +14057,7 @@ function App() {
       const newMaxHP = getMaxHP()
       setCurrentHP(newMaxHP)
     }
-  }, [level, attributes.saude, currentUser])
+  }, [level, attributes.saude])
 
   // Persistir NPCs no Firebase/LocalStorage
   useEffect(() => {
@@ -14988,7 +15000,7 @@ function App() {
 
   const handleLogin = () => {
     if (!selectedUser) return
-    if (password !== 'DnD7MarPkm') { setError('Senha incorreta!'); return }
+    if (!import.meta.env.DEV && password !== 'DnD7MarPkm') { setError('Senha incorreta!'); return }
     setCurrentUser(selectedUser)
     setCurrentArea(selectedUser.type === 'treinador' ? 'Treinador' : '')
     setSessionBg(BG_IMAGES[Math.floor(Math.random() * BG_IMAGES.length)])
@@ -16350,8 +16362,10 @@ function App() {
     if (!token) return
 
     // Mestre pode arrastar qualquer token
-    // Jogadores só podem arrastar tokens que pertencem a eles
-    if (currentUser.type !== 'mestre' && token.owner !== currentUser.username) {
+    // Jogadores só podem arrastar tokens que pertencem a eles ou que têm permissão
+    const _dragPermKey = getTokenPermKey(token)
+    const _hasDragPerm = vttTokenPermissions[_dragPermKey]?.includes(currentUser.username)
+    if (currentUser.type !== 'mestre' && token.owner !== currentUser.username && !_hasDragPerm) {
       return
     }
 
@@ -17138,6 +17152,24 @@ function App() {
     })
     return unsub
   }, [])
+
+  // Sincronizar permissões de tokens VTT em tempo real (todos os clientes)
+  useEffect(() => {
+    if (!useFirebase) return
+    const unsub = subscribeToFirebase('vtt/live/tokenPermissions', (data) => {
+      setVttTokenPermissions(data && typeof data === 'object' ? data : {})
+    })
+    return unsub
+  }, [])
+
+  // Salvar permissões de tokens VTT (apenas mestre, debounced)
+  useEffect(() => {
+    if (!useFirebase || !currentUser || currentUser.type !== 'mestre') return
+    const timer = setTimeout(() => {
+      saveToFirebase('vtt/live/tokenPermissions', vttTokenPermissions)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [vttTokenPermissions])
 
   // Cursor VTT (captura e escaneamento) — único style element, sempre movido para o fim do <head>
   useEffect(() => {
@@ -18096,12 +18128,61 @@ function App() {
       if (isPreview) setMasterPreviewScenario(prev => ({ ...prev, currentImageIndex: newIdx }))
       else setScenarioDisplay(prev => ({ ...prev, currentImageIndex: newIdx }))
     }
+    // Miniatura arrastável quando jogador minimizou
+    if (!isMestre && playerScenarioMinimized) {
+      const minStyle = {
+        position: 'fixed',
+        left: playerScenarioMinPos.x,
+        zIndex: 200,
+        cursor: 'grab',
+        userSelect: 'none',
+        ...(playerScenarioMinPos.y !== null
+          ? { top: playerScenarioMinPos.y }
+          : { bottom: 16 })
+      }
+      const handleMinMouseDown = (e) => {
+        e.preventDefault()
+        const ref = playerScenarioMinDragRef.current
+        ref.dragging = true
+        ref.moved = false
+        ref.startX = e.clientX
+        ref.startY = e.clientY
+        ref.origX = playerScenarioMinPos.x
+        ref.origY = playerScenarioMinPos.y !== null ? playerScenarioMinPos.y : (window.innerHeight - 16 - 90)
+        const onMove = (ev) => {
+          if (!ref.dragging) return
+          const dx = ev.clientX - ref.startX
+          const dy = ev.clientY - ref.startY
+          if (Math.abs(dx) > 3 || Math.abs(dy) > 3) ref.moved = true
+          setPlayerScenarioMinPos({ x: Math.max(0, ref.origX + dx), y: Math.max(0, ref.origY + dy) })
+        }
+        const onUp = () => {
+          ref.dragging = false
+          document.removeEventListener('mousemove', onMove)
+          document.removeEventListener('mouseup', onUp)
+          if (!ref.moved) setPlayerScenarioMinimized(false)
+        }
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
+      }
+      return (
+        <div style={minStyle} onMouseDown={handleMinMouseDown}>
+          <div className="rounded-xl overflow-hidden shadow-2xl border-2 border-white/30 w-[120px] h-[90px] relative">
+            <img src={imageUrl || ''} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/10 hover:bg-black/0 transition-colors" />
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[200] p-4">
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-gray-900'} rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col`}>
           {/* Header */}
           <div className="flex justify-between items-center px-5 py-3 border-b border-gray-700 flex-shrink-0">
-            <h3 className="text-white text-lg font-bold truncate pr-4">{scenarioTitle}</h3>
+            {isMestre
+              ? <h3 className="text-white text-lg font-bold truncate pr-4">{scenarioTitle}</h3>
+              : <div />
+            }
             {isMestre && (
               <button
                 onClick={() => isPreview ? setMasterPreviewScenario(null) : setScenarioDisplay(prev => ({ ...prev, active: false }))}
@@ -18110,13 +18191,24 @@ function App() {
                 <X size={22} />
               </button>
             )}
-            {!isMestre && canClose && (
-              <button
-                onClick={() => setPlayerScenarioPopupOpen(false)}
-                className="text-gray-400 hover:text-white flex-shrink-0"
-              >
-                <X size={22} />
-              </button>
+            {!isMestre && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setPlayerScenarioMinimized(true)}
+                  className="text-gray-400 hover:text-white"
+                  title="Minimizar"
+                >
+                  <Minus size={22} />
+                </button>
+                {canClose && (
+                  <button
+                    onClick={() => setPlayerScenarioPopupOpen(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X size={22} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
           {/* Imagem + Sidebar */}
@@ -18383,11 +18475,21 @@ function App() {
   const _ftHeader = { green: darkMode ? 'bg-green-900' : 'bg-green-100', yellow: darkMode ? 'bg-yellow-900' : 'bg-yellow-100', red: darkMode ? 'bg-red-900' : 'bg-red-100', blue: darkMode ? 'bg-blue-900/60' : 'bg-blue-50' }
   const _ftHeaderText = { green: 'text-green-300', yellow: 'text-yellow-300', red: 'text-red-300', blue: darkMode ? 'text-blue-300' : 'text-blue-700' }
 
+  const getTokenPermKey = (token) => {
+    if (!token) return null
+    if (token.npcType === 'trainer' && token.npcId) return `npc-trainer-${token.npcId}`
+    if (token.npcType === 'trainer' && token.owner) return `trainer-${token.owner}`
+    if (token.npcType === 'pokemon' && token.npcId) return `npc-pokemon-${token.npcId}`
+    if (token.npcType === 'pokemon' && token.pokemonId) return `trainer-pokemon-${token.pokemonId}`
+    return `token-${token.id}`
+  }
+
   const floatingPkmTracker = (() => {
     if (!currentUser || battlePokemonList.length === 0) return null
     const isMestre = currentUser.type === 'mestre'
     const color = _ftGetColor(battlePokemonList, currentPokemonTurn, currentUser.username, isMestre)
     return (
+      <>
       <div
         className={`fixed z-[989] ${darkMode ? 'bg-gray-800' : 'bg-white'} border-2 ${_ftBorder[color]} rounded-xl shadow-2xl w-72 select-none`}
         style={{ left: floatingPkmPos.x, top: floatingPkmPos.y }}
@@ -18423,14 +18525,16 @@ function App() {
                 const isRevealed = revealedNpcPokemon[pokemon.id] || false
                 const showReal = !pokemon.isNpc || isOwnPokemon || isRevealed
                 const showHP = isMestre || isOwnPokemon
+                const _pkmPermKey = pokemon.isNpc ? `npc-pokemon-${pokemon.npcId}` : `trainer-pokemon-${pokemon.originalId}`
+                const _hasPkmPerm = !isMestre && (vttTokenPermissions[_pkmPermKey]?.includes(currentUser?.username) || false)
                 return (
                   <div key={pokemon.id} className={`p-2 rounded-lg border-2 ${isCurrentTurn ? (darkMode ? 'bg-yellow-900/60 border-yellow-500' : 'bg-yellow-50 border-yellow-400') : (darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300')}`}>
                     <div className="flex items-center justify-between gap-1">
                       <div className={`font-semibold text-sm truncate ${isCurrentTurn ? 'text-yellow-400' : darkMode ? 'text-white' : 'text-gray-800'}`}>
                         {isCurrentTurn && '▶ '}
-                        {isMestre && pokemon.isNpc && showReal ? (
+                        {(isMestre || _hasPkmPerm) && pokemon.isNpc && showReal ? (
                           <span className="cursor-pointer hover:underline" onClick={() => { const fp = npcPokemon.find(p => p.id === pokemon.npcId); if (fp) { setPrestativoCardPokemon(fp); setShowPrestativoCardModal(true) } }}>{pokemon.nome}</span>
-                        ) : isMestre && !pokemon.isNpc ? (
+                        ) : (isMestre || _hasPkmPerm) && !pokemon.isNpc ? (
                           <span className="cursor-pointer hover:underline hover:text-yellow-300" onClick={() => handleOpenVisordex(pokemon)}>{pokemon.nome}</span>
                         ) : showReal ? pokemon.nome : (pokemon.nomeFalso || '???')}
                       </div>
@@ -18448,6 +18552,20 @@ function App() {
                       ))}
                     </div>
                     <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Ev F:{evasoes.evasaoFisica} E:{evasoes.evasaoEspecial} V:{evasoes.evasaoVeloz}</div>
+                    {showReal && (() => {
+                      const desloc = POKEMON_DESLOCAMENTO_MAP?.[pokemon.especie || pokemon.nome]
+                      if (!desloc) return null
+                      const LABELS = { terrestre: 'Ter', nadar: 'Nat', voar: 'Voa', cavar: 'Cav', submerso: 'Sub' }
+                      const parts = Object.entries(LABELS).filter(([k]) => desloc[k] !== '' && desloc[k] != null).map(([k, l]) => `${l} ${desloc[k]}`)
+                      if (!parts.length) return null
+                      return <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Mov {parts.join(' · ')}</div>
+                    })()}
+                    {/* Ícone de Verdades */}
+                    {showReal && pokemon.especie && Object.keys(pokedexVerdades[sanitizedSpeciesKey(pokemon.especie)] || {}).length > 0 && (
+                      <button onClick={e => { e.stopPropagation(); setTrackerVerdadePopup(pokemon.especie) }} className="mt-0.5 flex items-center gap-1" title={`Verdades de ${pokemon.especie}`}>
+                        <img src="/vdd/vddicon.png" alt="Verdades" className="w-4 h-4 opacity-75 hover:opacity-100" />
+                      </button>
+                    )}
                     {/* Revelar (master, NPC) */}
                     {isMestre && String(pokemon.id).startsWith('npc-pokemon-') && (
                       <label className="flex items-center gap-1 mt-1 cursor-pointer">
@@ -18507,6 +18625,34 @@ function App() {
           </div>
         )}
       </div>
+      {/* Popup de Verdades do Tracker (somente leitura) */}
+      {trackerVerdadePopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[990] p-4" onClick={() => setTrackerVerdadePopup(null)}>
+          <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-2xl shadow-2xl w-full max-w-sm p-5`} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <img src="/vdd/vddicon.png" alt="Verdades" className="w-5 h-5" />
+                <h3 className="text-base font-bold">Verdades — {trackerVerdadePopup}</h3>
+              </div>
+              <button onClick={() => setTrackerVerdadePopup(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {(() => {
+                const verdadesObj = pokedexVerdades[sanitizedSpeciesKey(trackerVerdadePopup)] || {}
+                const verdadesList = Object.entries(verdadesObj).sort((a, b) => Number(a[0]) - Number(b[0]))
+                if (verdadesList.length === 0) return <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma verdade ainda.</p>
+                return verdadesList.map(([id, v]) => (
+                  <div key={id} className={`p-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                    <p className="text-sm leading-snug">{v.texto}</p>
+                    <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>— {v.autorNome}</p>
+                  </div>
+                ))
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+      </>
     )
   })()
 
@@ -18593,13 +18739,17 @@ function App() {
                   const isRevealed = revealedTrainers[trainer.id] || false
                   const showReal = !trainer.isNpc || isOwn || isRevealed
                   const displayName = showReal ? trainer.nome : (trainer.nomeFalso || 'NPC')
+                  const _trainerPermKey = trainer.isNpc ? `npc-trainer-${trainer.npcId}` : `trainer-${trainer.nome}`
+                  const _hasTrainerPerm = !isMestre && (vttTokenPermissions[_trainerPermKey]?.includes(currentUser?.username) || false)
                   return (
                     <div key={trainer.id} className={`p-2 rounded-lg border-2 ${isCurrentTurn?(darkMode?'bg-yellow-900/60 border-yellow-500':'bg-yellow-50 border-yellow-400'):(darkMode?'bg-gray-700 border-gray-600':'bg-gray-50 border-gray-300')}`}>
                       <div className="flex items-center justify-between gap-1">
                         <div className={`font-semibold text-sm truncate ${isCurrentTurn?'text-yellow-400':darkMode?'text-white':'text-gray-800'}`}>
                           {isCurrentTurn && '▶ '}
-                          {isMestre && trainer.isNpc && showReal ? (
+                          {(isMestre || _hasTrainerPerm) && trainer.isNpc && showReal ? (
                             <span className="cursor-pointer hover:underline" onClick={() => { const ft = npcTrainers.find(n => n.id === trainer.npcId); if(ft) setFloatingNpcTrainerCard(ft) }}>{displayName}</span>
+                          ) : _hasTrainerPerm && !trainer.isNpc ? (
+                            <span className="cursor-pointer hover:underline" onClick={() => setFloatingNpcTrainerCard({ name: trainer.nome, level: trainer.level || 1, classes: [], caracteristicasETalentos: [] })}>{displayName}</span>
                           ) : displayName}
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
@@ -26141,7 +26291,7 @@ function App() {
                         transform: `rotate(${token.rotation || 0}deg)`,
                         userSelect: 'none',
                         pointerEvents: vttCurrentLayer === 'map' ? 'auto' : 'none',
-                        zIndex: 1
+                        zIndex: vttContextMenuToken === token.id ? 1000 : 1
                       }}
                     >
                       <div
@@ -26192,7 +26342,7 @@ function App() {
                         transform: `rotate(${token.rotation || 0}deg)`,
                         userSelect: 'none',
                         pointerEvents: vttCurrentLayer === 'gm' ? 'auto' : 'none',
-                        zIndex: 2
+                        zIndex: vttContextMenuToken === token.id ? 1000 : 2
                       }}
                     >
                       <div
@@ -26234,7 +26384,13 @@ function App() {
                         if (!pkm || !validMoves.length) return null
                         return (
                           <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '150px', maxWidth: '190px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
-                            <div style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.name}</div>
+                            <div style={{ marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.name}</span>
+                                {currentUser?.type === 'mestre' && <button onMouseDown={e => e.stopPropagation()} onClick={() => setVttPermMenuToken(prev => prev === token.id ? null : token.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: vttPermMenuToken === token.id ? '#facc15' : '#6b7280', fontSize: '11px', padding: '0', lineHeight: 1, flexShrink: 0 }} title="Permissões">🔑</button>}
+                              </div>
+                              {currentUser?.type === 'mestre' && vttPermMenuToken === token.id && <div style={{ marginTop: '4px' }}><div style={{ color: '#9ca3af', fontSize: '9px', marginBottom: '3px' }}>Permissões</div>{users.filter(u => u.type === 'treinador').map(u => { const _pk = getTokenPermKey(token); const _checked = vttTokenPermissions[_pk]?.includes(u.username) || false; return (<label key={u.username} onMouseDown={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', marginBottom: '2px' }}><input type="checkbox" checked={_checked} onChange={e => { const _k = getTokenPermKey(token); const _cur = vttTokenPermissions[_k] || []; const _upd = e.target.checked ? [..._cur, u.username] : _cur.filter(n => n !== u.username); setVttTokenPermissions(prev => ({ ...prev, [_k]: _upd })) }} style={{ width: '10px', height: '10px', cursor: 'pointer' }} /><span style={{ color: '#e5e7eb', fontSize: '10px' }}>{u.username}</span></label>) })}</div>}
+                            </div>
                             {validMoves.map((move, idx) => {
                               const moveName = typeof move === 'string' ? move : (move.nome || move.name || '')
                               if (!moveName) return null
@@ -26246,6 +26402,7 @@ function App() {
                                 </div>
                               )
                             })}
+                            {(() => { const desloc = pkm.displacement || POKEMON_DESLOCAMENTO_MAP?.[pkm.species || pkm.name]; if (!desloc) return null; const LABELS = { terrestre: 'Ter', nadar: 'Nad', voar: 'Voa', cavar: 'Cav', submerso: 'Sub' }; const parts = Object.entries(LABELS).filter(([k]) => desloc[k] !== '' && desloc[k] != null).map(([k, l]) => `${l} ${desloc[k]}`); if (!parts.length) return null; return <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{parts.join(' · ')}</div> })()}
                           </div>
                         )
                       })()}
@@ -26312,7 +26469,13 @@ function App() {
                         return (
                           <>
                             <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '130px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
-                              <div style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                              <div style={{ marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                  <span style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+                                  {currentUser?.type === 'mestre' && <button onMouseDown={e => e.stopPropagation()} onClick={() => setVttPermMenuToken(prev => prev === token.id ? null : token.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: vttPermMenuToken === token.id ? '#facc15' : '#6b7280', fontSize: '11px', padding: '0', lineHeight: 1, flexShrink: 0 }} title="Permissões">🔑</button>}
+                                </div>
+                                {currentUser?.type === 'mestre' && vttPermMenuToken === token.id && <div style={{ marginTop: '4px' }}><div style={{ color: '#9ca3af', fontSize: '9px', marginBottom: '3px' }}>Permissões</div>{users.filter(u => u.type === 'treinador').map(u => { const _pk = getTokenPermKey(token); const _checked = vttTokenPermissions[_pk]?.includes(u.username) || false; return (<label key={u.username} onMouseDown={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', marginBottom: '2px' }}><input type="checkbox" checked={_checked} onChange={e => { const _k = getTokenPermKey(token); const _cur = vttTokenPermissions[_k] || []; const _upd = e.target.checked ? [..._cur, u.username] : _cur.filter(n => n !== u.username); setVttTokenPermissions(prev => ({ ...prev, [_k]: _upd })) }} style={{ width: '10px', height: '10px', cursor: 'pointer' }} /><span style={{ color: '#e5e7eb', fontSize: '10px' }}>{u.username}</span></label>) })}</div>}
+                              </div>
                               <div style={{ display: 'flex', gap: '3px' }}>
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { const d20Roll = Math.floor(Math.random() * 20) + 1; const finalResult = d20Roll + precisaoStage; let details = `1d20 = ${d20Roll}`; if (precisaoStage !== 0) details += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`; const message = `🎲 Acurácia ${displayName}\n${details}\nTotal: ${finalResult}`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: finalResult }) }} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Acu</button>
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { let damageRoll, damageBonus, diceType; if (trainerLevel >= 1 && trainerLevel <= 6) { diceType = '1d10+4'; damageRoll = Math.floor(Math.random() * 10) + 1; damageBonus = 4 } else if (trainerLevel >= 7 && trainerLevel <= 14) { diceType = '1d12+6'; damageRoll = Math.floor(Math.random() * 12) + 1; damageBonus = 6 } else { diceType = '2d8+6'; const d1 = Math.floor(Math.random() * 8) + 1; const d2 = Math.floor(Math.random() * 8) + 1; damageRoll = d1 + d2; damageBonus = 6 }; const totalDamage = damageRoll + damageBonus + ataqueTotal; let stageInfo = ataqueStage !== 0 ? ` [Fase ATQ: ${ataqueStage > 0 ? '+' : ''}${ataqueStage} → ${ataqueBase}→${ataqueTotal}]` : ''; const message = `⚔️ ${displayName} atacou!\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTotal} (Ataque Total)${stageInfo} = ${totalDamage} de dano`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: totalDamage }) }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Dano</button>
@@ -26331,6 +26494,7 @@ function App() {
                                   })}
                                 </div>
                               )}
+                              <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{(() => { const d = calculateDisplacement({ ataque: ataqueBase, defesa: baseDefesa, velocidade: baseVel }); return `Ter ${d.terrestre} · Nat ${d.natacao} · Sub ${d.subaquatico}` })()}</div>
                             </div>
                             <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'absolute', left: '-34px', top: '0px', display: 'flex', flexDirection: 'column', gap: '3px', zIndex: 20 }}>
                               {[
@@ -26364,12 +26528,12 @@ function App() {
                         transform: `rotate(${token.rotation || 0}deg)`,
                         userSelect: 'none',
                         pointerEvents: vttCurrentLayer === 'players' ? 'auto' : 'none',
-                        zIndex: 3
+                        zIndex: vttContextMenuToken === token.id ? 1000 : 3
                       }}
                     >
                       <div
                         onMouseDown={(e) => { if (startToolFromToken(token, e)) return; if (vttCaptureMode && token.npcType === 'pokemon' && token.npcId) { e.stopPropagation(); handleVttCaptureToken(token); return } if (vttCurrentLayer === 'players') { handleVttTokenClick(token.id, 'tokens'); handleTokenMouseDown(token.id, 'tokens', e) } }}
-                        onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); if (selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
+                        onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); const _permKeyCtx = getTokenPermKey(token); const _canMenu = currentUser?.type === 'mestre' || token.owner === currentUser?.username || vttTokenPermissions[_permKeyCtx]?.includes(currentUser?.username); if (_canMenu && selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
                         style={{
                           width: '100%', height: '100%',
                           cursor: vttCaptureMode ? 'inherit' : vttCurrentLayer === 'players' ? 'move' : 'default',
@@ -26406,7 +26570,13 @@ function App() {
                         if (!pkm || !validMoves.length) return null
                         return (
                           <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '150px', maxWidth: '190px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
-                            <div style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.name}</div>
+                            <div style={{ marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.name}</span>
+                                {currentUser?.type === 'mestre' && <button onMouseDown={e => e.stopPropagation()} onClick={() => setVttPermMenuToken(prev => prev === token.id ? null : token.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: vttPermMenuToken === token.id ? '#facc15' : '#6b7280', fontSize: '11px', padding: '0', lineHeight: 1, flexShrink: 0 }} title="Permissões">🔑</button>}
+                              </div>
+                              {currentUser?.type === 'mestre' && vttPermMenuToken === token.id && <div style={{ marginTop: '4px' }}><div style={{ color: '#9ca3af', fontSize: '9px', marginBottom: '3px' }}>Permissões</div>{users.filter(u => u.type === 'treinador').map(u => { const _pk = getTokenPermKey(token); const _checked = vttTokenPermissions[_pk]?.includes(u.username) || false; return (<label key={u.username} onMouseDown={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', marginBottom: '2px' }}><input type="checkbox" checked={_checked} onChange={e => { const _k = getTokenPermKey(token); const _cur = vttTokenPermissions[_k] || []; const _upd = e.target.checked ? [..._cur, u.username] : _cur.filter(n => n !== u.username); setVttTokenPermissions(prev => ({ ...prev, [_k]: _upd })) }} style={{ width: '10px', height: '10px', cursor: 'pointer' }} /><span style={{ color: '#e5e7eb', fontSize: '10px' }}>{u.username}</span></label>) })}</div>}
+                            </div>
                             {validMoves.map((move, idx) => {
                               const moveName = typeof move === 'string' ? move : (move.nome || move.name || '')
                               if (!moveName) return null
@@ -26418,6 +26588,7 @@ function App() {
                                 </div>
                               )
                             })}
+                            {(() => { const desloc = pkm.displacement || POKEMON_DESLOCAMENTO_MAP?.[pkm.species || pkm.name]; if (!desloc) return null; const LABELS = { terrestre: 'Ter', nadar: 'Nad', voar: 'Voa', cavar: 'Cav', submerso: 'Sub' }; const parts = Object.entries(LABELS).filter(([k]) => desloc[k] !== '' && desloc[k] != null).map(([k, l]) => `${l} ${desloc[k]}`); if (!parts.length) return null; return <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{parts.join(' · ')}</div> })()}
                           </div>
                         )
                       })()}
@@ -26484,7 +26655,13 @@ function App() {
                         return (
                           <>
                             <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '130px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
-                              <div style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                              <div style={{ marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                  <span style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+                                  {currentUser?.type === 'mestre' && <button onMouseDown={e => e.stopPropagation()} onClick={() => setVttPermMenuToken(prev => prev === token.id ? null : token.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: vttPermMenuToken === token.id ? '#facc15' : '#6b7280', fontSize: '11px', padding: '0', lineHeight: 1, flexShrink: 0 }} title="Permissões">🔑</button>}
+                                </div>
+                                {currentUser?.type === 'mestre' && vttPermMenuToken === token.id && <div style={{ marginTop: '4px' }}><div style={{ color: '#9ca3af', fontSize: '9px', marginBottom: '3px' }}>Permissões</div>{users.filter(u => u.type === 'treinador').map(u => { const _pk = getTokenPermKey(token); const _checked = vttTokenPermissions[_pk]?.includes(u.username) || false; return (<label key={u.username} onMouseDown={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', marginBottom: '2px' }}><input type="checkbox" checked={_checked} onChange={e => { const _k = getTokenPermKey(token); const _cur = vttTokenPermissions[_k] || []; const _upd = e.target.checked ? [..._cur, u.username] : _cur.filter(n => n !== u.username); setVttTokenPermissions(prev => ({ ...prev, [_k]: _upd })) }} style={{ width: '10px', height: '10px', cursor: 'pointer' }} /><span style={{ color: '#e5e7eb', fontSize: '10px' }}>{u.username}</span></label>) })}</div>}
+                              </div>
                               <div style={{ display: 'flex', gap: '3px' }}>
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { const d20Roll = Math.floor(Math.random() * 20) + 1; const finalResult = d20Roll + precisaoStage; let details = `1d20 = ${d20Roll}`; if (precisaoStage !== 0) details += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`; const message = `🎲 Acurácia ${displayName}\n${details}\nTotal: ${finalResult}`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: finalResult }) }} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Acu</button>
                                 <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { let damageRoll, damageBonus, diceType; if (trainerLevel >= 1 && trainerLevel <= 6) { diceType = '1d10+4'; damageRoll = Math.floor(Math.random() * 10) + 1; damageBonus = 4 } else if (trainerLevel >= 7 && trainerLevel <= 14) { diceType = '1d12+6'; damageRoll = Math.floor(Math.random() * 12) + 1; damageBonus = 6 } else { diceType = '2d8+6'; const d1 = Math.floor(Math.random() * 8) + 1; const d2 = Math.floor(Math.random() * 8) + 1; damageRoll = d1 + d2; damageBonus = 6 }; const totalDamage = damageRoll + damageBonus + ataqueTotal; let stageInfo = ataqueStage !== 0 ? ` [Fase ATQ: ${ataqueStage > 0 ? '+' : ''}${ataqueStage} → ${ataqueBase}→${ataqueTotal}]` : ''; const message = `⚔️ ${displayName} atacou!\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTotal} (Ataque Total)${stageInfo} = ${totalDamage} de dano`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: chatUser, text: message, timestamp, isDiceRoll: true, diceResult: totalDamage }) }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Dano</button>
@@ -26503,6 +26680,7 @@ function App() {
                                   })}
                                 </div>
                               )}
+                              <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{(() => { const d = calculateDisplacement({ ataque: ataqueBase, defesa: baseDefesa, velocidade: baseVel }); return `Ter ${d.terrestre} · Nat ${d.natacao} · Sub ${d.subaquatico}` })()}</div>
                             </div>
                             <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'absolute', left: '-34px', top: '0px', display: 'flex', flexDirection: 'column', gap: '3px', zIndex: 20 }}>
                               {[
@@ -30074,6 +30252,155 @@ function App() {
           {pokezapPanel}{pokeAgendaPanel}
         {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
         </div>
+      </>
+    )
+  }
+
+  // ÁREA VERDADEDEX M (MESTRE)
+  if (currentUser.type === 'mestre' && currentArea === 'Verdadedex M') {
+    const VDD_PER_PAGE = 16
+    const speciesWithVerdades = Object.entries(pokedexVerdades)
+      .filter(([, verdades]) => Object.keys(verdades || {}).length > 0)
+      .map(([key, verdades]) => ({ key, displayName: key.replace(/_/g, ' '), verdades }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName))
+    const vddTotalPages = Math.max(1, Math.ceil(speciesWithVerdades.length / VDD_PER_PAGE))
+    const vddCurrentPage = Math.min(vddPage, vddTotalPages - 1)
+    const vddPageItems = speciesWithVerdades.slice(vddCurrentPage * VDD_PER_PAGE, (vddCurrentPage + 1) * VDD_PER_PAGE)
+
+    return (
+      <>
+        <div className={`${mainPageClass} relative`}>
+          {/* Background vddicon */}
+          <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'url(/vdd/vddicon.png)', backgroundSize: '140px', backgroundRepeat: 'repeat', opacity: 0.04 }} />
+          <div className="relative z-10">
+            {sidebarNav}
+            <div className={`${darkMode ? 'bg-gray-800/90' : 'bg-white/90'} shadow-lg sticky top-0 z-30 backdrop-blur-sm`}>
+              <div className="max-w-7xl mx-auto px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <img src="/vdd/vddicon.png" alt="Verdadedex" className="w-8 h-8" />
+                  <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Verdadedex</h1>
+                  <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{speciesWithVerdades.length} espécie{speciesWithVerdades.length !== 1 ? 's' : ''} com verdades</span>
+                </div>
+              </div>
+            </div>
+            <div className="max-w-7xl mx-auto px-4 py-6">
+              {speciesWithVerdades.length === 0 ? (
+                <div className={`text-center py-16 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <img src="/vdd/vddicon.png" alt="Verdadedex" className="w-16 h-16 mx-auto mb-4 opacity-40" />
+                  <p className="text-lg">Nenhuma verdade registrada ainda.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-4 gap-3 mb-6">
+                    {vddPageItems.map(({ key, displayName, verdades }) => {
+                      const isExpanded = !!vddExpanded[key]
+                      const verdadesList = Object.entries(verdades || {}).sort((a, b) => Number(a[0]) - Number(b[0]))
+                      return (
+                        <div key={key} className={`rounded-xl border-2 overflow-hidden shadow-sm ${darkMode ? 'bg-gray-800/80 border-gray-600' : 'bg-white/90 border-gray-200'}`}>
+                          {/* Header colapsável */}
+                          <button
+                            onClick={() => setVddExpanded(prev => ({ ...prev, [key]: !prev[key] }))}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 gap-2 transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <img src="/vdd/vddicon.png" alt="" className="w-5 h-5 flex-shrink-0 opacity-80" />
+                              <span className={`text-sm font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-800'}`}>{displayName}</span>
+                            </div>
+                            <span className={`text-[10px] flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>▼</span>
+                          </button>
+                          {/* Corpo expandido */}
+                          {isExpanded && (
+                            <div className={`border-t px-3 py-2 space-y-1.5 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                              {verdadesList.map(([id, v]) => (
+                                <div key={id} className={`p-2 rounded-lg text-xs ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                                  <p className={`leading-snug ${darkMode ? 'text-gray-100' : 'text-gray-700'}`}>{v.texto}</p>
+                                  <p className={`mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>— {v.autorNome}</p>
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => { setShowVerdadesPopup(displayName); setNewVerdadeText(''); setEditingVerdade(null); setEditingVerdadeText('') }}
+                                className="w-full mt-1 text-xs py-1.5 rounded-lg bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold transition-all"
+                              >
+                                Verdade Mestre
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* Paginação */}
+                  {vddTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-3">
+                      <button
+                        onClick={() => setVddPage(p => Math.max(0, p - 1))}
+                        disabled={vddCurrentPage === 0}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${vddCurrentPage === 0 ? 'opacity-40 cursor-not-allowed' : ''} ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      >← Anterior</button>
+                      <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {vddCurrentPage + 1} / {vddTotalPages}
+                      </span>
+                      <button
+                        onClick={() => setVddPage(p => Math.min(vddTotalPages - 1, p + 1))}
+                        disabled={vddCurrentPage === vddTotalPages - 1}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${vddCurrentPage === vddTotalPages - 1 ? 'opacity-40 cursor-not-allowed' : ''} ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      >Próxima →</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          {pokezapPanel}{pokeAgendaPanel}
+          {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        </div>
+        {/* Popup de Verdades */}
+        {showVerdadesPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => { setShowVerdadesPopup(null); setEditingVerdade(null); setNewVerdadeText(''); setEditingVerdadeText('') }}>
+            <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'} rounded-2xl shadow-2xl w-full max-w-md p-5`} onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <img src="/vdd/vddicon.png" alt="Verdades" className="w-5 h-5" />
+                  <h3 className="text-lg font-bold">Verdades — {showVerdadesPopup}</h3>
+                </div>
+                <button onClick={() => { setShowVerdadesPopup(null); setEditingVerdade(null); setNewVerdadeText(''); setEditingVerdadeText('') }} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              </div>
+              <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+                {(() => {
+                  const verdadesObj = pokedexVerdades[sanitizedSpeciesKey(showVerdadesPopup)] || {}
+                  const verdadesList = Object.entries(verdadesObj).sort((a, b) => Number(a[0]) - Number(b[0]))
+                  if (verdadesList.length === 0) return <p className={`text-sm text-center ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma verdade ainda.</p>
+                  return verdadesList.map(([id, v]) => (
+                    <div key={id} className={`p-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                      {editingVerdade?.id === id ? (
+                        <div className="flex gap-2">
+                          <input value={editingVerdadeText} onChange={e => setEditingVerdadeText(e.target.value)} className={`flex-1 text-sm px-2 py-1 rounded border ${darkMode ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-300'}`} onKeyDown={e => { if (e.key === 'Enter') saveEditVerdade() }} autoFocus />
+                          <button onClick={() => saveEditVerdade()} className="text-green-500 hover:text-green-400"><Check size={16} /></button>
+                          <button onClick={() => { setEditingVerdade(null); setEditingVerdadeText('') }} className="text-gray-400 hover:text-gray-300"><X size={16} /></button>
+                        </div>
+                      ) : (
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="text-sm leading-snug">{v.texto}</p>
+                            <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>— {v.autorNome}</p>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <button onClick={() => { setEditingVerdade({ species: showVerdadesPopup, id }); setEditingVerdadeText(v.texto) }} className="text-blue-400 hover:text-blue-300"><Pencil size={14} /></button>
+                            <button onClick={() => deleteVerdade(showVerdadesPopup, id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                })()}
+              </div>
+              <div className="flex gap-2">
+                <input value={newVerdadeText} onChange={e => setNewVerdadeText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addVerdade(showVerdadesPopup) }} placeholder="Nova verdade..." className={`flex-1 text-sm px-3 py-2 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300'}`} />
+                <button onClick={() => addVerdade(showVerdadesPopup)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold">Adicionar</button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     )
   }
@@ -37638,12 +37965,12 @@ function App() {
                   />
                 </div>
 
-                {/* Filtro de Tipo */}
+                {/* Filtro de Tipo + Toggle Verdades */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <label className={`font-semibold text-sm sm:text-base ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     Filtrar por tipo:
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <select
                       value={pokedexTypeFilter}
                       onChange={e => setPokedexTypeFilter(e.target.value)}
@@ -37654,11 +37981,19 @@ function App() {
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
-                    {(pokedexSearchQuery || pokedexTypeFilter) && (
+                    <button
+                      onClick={() => setPokedexVerdadesFilter(prev => !prev)}
+                      className={`px-3 py-2 rounded-lg text-sm sm:text-base font-semibold border-2 transition-all ${pokedexVerdadesFilter ? (darkMode ? 'bg-yellow-600 border-yellow-500 text-white' : 'bg-yellow-400 border-yellow-500 text-gray-900') : (darkMode ? 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50')}`}
+                      title="Mostrar apenas Pokémon com verdades registradas"
+                    >
+                      Verdades
+                    </button>
+                    {(pokedexSearchQuery || pokedexTypeFilter || pokedexVerdadesFilter) && (
                       <button
                         onClick={() => {
                           setPokedexSearchQuery('')
                           setPokedexTypeFilter('')
+                          setPokedexVerdadesFilter(false)
                         }}
                         className={`px-3 py-2 rounded-lg text-sm sm:text-base ${darkMode ? 'bg-red-600 hover:bg-red-700' : 'bg-red-500 hover:bg-red-600'} text-white font-semibold`}
                       >
@@ -37681,6 +38016,13 @@ function App() {
                   // Filtro de pesquisa por espécie
                   const matchesSearch = !pokedexSearchQuery ||
                     entry.species.toLowerCase().includes(pokedexSearchQuery.toLowerCase())
+
+                  // Filtro de verdades
+                  if (pokedexVerdadesFilter) {
+                    const key = sanitizedSpeciesKey(entry.species)
+                    const verdades = pokedexVerdades[key] || {}
+                    if (Object.keys(verdades).length === 0) return false
+                  }
 
                   // Filtro de tipo
                   if (!pokedexTypeFilter) return matchesSearch
@@ -46143,7 +46485,7 @@ function App() {
 
                     {/* Tokens da camada MAPA (visível para todos, embaixo de tudo) */}
                     {vttMapTokens.map(token => (
-                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: 1 }}>
+                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: vttContextMenuToken === token.id ? 1000 : 1 }}>
                         <div style={{ width: '100%', height: '100%', cursor: 'default', border: '2px solid #b45309', borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
                           {token.image ? (
                             <img src={token.image} alt={token.name} className="w-full h-full object-cover"
@@ -46157,10 +46499,10 @@ function App() {
 
                     {/* Tokens da camada de JOGADORES (visível para todos) */}
                     {vttTokens.map(token => (
-                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: 3 }}>
+                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: vttContextMenuToken === token.id ? 1000 : 3 }}>
                         <div
                           onMouseDown={(e) => { if (startToolFromToken(token, e)) return; if (vttScanMode && (token.pokemonId || token.npcId)) { e.stopPropagation(); handleVttScanToken(token); return } if (vttCaptureMode && token.npcType === 'pokemon' && token.npcId) { e.stopPropagation(); handleVttCaptureToken(token); return } handleVttTokenClick(token.id, 'tokens'); handleTokenMouseDown(token.id, 'tokens', e) }}
-                          onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); if (selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
+                          onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); const _permKeyCtx = getTokenPermKey(token); const _canMenu = currentUser?.type === 'mestre' || token.owner === currentUser?.username || vttTokenPermissions[_permKeyCtx]?.includes(currentUser?.username); if (_canMenu && selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
                           style={{
                             width: '100%', height: '100%',
                             cursor: vttCaptureMode || vttScanMode ? 'inherit' : token.owner === currentUser.username ? 'move' : 'default',
@@ -46188,7 +46530,13 @@ function App() {
                           if (!pkm || !validMoves.length) return null
                           return (
                             <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '150px', maxWidth: '190px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
-                              <div style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.name}</div>
+                              <div style={{ marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{token.name}</span>
+                                {currentUser?.type === 'mestre' && <button onMouseDown={e => e.stopPropagation()} onClick={() => setVttPermMenuToken(prev => prev === token.id ? null : token.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: vttPermMenuToken === token.id ? '#facc15' : '#6b7280', fontSize: '11px', padding: '0', lineHeight: 1, flexShrink: 0 }} title="Permissões">🔑</button>}
+                              </div>
+                              {currentUser?.type === 'mestre' && vttPermMenuToken === token.id && <div style={{ marginTop: '4px' }}><div style={{ color: '#9ca3af', fontSize: '9px', marginBottom: '3px' }}>Permissões</div>{users.filter(u => u.type === 'treinador').map(u => { const _pk = getTokenPermKey(token); const _checked = vttTokenPermissions[_pk]?.includes(u.username) || false; return (<label key={u.username} onMouseDown={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', marginBottom: '2px' }}><input type="checkbox" checked={_checked} onChange={e => { const _k = getTokenPermKey(token); const _cur = vttTokenPermissions[_k] || []; const _upd = e.target.checked ? [..._cur, u.username] : _cur.filter(n => n !== u.username); setVttTokenPermissions(prev => ({ ...prev, [_k]: _upd })) }} style={{ width: '10px', height: '10px', cursor: 'pointer' }} /><span style={{ color: '#e5e7eb', fontSize: '10px' }}>{u.username}</span></label>) })}</div>}
+                            </div>
                               {validMoves.map((move, idx) => {
                                 const moveName = typeof move === 'string' ? move : (move.nome || move.name || '')
                                 if (!moveName) return null
@@ -46200,6 +46548,7 @@ function App() {
                                   </div>
                                 )
                               })}
+                              {(() => { const desloc = pkm.displacement || POKEMON_DESLOCAMENTO_MAP?.[pkm.species || pkm.name]; if (!desloc) return null; const LABELS = { terrestre: 'Ter', nadar: 'Nad', voar: 'Voa', cavar: 'Cav', submerso: 'Sub' }; const parts = Object.entries(LABELS).filter(([k]) => desloc[k] !== '' && desloc[k] != null).map(([k, l]) => `${l} ${desloc[k]}`); if (!parts.length) return null; return <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{parts.join(' · ')}</div> })()}
                             </div>
                           )
                         })()}
@@ -46269,11 +46618,18 @@ function App() {
                           return (
                             <>
                               <div onMouseDown={(e) => e.stopPropagation()} className="absolute" style={{ left: `${token.size + 6}px`, top: '0px', minWidth: '130px', background: 'rgba(15,15,30,0.93)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '6px 7px', zIndex: 20, boxShadow: '0 4px 14px rgba(0,0,0,0.7)' }}>
-                                <div style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</div>
+                                <div style={{ marginBottom: '4px', paddingBottom: '3px', borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <span style={{ color: '#facc15', fontWeight: 'bold', fontSize: '11px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName}</span>
+                                    {currentUser?.type === 'mestre' && <button onMouseDown={e => e.stopPropagation()} onClick={() => setVttPermMenuToken(prev => prev === token.id ? null : token.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: vttPermMenuToken === token.id ? '#facc15' : '#6b7280', fontSize: '11px', padding: '0', lineHeight: 1, flexShrink: 0 }} title="Permissões">🔑</button>}
+                                  </div>
+                                  {currentUser?.type === 'mestre' && vttPermMenuToken === token.id && <div style={{ marginTop: '4px' }}><div style={{ color: '#9ca3af', fontSize: '9px', marginBottom: '3px' }}>Permissões</div>{users.filter(u => u.type === 'treinador').map(u => { const _pk = getTokenPermKey(token); const _checked = vttTokenPermissions[_pk]?.includes(u.username) || false; return (<label key={u.username} onMouseDown={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', marginBottom: '2px' }}><input type="checkbox" checked={_checked} onChange={e => { const _k = getTokenPermKey(token); const _cur = vttTokenPermissions[_k] || []; const _upd = e.target.checked ? [..._cur, u.username] : _cur.filter(n => n !== u.username); setVttTokenPermissions(prev => ({ ...prev, [_k]: _upd })) }} style={{ width: '10px', height: '10px', cursor: 'pointer' }} /><span style={{ color: '#e5e7eb', fontSize: '10px' }}>{u.username}</span></label>) })}</div>}
+                                </div>
                                 <div style={{ display: 'flex', gap: '3px' }}>
                                   <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { const d20Roll = Math.floor(Math.random() * 20) + 1; const finalResult = d20Roll + precisaoStage; let details = `1d20 = ${d20Roll}`; if (precisaoStage !== 0) details += ` | Fase Precisão: ${precisaoStage >= 0 ? '+' : ''}${precisaoStage}`; const message = `🎲 Acurácia ${displayName}\n${details}\nTotal: ${finalResult}`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: currentUser.username, text: message, timestamp, isDiceRoll: true, diceResult: finalResult }) }} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Acu</button>
                                   <button onMouseDown={(e) => e.stopPropagation()} onClick={() => { const efArma = effectiveArmaForToken; let damageRoll, damageBonus, diceType; if (efArma) { if (trainerLevel >= 1 && trainerLevel <= 6) { diceType = '1d12+6'; damageRoll = Math.floor(Math.random() * 12) + 1; damageBonus = 6 } else if (trainerLevel >= 7 && trainerLevel <= 14) { diceType = '2d10+8'; const _a1 = Math.floor(Math.random() * 10) + 1; const _a2 = Math.floor(Math.random() * 10) + 1; damageRoll = _a1 + _a2; damageBonus = 8 } else { diceType = '3d10+12'; const _a1 = Math.floor(Math.random() * 10) + 1; const _a2 = Math.floor(Math.random() * 10) + 1; const _a3 = Math.floor(Math.random() * 10) + 1; damageRoll = _a1 + _a2 + _a3; damageBonus = 12 } } else { if (trainerLevel >= 1 && trainerLevel <= 6) { diceType = '1d10+4'; damageRoll = Math.floor(Math.random() * 10) + 1; damageBonus = 4 } else if (trainerLevel >= 7 && trainerLevel <= 14) { diceType = '1d12+6'; damageRoll = Math.floor(Math.random() * 12) + 1; damageBonus = 6 } else { diceType = '2d8+6'; const _a1 = Math.floor(Math.random() * 8) + 1; const _a2 = Math.floor(Math.random() * 8) + 1; damageRoll = _a1 + _a2; damageBonus = 6 } }; const totalDamage = damageRoll + damageBonus + ataqueTotal; const _uname = currentUser?.username || 'Treinador'; let attackMessage; if (!isOwnToken) { attackMessage = `${displayName} atacou!, causou ${totalDamage} de dano` } else { switch(_uname.toLowerCase()) { case 'alocin': attackMessage = `${_uname} atirou uma flecha e atingiu seu alvo, causou ${totalDamage} de dano`; break; case 'lila': attackMessage = `${_uname} deu um nome horrível para seu alvo, causou ${totalDamage} de dano`; break; case 'ludovic': attackMessage = `${_uname} atirou uma pedra envolta em papel e atingiu seu alvo, causou ${totalDamage} de dano`; break; case 'noryat': attackMessage = `${_uname} correu e deu uma voadora e atingiu seu alvo, causou ${totalDamage} de dano`; break; case 'pedro': attackMessage = `Treinador ${_uname} incendiou seu alvo, causou ${totalDamage} de dano`; break; default: attackMessage = `${_uname} atacou seu alvo, causou ${totalDamage} de dano` } }; let stageInfo = ataqueStage !== 0 ? ` [Fase ATQ: ${ataqueStage > 0 ? '+' : ''}${ataqueStage} → ${ataqueBase}→${ataqueTotal}]` : ''; const message = `⚔️ ${attackMessage}\n${diceType} = ${damageRoll} + ${damageBonus} + ${ataqueTotal} (Ataque Total)${stageInfo} = ${totalDamage}`; const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); addChatMessage({ username: currentUser.username, text: message, timestamp, isDiceRoll: true, diceResult: totalDamage }) }} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flex: 1 }}>Dano</button>
                                 </div>
+                                <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{(() => { const d = calculateDisplacement({ ataque: ataqueBase, defesa: baseDefesa, velocidade: baseVel }); return `Ter ${d.terrestre} · Nat ${d.natacao} · Sub ${d.subaquatico}` })()}</div>
                               </div>
                               <div onMouseDown={(e) => e.stopPropagation()} style={{ position: 'absolute', left: '-34px', top: '0px', display: 'flex', flexDirection: 'column', gap: '3px', zIndex: 20 }}>
                                 {[
