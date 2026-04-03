@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, RotateCw, RotateCcw, Settings2, Hand, Sigma, Dices, Check, Send, BookType, FileText, ClipboardCheck, Trophy, Target, Shuffle, Pencil, ListPlus, Save, Archive, MoveVertical, Menu, Gamepad2, TowerControl, MousePointer, Star } from 'lucide-react'
+import { Camera, Plus, Minus, Crown, X, Moon, Sun, User, Lock, Sword, Heart, Search, Trash2, Smile, BookOpenText, Zap, BookA, CircleDot, Webhook, Coins, Backpack, ArrowBigRightDash, ArrowBigLeftDash, Info, ChevronDown, ChevronUp, ChevronRight, Wrench, Sparkles, CornerLeftDown, CornerRightUp, LifeBuoy, BatteryCharging, ShieldPlus, Users, ShoppingBag, Package, BarChart3, ChevronLeft, BadgeHelp, Clover, Shell, Snowflake, Flame, Droplet, Edit, ArrowRightCircle, PlusCircle, HandMetal, MapPin, ArrowDownUp, Award, BookOpen, ListTree, RefreshCcw, RotateCw, RotateCcw, Settings2, Hand, Sigma, Dices, Check, Send, BookType, FileText, ClipboardCheck, Trophy, Target, Shuffle, Pencil, ListPlus, Save, Archive, MoveVertical, Menu, Gamepad2, TowerControl, MousePointer, Star, Circle, Square } from 'lucide-react'
 import AccountDataModal from './AccountDataModal'
 import JornadaNiaypeta from './JornadaNiaypeta'
 import pokedexData, { POKEMON_DIET_MAP } from './pokemonData'
@@ -4373,6 +4373,15 @@ function App() {
 
   // Estados para VTT (Virtual Tabletop)
   const [battleView, setBattleView] = useState('rolagens') // 'rolagens' ou 'mapa'
+  const [vttFloatingMenuPos, setVttFloatingMenuPos] = useState({ x: 20, y: 120 })
+  const vttFloatingMenuDragRef = useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 })
+  const vttTitleRef = useRef(null)
+  useEffect(() => {
+    if (battleView === 'mapa' && vttTitleRef.current) {
+      const rect = vttTitleRef.current.getBoundingClientRect()
+      setVttFloatingMenuPos({ x: rect.right + 16, y: rect.top })
+    }
+  }, [battleView])
   const [vttLocations, setVttLocations] = useState([]) // Array de localidades/mapas
   const [currentVttLocation, setCurrentVttLocation] = useState(null) // ID da localidade atual
   const [vttMapImage, setVttMapImage] = useState(null) // URL da imagem do mapa (deprecated, usar vttLocations)
@@ -4410,6 +4419,16 @@ function App() {
   const [vttRulerActive, setVttRulerActive] = useState(false) // Se a régua está ativa
   const [vttRulerStart, setVttRulerStart] = useState({ x: 0, y: 0 }) // Posição inicial da régua
   const [vttRulerEnd, setVttRulerEnd] = useState({ x: 0, y: 0 }) // Posição atual/final da régua
+  const [vttRulerWaypoints, setVttRulerWaypoints] = useState([]) // Waypoints intermediários da régua
+  const vttRulerActiveRef = useRef(false) // Ref síncrona para vttRulerActive (evita closure stale)
+  const vttRulerEndRef = useRef({ x: 0, y: 0 }) // Ref síncrona para vttRulerEnd
+  const [vttPathActive, setVttPathActive] = useState(false) // Modo de planejamento de rota (tecla W)
+  const [vttPathStart, setVttPathStart] = useState({ x: 0, y: 0 }) // Posição âncora (início da rota)
+  const [vttPathWaypoints, setVttPathWaypoints] = useState([]) // Waypoints da rota planejada
+  const [vttAnimatingToken, setVttAnimatingToken] = useState(null) // { id, layer } token animando célula a célula
+  const vttPathActiveRef = useRef(false) // Ref síncrona para vttPathActive
+  const vttPathCurrentRef = useRef({ x: 0, y: 0 }) // Ref síncrona para posição atual do token no path
+  const [vttPersistedRulers, setVttPersistedRulers] = useState([]) // Réguas persistidas com tecla E [{id, type, start, end, waypoints, owner}]
   const [vttSettingsOpen, setVttSettingsOpen] = useState(false) // Menu de configurações do canvas aberto/fechado
   const [vttTokenPanelOpen, setVttTokenPanelOpen] = useState(true) // Painel lateral de tokens aberto/fechado
   const [vttEditingToken, setVttEditingToken] = useState(null) // { id, layer } token sendo editado
@@ -16355,6 +16374,9 @@ function App() {
     event.preventDefault()
     event.stopPropagation()
 
+    // Bloquear arrasto durante animação
+    if (vttAnimatingToken && vttAnimatingToken.id === tokenId) return
+
     // Verificar permissões
     const tokens = layer === 'gm' ? vttGMTokens : layer === 'map' ? vttMapTokens : vttTokens
     const token = tokens.find(t => t.id === tokenId)
@@ -16389,10 +16411,12 @@ function App() {
     setSelectedToken(tokenId)
     setDraggingToken({ id: tokenId, layer, offsetX, offsetY, startX: tokenCenterX, startY: tokenCenterY })
     // Resetar régua ao iniciar novo arrasto
+    vttRulerActiveRef.current = false
     setVttRulerActive(false)
+    setVttRulerWaypoints([])
   }
 
-  // Função para ativar a régua com tecla "M" durante arrasto
+  // Função para ativar a régua com tecla "Q" durante arrasto
   const activateRuler = () => {
     // Só ativa a régua se estiver arrastando um token
     if (!draggingToken) return
@@ -16407,10 +16431,81 @@ function App() {
     const tokenCenterX = token.x + token.size / 2
     const tokenCenterY = token.y + token.size / 2
 
-    // Ativar régua a partir da posição inicial do token
+    // Ativar régua a partir da posição atual do token (não do início do drag)
+    const startPt = { x: tokenCenterX, y: tokenCenterY }
+    vttRulerActiveRef.current = true
+    vttRulerEndRef.current = startPt
     setVttRulerActive(true)
-    setVttRulerStart({ x: draggingToken.startX, y: draggingToken.startY })
-    setVttRulerEnd({ x: tokenCenterX, y: tokenCenterY })
+    setVttRulerStart(startPt)
+    setVttRulerEnd(startPt)
+    setVttRulerWaypoints([])
+  }
+
+  // Ativar modo de planejamento de rota com tecla W
+  const activatePath = () => {
+    if (!draggingToken) return
+    const tokens = draggingToken.layer === 'gm' ? vttGMTokens : draggingToken.layer === 'map' ? vttMapTokens : vttTokens
+    const token = tokens.find(t => t.id === draggingToken.id)
+    if (!token) return
+    const pathStart = { x: token.x, y: token.y }
+    vttPathActiveRef.current = true
+    vttPathCurrentRef.current = pathStart
+    setVttPathActive(true)
+    setVttPathStart(pathStart)
+    setVttPathWaypoints([])
+  }
+
+  // Calcular caminho célula a célula entre uma série de pontos
+  const computeCellPath = (points, cellW, cellH) => {
+    const steps = []
+    for (let i = 0; i < points.length - 1; i++) {
+      const from = points[i]
+      const to = points[i + 1]
+      let col = Math.round(from.x / cellW)
+      let row = Math.round(from.y / cellH)
+      const toCol = Math.round(to.x / cellW)
+      const toRow = Math.round(to.y / cellH)
+      while (col !== toCol || row !== toRow) {
+        const dCol = toCol - col
+        const dRow = toRow - row
+        col += dCol !== 0 ? Math.sign(dCol) : 0
+        row += dRow !== 0 ? Math.sign(dRow) : 0
+        steps.push({ x: col * cellW, y: row * cellH })
+      }
+    }
+    return steps
+  }
+
+  // Iniciar animação célula a célula ao longo do caminho planejado
+  const startPathAnimation = (tokenId, layer, allPoints, initialTokens) => {
+    const cellW = vttCanvasWidth / vttGridColumns
+    const cellH = vttCanvasHeight / vttGridRows
+    const steps = computeCellPath(allPoints, cellW, cellH)
+    if (steps.length === 0) {
+      setVttAnimatingToken(null)
+      return
+    }
+    let currentTokens = [...initialTokens]
+    let stepIndex = 0
+    const intervalId = setInterval(() => {
+      if (stepIndex >= steps.length) {
+        clearInterval(intervalId)
+        setVttAnimatingToken(null)
+        return
+      }
+      const pos = steps[stepIndex]
+      currentTokens = currentTokens.map(t => t.id === tokenId ? { ...t, x: pos.x, y: pos.y } : t)
+      if (layer === 'gm') {
+        setVttGMTokens(currentTokens)
+      } else if (layer === 'map') {
+        setVttMapTokens(currentTokens)
+        if (useFirebase) saveToFirebase('vtt/live/mapTokens', currentTokens)
+      } else {
+        setVttTokens(currentTokens)
+        if (useFirebase) saveToFirebase('vtt/live/tokens', currentTokens)
+      }
+      stepIndex++
+    }, 350)
   }
 
   // Função para mover o token durante o arrasto
@@ -16450,22 +16545,53 @@ function App() {
       ))
     }
 
+    // Rastrear posição atual do token para o path (tecla W)
+    if (vttPathActiveRef.current) {
+      vttPathCurrentRef.current = { x: newX, y: newY }
+    }
+
     // Atualizar posição final da régua se estiver ativa
     if (vttRulerActive) {
       // Pegar o tamanho do token para calcular o centro
       const tokens = draggingToken.layer === 'gm' ? vttGMTokens : draggingToken.layer === 'map' ? vttMapTokens : vttTokens
       const token = tokens.find(t => t.id === draggingToken.id)
       const tokenSize = token ? token.size : vttGridSize
-      setVttRulerEnd({ x: newX + tokenSize / 2, y: newY + tokenSize / 2 })
+      const newEnd = { x: newX + tokenSize / 2, y: newY + tokenSize / 2 }
+      vttRulerEndRef.current = newEnd
+      setVttRulerEnd(newEnd)
     }
   }
 
   // Função para finalizar o arrasto
   const handleTokenMouseUp = () => {
+    // Modo de rota animada (tecla W): disparar animação célula a célula
+    if (vttPathActiveRef.current && draggingToken) {
+      const { id, layer } = draggingToken
+      const finalPos = { x: vttPathCurrentRef.current.x, y: vttPathCurrentRef.current.y }
+      const allPoints = [vttPathStart, ...vttPathWaypoints, finalPos]
+      // Obter tokens atuais da camada correta
+      const initialTokens = layer === 'gm' ? vttGMTokens : layer === 'map' ? vttMapTokens : vttTokens
+      // Resetar o token para a posição inicial (âncora) antes de animar
+      const resetFn = prev => prev.map(t => t.id === id ? { ...t, x: vttPathStart.x, y: vttPathStart.y } : t)
+      if (layer === 'gm') setVttGMTokens(resetFn)
+      else if (layer === 'map') setVttMapTokens(resetFn)
+      else setVttTokens(resetFn)
+      // Marcar token como animando e iniciar
+      setVttAnimatingToken({ id, layer })
+      // Usar setTimeout 0 para garantir que o reset de posição seja renderizado antes
+      setTimeout(() => startPathAnimation(id, layer, allPoints, initialTokens.map(t => t.id === id ? { ...t, x: vttPathStart.x, y: vttPathStart.y } : t)), 0)
+    }
+
     setDraggingToken(null)
     setVttDraggingMap(false)
-    // Desativar a régua quando soltar o token
+    // Desativar régua
+    vttRulerActiveRef.current = false
     setVttRulerActive(false)
+    setVttRulerWaypoints([])
+    // Desativar path
+    vttPathActiveRef.current = false
+    setVttPathActive(false)
+    setVttPathWaypoints([])
   }
 
   // Abrir modal de edição de token
@@ -16674,6 +16800,14 @@ function App() {
     set(ref(database, `vtt/drawingStrokes/${key}`), null)
   }
 
+  const deletePersistedRuler = (rulerId) => {
+    setVttPersistedRulers(prev => prev.filter(r => r.id !== rulerId))
+    if (useFirebase) {
+      const key = rulerId.replace(/[.#$[\]/]/g, '_')
+      set(ref(database, `vtt/persistedRulers/${key}`), null)
+    }
+  }
+
   // MouseDown no canvas quando uma ferramenta está ativa
   const distToSegment = (p, a, b) => {
     const dx = b.x - a.x, dy = b.y - a.y
@@ -16815,10 +16949,19 @@ function App() {
       for (let i = visibleStrokes.length - 1; i >= 0; i--) {
         const stroke = visibleStrokes[i]
         const hitRadius = Math.max((stroke.width || 3) / 2 + 6, 8) / vttViewportZoom
-        const pts = stroke.points
         let hit = false
-        for (let j = 0; j < pts.length - 1; j++) {
-          if (distToSegment(pos, pts[j], pts[j + 1]) <= hitRadius) { hit = true; break }
+        if (stroke.shape === 'circle') {
+          const dist = Math.hypot(pos.x - stroke.cx, pos.y - stroke.cy)
+          hit = dist <= stroke.r + hitRadius
+        } else if (stroke.shape === 'rect') {
+          const rx1 = Math.min(stroke.x1, stroke.x2), rx2 = Math.max(stroke.x1, stroke.x2)
+          const ry1 = Math.min(stroke.y1, stroke.y2), ry2 = Math.max(stroke.y1, stroke.y2)
+          hit = pos.x >= rx1 - hitRadius && pos.x <= rx2 + hitRadius && pos.y >= ry1 - hitRadius && pos.y <= ry2 + hitRadius
+        } else {
+          const pts = stroke.points || []
+          for (let j = 0; j < pts.length - 1; j++) {
+            if (distToSegment(pos, pts[j], pts[j + 1]) <= hitRadius) { hit = true; break }
+          }
         }
         if (hit) {
           setVttSelectedStroke(stroke.id)
@@ -16870,7 +17013,14 @@ function App() {
       if (curDx !== 0 || curDy !== 0) {
         setVttDrawingStrokes(prev => prev.map(s => {
           if (s.id !== id) return s
-          const moved = { ...s, points: s.points.map(p => ({ x: p.x + curDx, y: p.y + curDy })) }
+          let moved
+          if (s.shape === 'circle') {
+            moved = { ...s, cx: s.cx + curDx, cy: s.cy + curDy }
+          } else if (s.shape === 'rect') {
+            moved = { ...s, x1: s.x1 + curDx, y1: s.y1 + curDy, x2: s.x2 + curDx, y2: s.y2 + curDy }
+          } else {
+            moved = { ...s, points: s.points.map(p => ({ x: p.x + curDx, y: p.y + curDy })) }
+          }
           saveVttStroke(moved)
           return moved
         }))
@@ -16885,6 +17035,19 @@ function App() {
         saveVttStroke(vttCurrentStroke)
       }
       setVttCurrentStroke(null)
+      clearLiveTool()
+    } else if ((vttActiveTool === 'pincel-circulo' || vttActiveTool === 'pincel-quadrado') && vttToolDrawing && vttToolStart && vttToolEnd) {
+      const layer = currentUser.type === 'mestre' ? vttCurrentLayer : 'players'
+      const strokeId = `stroke-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+      let stroke = null
+      if (vttActiveTool === 'pincel-circulo') {
+        const r = Math.hypot(vttToolEnd.x - vttToolStart.x, vttToolEnd.y - vttToolStart.y)
+        if (r > 3) stroke = { id: strokeId, owner: currentUser.username, layer, color: vttPincelColor, width: vttPincelWidth, shape: 'circle', cx: vttToolStart.x, cy: vttToolStart.y, r }
+      } else {
+        const dx = Math.abs(vttToolEnd.x - vttToolStart.x), dy = Math.abs(vttToolEnd.y - vttToolStart.y)
+        if (dx > 3 || dy > 3) stroke = { id: strokeId, owner: currentUser.username, layer, color: vttPincelColor, width: vttPincelWidth, shape: 'rect', x1: vttToolStart.x, y1: vttToolStart.y, x2: vttToolEnd.x, y2: vttToolEnd.y }
+      }
+      if (stroke) { setVttDrawingStrokes(prev => [...prev, stroke]); saveVttStroke(stroke) }
       clearLiveTool()
     } else if (vttToolDrawing) {
       clearLiveTool()
@@ -16992,13 +17155,25 @@ function App() {
     setVttViewportOffset({ x: 0, y: 0 })
   }
 
-  // Adicionar listeners globais para drag e tecla M (régua)
+  // Adicionar listeners globais para drag e tecla Q (régua com waypoints)
   useEffect(() => {
     if (draggingToken) {
-      // Handler para tecla M ativar a régua
+      // Handler para teclas Q (régua) e W (rota animada)
       const handleKeyDown = (event) => {
-        if (event.key === 'm' || event.key === 'M') {
-          activateRuler()
+        if (event.key === 'q' || event.key === 'Q') {
+          if (!vttRulerActiveRef.current) {
+            activateRuler()
+          } else {
+            setVttRulerWaypoints(prev => [...prev, { x: vttRulerEndRef.current.x, y: vttRulerEndRef.current.y }])
+          }
+        }
+        if (event.key === 'w' || event.key === 'W') {
+          if (!vttPathActiveRef.current) {
+            activatePath()
+          } else {
+            // W seguintes adicionam waypoint na posição atual do token
+            setVttPathWaypoints(prev => [...prev, { x: vttPathCurrentRef.current.x, y: vttPathCurrentRef.current.y }])
+          }
         }
       }
 
@@ -17026,6 +17201,39 @@ function App() {
     window.addEventListener('keydown', handleDelKey)
     return () => window.removeEventListener('keydown', handleDelKey)
   }, [vttSelectedStroke, vttDrawingStrokes, currentUser])
+
+  // Tecla E — persistir régua ativa no mapa (clique direito para remover)
+  const VTT_RULER_PALETTE = [
+    '#ff4444','#ff7700','#ffcc00','#aaff00','#44ff44',
+    '#00ff99','#00ffff','#00aaff','#4455ff','#8800ff',
+    '#cc00ff','#ff00cc','#ff0077','#ff8888','#ffbb77',
+    '#ffff44','#bbff44','#44ffbb','#44bbff','#bb77ff',
+    '#ff77bb','#00ff66','#0077ff','#ff5500','#ff00ff',
+    '#88ffff','#ff6688','#66ff88','#8888ff','#ffaa44',
+  ]
+  useEffect(() => {
+    const handleEKey = (e) => {
+      if (e.key !== 'e' && e.key !== 'E') return
+      let rulerBase = null
+      if (vttRulerActive && vttRulerStart && vttRulerEnd) {
+        rulerBase = { id: `ruler-${Date.now()}`, type: 'regua-q', start: vttRulerStart, end: vttRulerEnd, waypoints: vttRulerWaypoints, owner: currentUser?.username || '' }
+      } else if (vttToolDrawing && (vttActiveTool === 'regua' || vttActiveTool === 'regua-raio') && vttToolStart && vttToolEnd) {
+        rulerBase = { id: `ruler-${Date.now()}`, type: vttActiveTool, start: vttToolStart, end: vttToolEnd, waypoints: [], owner: currentUser?.username || '' }
+      }
+      if (!rulerBase) return
+      setVttPersistedRulers(prev => {
+        const color = VTT_RULER_PALETTE[prev.length % VTT_RULER_PALETTE.length]
+        const ruler = { ...rulerBase, color }
+        if (useFirebase) {
+          const key = ruler.id.replace(/[.#$[\]/]/g, '_')
+          set(ref(database, `vtt/persistedRulers/${key}`), ruler)
+        }
+        return [...prev, ruler]
+      })
+    }
+    window.addEventListener('keydown', handleEKey)
+    return () => window.removeEventListener('keydown', handleEKey)
+  }, [vttRulerActive, vttRulerStart, vttRulerEnd, vttRulerWaypoints, vttToolDrawing, vttActiveTool, vttToolStart, vttToolEnd, currentUser])
 
   // Scroll automático para última mensagem do chat (apenas dentro do container)
   useEffect(() => {
@@ -17153,6 +17361,15 @@ function App() {
     return unsub
   }, [])
 
+  // Sincronizar réguas persistidas em tempo real (todos os clientes)
+  useEffect(() => {
+    if (!useFirebase) return
+    const unsub = subscribeToFirebase('vtt/persistedRulers', (data) => {
+      setVttPersistedRulers(data ? Object.values(data) : [])
+    })
+    return unsub
+  }, [])
+
   // Sincronizar permissões de tokens VTT em tempo real (todos os clientes)
   useEffect(() => {
     if (!useFirebase) return
@@ -17183,7 +17400,7 @@ function App() {
     return () => applyVttCursor(null)
   }, [vttCaptureMode, vttCapturePokeball, vttScanMode, classes])
 
-  // Esc cancela modos VTT (captura e escaneamento)
+  // Esc cancela modos VTT (captura, escaneamento e ferramenta ativa)
   useEffect(() => {
     const handleEscVtt = (e) => {
       if (e.key !== 'Escape') return
@@ -17192,10 +17409,17 @@ function App() {
         setVttCapturePokeball(null)
         setVttScanMode(false)
       }
+      if (vttActiveTool) {
+        setVttActiveTool(null)
+        setVttToolDrawing(false)
+        setVttToolStart(null)
+        setVttToolEnd(null)
+        clearLiveTool()
+      }
     }
     window.addEventListener('keydown', handleEscVtt)
     return () => window.removeEventListener('keydown', handleEscVtt)
-  }, [vttCaptureMode, vttScanMode])
+  }, [vttCaptureMode, vttScanMode, vttActiveTool])
 
   // Listener de requisição de captura VTT (apenas mestre)
   const npcPokemonRef = useRef(npcPokemon)
@@ -25586,67 +25810,9 @@ function App() {
             <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-3 sm:p-5 md:p-8 mx-auto`} style={{ width: 'fit-content' }}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2">
                 <div className="flex items-center gap-2">
-                  <h3 className={`text-xl sm:text-2xl md:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  <h3 ref={vttTitleRef} className={`text-xl sm:text-2xl md:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                     Mapa de Batalha 👑
                   </h3>
-                  {/* Dropdown de Ferramentas */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setVttToolDropdownOpen(prev => !prev)}
-                      className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttActiveTool ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      title="Ferramentas de Desenho"
-                    >
-                      <Wrench size={16} />
-                      {vttActiveTool && <span className="text-xs">{vttActiveTool === 'pincel' ? 'Pincel' : vttActiveTool === 'regua' ? 'Régua' : vttActiveTool === 'coluna' ? 'Coluna' : 'Explosão'}</span>}
-                    </button>
-                    {vttToolDropdownOpen && (
-                      <div className={`absolute left-0 top-full mt-1 z-[200] rounded-xl shadow-2xl border p-2 min-w-[180px] ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
-                        <p className={`text-xs font-bold mb-2 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>FERRAMENTAS</p>
-                        {/* Pincel */}
-                        <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel' ? null : 'pincel'); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Pencil size={15} /> Pincel
-                        </button>
-                        {vttActiveTool === 'pincel' && (
-                          <div className="flex items-center gap-2 px-3 py-1 mb-1">
-                            <input type="color" value={vttPincelColor} onChange={e => setVttPincelColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 p-0" title="Cor" />
-                            <input type="range" min="1" max="20" value={vttPincelWidth} onChange={e => setVttPincelWidth(Number(e.target.value))} className="flex-1" title="Espessura" />
-                            <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{vttPincelWidth}px</span>
-                          </div>
-                        )}
-                        <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                        <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MEDIÇÃO</p>
-                        {/* Régua */}
-                        <button onClick={() => { setVttActiveTool(vttActiveTool === 'regua' ? null : 'regua'); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'regua' ? 'bg-yellow-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Sigma size={15} /> Régua
-                        </button>
-                        <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                        <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MARCADORES</p>
-                        {/* Coluna */}
-                        <button onClick={() => { setVttColunaInputVal(String(vttColunaThickness)); setVttColunaPopupOpen(true); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'coluna' ? 'bg-orange-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Target size={15} /> Coluna {vttActiveTool === 'coluna' && `(${vttColunaThickness}m)`}
-                        </button>
-                        {/* Explosão */}
-                        <button onClick={() => { setVttExplosaoInputVal(String(vttExplosaoRadius)); setVttExplosaoPopupOpen(true); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${vttActiveTool === 'explosao' ? 'bg-red-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Zap size={15} /> Explosão {vttActiveTool === 'explosao' && `(${vttExplosaoRadius}m)`}
-                        </button>
-                        {vttActiveTool && (
-                          <>
-                            <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                            <button onClick={() => { setVttActiveTool(null); setVttToolDropdownOpen(false) }}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-red-400 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                              <X size={15} /> Desativar ferramenta
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {vttToolDropdownOpen && <div className="fixed inset-0 z-[199]" onClick={() => setVttToolDropdownOpen(false)} />}
-                  </div>
-
                 </div>
                 <div className="flex gap-1.5 sm:gap-3">
                   <button
@@ -26063,72 +26229,198 @@ function App() {
                     )
                   })()}
 
-                  {/* Régua de Medição */}
+                  {/* Régua de Medição com Waypoints */}
                   {vttRulerActive && (() => {
                     const cellWidth = vttCanvasWidth / vttGridColumns
                     const cellHeight = vttCanvasHeight / vttGridRows
-                    // Calcular distância em pixels
-                    const dx = vttRulerEnd.x - vttRulerStart.x
-                    const dy = vttRulerEnd.y - vttRulerStart.y
-                    const distancePixels = Math.sqrt(dx * dx + dy * dy)
-                    // Converter para metros (1 quadrado = 1 metro)
                     const avgCellSize = (cellWidth + cellHeight) / 2
-                    const distanceMeters = distancePixels / avgCellSize
-                    // Posição do texto (meio da linha)
-                    const midX = (vttRulerStart.x + vttRulerEnd.x) / 2
-                    const midY = (vttRulerStart.y + vttRulerEnd.y) / 2
+                    // Caminho completo: início → waypoints → fim
+                    const allPoints = [vttRulerStart, ...vttRulerWaypoints, vttRulerEnd]
+                    // Calcular distância total acumulada
+                    let totalPixels = 0
+                    for (let i = 0; i < allPoints.length - 1; i++) {
+                      const pdx = allPoints[i+1].x - allPoints[i].x
+                      const pdy = allPoints[i+1].y - allPoints[i].y
+                      totalPixels += Math.sqrt(pdx*pdx + pdy*pdy)
+                    }
+                    const totalMeters = totalPixels / avgCellSize
                     return (
                       <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1000 }}>
-                        {/* Linha da régua */}
-                        <line
-                          x1={vttRulerStart.x}
-                          y1={vttRulerStart.y}
-                          x2={vttRulerEnd.x}
-                          y2={vttRulerEnd.y}
-                          stroke="#ffcc00"
-                          strokeWidth="3"
-                          strokeDasharray="8,4"
-                        />
+                        {/* Segmentos da régua */}
+                        {allPoints.slice(0, -1).map((p, i) => {
+                          const next = allPoints[i+1]
+                          const sdx = next.x - p.x
+                          const sdy = next.y - p.y
+                          const segPixels = Math.sqrt(sdx*sdx + sdy*sdy)
+                          const segMeters = segPixels / avgCellSize
+                          const lmX = (p.x + next.x) / 2
+                          const lmY = (p.y + next.y) / 2
+                          return (
+                            <g key={i}>
+                              <line x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke="#ffcc00" strokeWidth="3" strokeDasharray="8,4" />
+                              {segPixels > 20 && (
+                                <>
+                                  <rect x={lmX - 28} y={lmY - 12} width="56" height="22" rx="3" fill="rgba(0,0,0,0.75)" />
+                                  <text x={lmX} y={lmY + 5} textAnchor="middle" fill="#ffcc00" fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>{segMeters.toFixed(1)}m</text>
+                                </>
+                              )}
+                            </g>
+                          )
+                        })}
                         {/* Círculo no início */}
-                        <circle
-                          cx={vttRulerStart.x}
-                          cy={vttRulerStart.y}
-                          r="6"
-                          fill="#ffcc00"
-                          stroke="#000"
-                          strokeWidth="2"
-                        />
+                        <circle cx={vttRulerStart.x} cy={vttRulerStart.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                        {/* Círculos nos waypoints */}
+                        {vttRulerWaypoints.map((wp, i) => (
+                          <circle key={i} cx={wp.x} cy={wp.y} r="5" fill="#ff8800" stroke="#000" strokeWidth="2" />
+                        ))}
                         {/* Círculo no fim */}
-                        <circle
-                          cx={vttRulerEnd.x}
-                          cy={vttRulerEnd.y}
-                          r="6"
-                          fill="#ffcc00"
-                          stroke="#000"
-                          strokeWidth="2"
-                        />
-                        {/* Fundo do texto */}
-                        <rect
-                          x={midX - 35}
-                          y={midY - 14}
-                          width="70"
-                          height="28"
-                          rx="4"
-                          fill="rgba(0,0,0,0.8)"
-                        />
-                        {/* Texto com distância */}
-                        <text
-                          x={midX}
-                          y={midY + 5}
-                          textAnchor="middle"
-                          fill="#ffcc00"
-                          fontSize="16"
-                          fontWeight="bold"
-                          style={{ userSelect: 'none' }}
-                        >
-                          {distanceMeters.toFixed(1)}m
-                        </text>
+                        <circle cx={vttRulerEnd.x} cy={vttRulerEnd.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                        {/* Total acumulado no fim (só se há waypoints) */}
+                        {vttRulerWaypoints.length > 0 && (
+                          <>
+                            <rect x={vttRulerEnd.x + 10} y={vttRulerEnd.y - 22} width="74" height="22" rx="3" fill="rgba(0,0,0,0.85)" />
+                            <text x={vttRulerEnd.x + 47} y={vttRulerEnd.y - 5} textAnchor="middle" fill="#ff8800" fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>Total: {totalMeters.toFixed(1)}m</text>
+                          </>
+                        )}
                       </svg>
+                    )
+                  })()}
+
+                  {/* Réguas persistidas (tecla E) — clique direito para remover */}
+                  {vttPersistedRulers.length > 0 && (() => {
+                    const cellW = vttCanvasWidth / vttGridColumns
+                    const cellH = vttCanvasHeight / vttGridRows
+                    const avgCell = (cellW + cellH) / 2
+                    return (
+                      <svg className="absolute inset-0" style={{ width: vttCanvasWidth, height: vttCanvasHeight, zIndex: 998, pointerEvents: 'none' }}>
+                        {vttPersistedRulers.map(ruler => {
+                          const onRightClick = (e) => { e.preventDefault(); e.stopPropagation(); deletePersistedRuler(ruler.id) }
+                          const c = ruler.color || '#ffcc00'
+                          if (ruler.type === 'regua-q') {
+                            const allPts = [ruler.start, ...(ruler.waypoints || []), ruler.end]
+                            let totalPx = 0
+                            for (let i = 0; i < allPts.length - 1; i++) {
+                              const pdx = allPts[i+1].x - allPts[i].x, pdy = allPts[i+1].y - allPts[i].y
+                              totalPx += Math.sqrt(pdx*pdx + pdy*pdy)
+                            }
+                            const totalMeters = totalPx / avgCell
+                            return (
+                              <g key={ruler.id} style={{ pointerEvents: 'all', cursor: 'context-menu' }} onContextMenu={onRightClick}>
+                                {allPts.slice(0, -1).map((p, i) => {
+                                  const next = allPts[i+1]
+                                  const sdx = next.x - p.x, sdy = next.y - p.y
+                                  const segPx = Math.sqrt(sdx*sdx + sdy*sdy)
+                                  const lmX = (p.x + next.x) / 2, lmY = (p.y + next.y) / 2
+                                  return (
+                                    <g key={i}>
+                                      <line x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke="transparent" strokeWidth="12" />
+                                      <line x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke={c} strokeWidth="3" strokeDasharray="8,4" />
+                                      {segPx > 20 && (<>
+                                        <rect x={lmX - 28} y={lmY - 12} width="56" height="22" rx="3" fill="rgba(0,0,0,0.75)" />
+                                        <text x={lmX} y={lmY + 5} textAnchor="middle" fill={c} fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>{(segPx / avgCell).toFixed(1)}m</text>
+                                      </>)}
+                                    </g>
+                                  )
+                                })}
+                                <circle cx={ruler.start.x} cy={ruler.start.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                {(ruler.waypoints || []).map((wp, i) => <circle key={i} cx={wp.x} cy={wp.y} r="5" fill={c} stroke="#000" strokeWidth="2" />)}
+                                <circle cx={ruler.end.x} cy={ruler.end.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                {(ruler.waypoints || []).length > 0 && (<>
+                                  <rect x={ruler.end.x + 10} y={ruler.end.y - 22} width="74" height="22" rx="3" fill="rgba(0,0,0,0.85)" />
+                                  <text x={ruler.end.x + 47} y={ruler.end.y - 5} textAnchor="middle" fill={c} fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>Total: {totalMeters.toFixed(1)}m</text>
+                                </>)}
+                              </g>
+                            )
+                          }
+                          if (ruler.type === 'regua') {
+                            const dx = ruler.end.x - ruler.start.x, dy = ruler.end.y - ruler.start.y
+                            const dist = Math.sqrt(dx*dx + dy*dy)
+                            const meters = (dist / avgCell).toFixed(1)
+                            const mx = (ruler.start.x + ruler.end.x) / 2, my = (ruler.start.y + ruler.end.y) / 2
+                            return (
+                              <g key={ruler.id} style={{ pointerEvents: 'all', cursor: 'context-menu' }} onContextMenu={onRightClick}>
+                                <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke="transparent" strokeWidth="12" />
+                                <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke={c} strokeWidth="3" strokeDasharray="8,4" />
+                                <circle cx={ruler.start.x} cy={ruler.start.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                <circle cx={ruler.end.x} cy={ruler.end.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                <rect x={mx - 35} y={my - 14} width="70" height="28" rx="4" fill="rgba(0,0,0,0.8)" />
+                                <text x={mx} y={my + 5} textAnchor="middle" fill={c} fontSize="16" fontWeight="bold" style={{ userSelect: 'none' }}>{meters}m</text>
+                              </g>
+                            )
+                          }
+                          if (ruler.type === 'regua-raio') {
+                            const dx = ruler.end.x - ruler.start.x, dy = ruler.end.y - ruler.start.y
+                            const r = Math.sqrt(dx*dx + dy*dy)
+                            const meters = (r / avgCell).toFixed(1)
+                            return (
+                              <g key={ruler.id} style={{ pointerEvents: 'all', cursor: 'context-menu' }} onContextMenu={onRightClick}>
+                                <circle cx={ruler.start.x} cy={ruler.start.y} r={r} fill={c + '1a'} stroke={c} strokeWidth="2" strokeDasharray="10,5" />
+                                <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke="transparent" strokeWidth="12" />
+                                <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke={c} strokeWidth="2" strokeDasharray="6,3" />
+                                <circle cx={ruler.start.x} cy={ruler.start.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                <circle cx={ruler.end.x} cy={ruler.end.y} r="5" fill={c} stroke="#000" strokeWidth="2" />
+                                <rect x={ruler.end.x + 10} y={ruler.end.y - 14} width="64" height="24" rx="4" fill="rgba(0,0,0,0.8)" />
+                                <text x={ruler.end.x + 42} y={ruler.end.y + 4} textAnchor="middle" fill={c} fontSize="14" fontWeight="bold" style={{ userSelect: 'none' }}>r:{meters}m</text>
+                              </g>
+                            )
+                          }
+                          return null
+                        })}
+                      </svg>
+                    )
+                  })()}
+
+                  {/* Rota Planejada (tecla W) — âncora sólida + linha de caminho */}
+                  {vttPathActive && draggingToken && (() => {
+                    const tokens = draggingToken.layer === 'gm' ? vttGMTokens : draggingToken.layer === 'map' ? vttMapTokens : vttTokens
+                    const token = tokens.find(t => t.id === draggingToken.id)
+                    if (!token) return null
+                    const cellWidth = vttCanvasWidth / vttGridColumns
+                    const cellHeight = vttCanvasHeight / vttGridRows
+                    const avgCellSize = (cellWidth + cellHeight) / 2
+                    const curPos = vttPathCurrentRef.current
+                    const allPoints = [vttPathStart, ...vttPathWaypoints, curPos]
+                    // Calcular distância total planejada
+                    let totalPixels = 0
+                    for (let i = 0; i < allPoints.length - 1; i++) {
+                      const pdx = allPoints[i+1].x - allPoints[i].x
+                      const pdy = allPoints[i+1].y - allPoints[i].y
+                      totalPixels += Math.sqrt(pdx*pdx + pdy*pdy)
+                    }
+                    const totalMeters = totalPixels / avgCellSize
+                    const anchorCx = vttPathStart.x + token.size / 2
+                    const anchorCy = vttPathStart.y + token.size / 2
+                    // Converter pontos para centros de token
+                    const centerPoints = allPoints.map(p => ({ x: p.x + token.size / 2, y: p.y + token.size / 2 }))
+                    return (
+                      <>
+                        {/* Token âncora sólido na posição inicial */}
+                        <div style={{ position: 'absolute', left: vttPathStart.x, top: vttPathStart.y, width: token.size, height: token.size, zIndex: 998, borderRadius: '50%', border: '3px solid #22c55e', overflow: 'hidden', pointerEvents: 'none', boxShadow: '0 0 8px #22c55e' }}>
+                          {token.image
+                            ? <img src={token.image} alt={token.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${token.offsetY || 50}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
+                            : <div style={{ width: '100%', height: '100%', background: token.color || '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: token.size * 0.4, fontWeight: 'bold' }}>{token.name?.[0]?.toUpperCase() || '?'}</div>
+                          }
+                        </div>
+                        {/* SVG de linha de rota */}
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 999 }}>
+                          {/* Segmentos do caminho */}
+                          {centerPoints.slice(0, -1).map((p, i) => {
+                            const next = centerPoints[i+1]
+                            return <line key={i} x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke="#22c55e" strokeWidth="3" strokeDasharray="10,5" />
+                          })}
+                          {/* Círculo de origem */}
+                          <circle cx={anchorCx} cy={anchorCy} r="7" fill="#22c55e" stroke="#000" strokeWidth="2" />
+                          {/* Waypoints intermediários */}
+                          {vttPathWaypoints.map((wp, i) => (
+                            <circle key={i} cx={wp.x + token.size/2} cy={wp.y + token.size/2} r="5" fill="#f97316" stroke="#000" strokeWidth="2" />
+                          ))}
+                          {/* Cursor atual */}
+                          <circle cx={curPos.x + token.size/2} cy={curPos.y + token.size/2} r="6" fill="#22c55e" stroke="#000" strokeWidth="2" />
+                          {/* Distância total */}
+                          <rect x={curPos.x + token.size/2 + 10} y={curPos.y + token.size/2 - 22} width="74" height="22" rx="3" fill="rgba(0,0,0,0.85)" />
+                          <text x={curPos.x + token.size/2 + 47} y={curPos.y + token.size/2 - 5} textAnchor="middle" fill="#22c55e" fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>{totalMeters.toFixed(1)}m</text>
+                        </svg>
+                      </>
                     )
                   })()}
 
@@ -26145,15 +26437,37 @@ function App() {
                         {visibleStrokes.map(stroke => {
                           const dx = vttDraggingStroke?.id === stroke.id ? (vttDraggingStroke.curDx || 0) : 0
                           const dy = vttDraggingStroke?.id === stroke.id ? (vttDraggingStroke.curDy || 0) : 0
-                          const pts = stroke.points.map(p => `${p.x + dx},${p.y + dy}`).join(' ')
                           const isSelected = vttSelectedStroke === stroke.id
+                          const col = stroke.color || '#ff4444'
+                          const sw = stroke.width || 3
+                          if (stroke.shape === 'circle') {
+                            return (
+                              <g key={stroke.id}>
+                                <circle cx={stroke.cx + dx} cy={stroke.cy + dy} r={stroke.r} fill="none" stroke={col} strokeWidth={sw} />
+                                {isSelected && <circle cx={stroke.cx + dx} cy={stroke.cy + dy} r={stroke.r} fill="none" stroke="white" strokeWidth={sw + 4} strokeDasharray="6,4" style={{ opacity: 0.6 }} />}
+                              </g>
+                            )
+                          }
+                          if (stroke.shape === 'rect') {
+                            const rx = Math.min(stroke.x1, stroke.x2) + dx
+                            const ry = Math.min(stroke.y1, stroke.y2) + dy
+                            const rw = Math.abs(stroke.x2 - stroke.x1)
+                            const rh = Math.abs(stroke.y2 - stroke.y1)
+                            return (
+                              <g key={stroke.id}>
+                                <rect x={rx} y={ry} width={rw} height={rh} fill="none" stroke={col} strokeWidth={sw} />
+                                {isSelected && <rect x={rx} y={ry} width={rw} height={rh} fill="none" stroke="white" strokeWidth={sw + 4} strokeDasharray="6,4" style={{ opacity: 0.6 }} />}
+                              </g>
+                            )
+                          }
+                          const pts = (stroke.points || []).map(p => `${p.x + dx},${p.y + dy}`).join(' ')
                           return (
                             <g key={stroke.id}>
-                              <polyline points={pts} fill="none" stroke={stroke.color || '#ff4444'} strokeWidth={stroke.width || 3}
+                              <polyline points={pts} fill="none" stroke={col} strokeWidth={sw}
                                 strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}
                               />
                               {isSelected && (
-                                <polyline points={pts} fill="none" stroke="white" strokeWidth={(stroke.width || 3) + 4}
+                                <polyline points={pts} fill="none" stroke="white" strokeWidth={sw + 4}
                                   strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6,4"
                                   style={{ pointerEvents: 'none', opacity: 0.6 }}
                                 />
@@ -26171,6 +26485,17 @@ function App() {
                         )}
                         {/* Ferramenta ativa do usuário atual (régua, coluna, explosão) */}
                         {vttActiveTool && vttActiveTool !== 'pincel' && vttToolDrawing && vttToolStart && vttToolEnd && (() => {
+                          if (vttActiveTool === 'pincel-circulo') {
+                            const r = Math.hypot(vttToolEnd.x - vttToolStart.x, vttToolEnd.y - vttToolStart.y)
+                            return <circle cx={vttToolStart.x} cy={vttToolStart.y} r={r} fill="none" stroke={vttPincelColor} strokeWidth={vttPincelWidth} />
+                          }
+                          if (vttActiveTool === 'pincel-quadrado') {
+                            const rx = Math.min(vttToolStart.x, vttToolEnd.x)
+                            const ry = Math.min(vttToolStart.y, vttToolEnd.y)
+                            const rw = Math.abs(vttToolEnd.x - vttToolStart.x)
+                            const rh = Math.abs(vttToolEnd.y - vttToolStart.y)
+                            return <rect x={rx} y={ry} width={rw} height={rh} fill="none" stroke={vttPincelColor} strokeWidth={vttPincelWidth} />
+                          }
                           if (vttActiveTool === 'regua') {
                             const dx2 = vttToolEnd.x - vttToolStart.x
                             const dy2 = vttToolEnd.y - vttToolStart.y
@@ -26184,6 +26509,20 @@ function App() {
                               <circle cx={vttToolEnd.x} cy={vttToolEnd.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
                               <rect x={mx - 35} y={my - 14} width="70" height="28" rx="4" fill="rgba(0,0,0,0.8)" />
                               <text x={mx} y={my + 5} textAnchor="middle" fill="#ffcc00" fontSize="16" fontWeight="bold" style={{ userSelect: 'none' }}>{meters}m</text>
+                            </>)
+                          }
+                          if (vttActiveTool === 'regua-raio') {
+                            const dx2 = vttToolEnd.x - vttToolStart.x
+                            const dy2 = vttToolEnd.y - vttToolStart.y
+                            const r = Math.sqrt(dx2 * dx2 + dy2 * dy2)
+                            const meters = (r / avgCell).toFixed(1)
+                            return (<>
+                              <circle cx={vttToolStart.x} cy={vttToolStart.y} r={r} fill="rgba(255,204,0,0.1)" stroke="#ffcc00" strokeWidth="2" strokeDasharray="10,5" />
+                              <line x1={vttToolStart.x} y1={vttToolStart.y} x2={vttToolEnd.x} y2={vttToolEnd.y} stroke="#ffcc00" strokeWidth="2" strokeDasharray="6,3" />
+                              <circle cx={vttToolStart.x} cy={vttToolStart.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                              <circle cx={vttToolEnd.x} cy={vttToolEnd.y} r="5" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                              <rect x={vttToolEnd.x + 10} y={vttToolEnd.y - 14} width="64" height="24" rx="4" fill="rgba(0,0,0,0.8)" />
+                              <text x={vttToolEnd.x + 42} y={vttToolEnd.y + 4} textAnchor="middle" fill="#ffcc00" fontSize="14" fontWeight="bold" style={{ userSelect: 'none' }}>r:{meters}m</text>
                             </>)
                           }
                           if (vttActiveTool === 'coluna') {
@@ -26229,6 +26568,15 @@ function App() {
                             const pts = toolData.points.map(p => `${p.x},${p.y}`).join(' ')
                             return <polyline key={uname} points={pts} fill="none" stroke={toolData.color || color} strokeWidth={toolData.width || 3} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
                           }
+                          if (toolData.type === 'pincel-circulo' && toolData.start && toolData.end) {
+                            const r = Math.hypot(toolData.end.x - toolData.start.x, toolData.end.y - toolData.start.y)
+                            return <circle key={uname} cx={toolData.start.x} cy={toolData.start.y} r={r} fill="none" stroke={color} strokeWidth={toolData.width || 3} />
+                          }
+                          if (toolData.type === 'pincel-quadrado' && toolData.start && toolData.end) {
+                            const rx = Math.min(toolData.start.x, toolData.end.x), ry = Math.min(toolData.start.y, toolData.end.y)
+                            const rw = Math.abs(toolData.end.x - toolData.start.x), rh = Math.abs(toolData.end.y - toolData.start.y)
+                            return <rect key={uname} x={rx} y={ry} width={rw} height={rh} fill="none" stroke={color} strokeWidth={toolData.width || 3} />
+                          }
                           if (toolData.type === 'regua' && toolData.start && toolData.end) {
                             const dx2 = toolData.end.x - toolData.start.x
                             const dy2 = toolData.end.y - toolData.start.y
@@ -26242,6 +26590,20 @@ function App() {
                               <circle cx={toolData.end.x} cy={toolData.end.y} r="6" fill={color} stroke="#000" strokeWidth="2" />
                               <rect x={mx - 50} y={my - 22} width="100" height="28" rx="4" fill="rgba(0,0,0,0.8)" />
                               <text x={mx} y={my - 3} textAnchor="middle" fill={color} fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>{uname}: {meters}m</text>
+                            </g>)
+                          }
+                          if (toolData.type === 'regua-raio' && toolData.start && toolData.end) {
+                            const dx2 = toolData.end.x - toolData.start.x
+                            const dy2 = toolData.end.y - toolData.start.y
+                            const r = Math.sqrt(dx2 * dx2 + dy2 * dy2)
+                            const meters = (r / avgCell).toFixed(1)
+                            return (<g key={uname}>
+                              <circle cx={toolData.start.x} cy={toolData.start.y} r={r} fill="rgba(0,204,255,0.1)" stroke={color} strokeWidth="2" strokeDasharray="10,5" />
+                              <line x1={toolData.start.x} y1={toolData.start.y} x2={toolData.end.x} y2={toolData.end.y} stroke={color} strokeWidth="2" strokeDasharray="6,3" />
+                              <circle cx={toolData.start.x} cy={toolData.start.y} r="6" fill={color} stroke="#000" strokeWidth="2" />
+                              <circle cx={toolData.end.x} cy={toolData.end.y} r="5" fill={color} stroke="#000" strokeWidth="2" />
+                              <rect x={toolData.end.x + 10} y={toolData.end.y - 20} width="110" height="22" rx="4" fill="rgba(0,0,0,0.8)" />
+                              <text x={toolData.end.x + 65} y={toolData.end.y - 4} textAnchor="middle" fill={color} fontSize="12" fontWeight="bold" style={{ userSelect: 'none' }}>{uname}: r:{meters}m</text>
                             </g>)
                           }
                           if (toolData.type === 'coluna' && toolData.start && toolData.end) {
@@ -26287,7 +26649,7 @@ function App() {
                         top: `${token.y}px`,
                         width: `${token.size}px`,
                         height: `${token.size}px`,
-                        opacity: vttCurrentLayer === 'map' ? 1 : 0.4,
+                        opacity: vttPathActive && draggingToken?.id === token.id ? 0.3 : vttCurrentLayer === 'map' ? 1 : 0.4,
                         transform: `rotate(${token.rotation || 0}deg)`,
                         userSelect: 'none',
                         pointerEvents: vttCurrentLayer === 'map' ? 'auto' : 'none',
@@ -26338,7 +26700,7 @@ function App() {
                         top: `${token.y}px`,
                         width: `${token.size}px`,
                         height: `${token.size}px`,
-                        opacity: vttCurrentLayer === 'gm' ? 0.8 : 0.3,
+                        opacity: vttPathActive && draggingToken?.id === token.id ? 0.3 : vttCurrentLayer === 'gm' ? 0.8 : 0.3,
                         transform: `rotate(${token.rotation || 0}deg)`,
                         userSelect: 'none',
                         pointerEvents: vttCurrentLayer === 'gm' ? 'auto' : 'none',
@@ -26524,7 +26886,7 @@ function App() {
                         top: `${token.y}px`,
                         width: `${token.size}px`,
                         height: `${token.size}px`,
-                        opacity: vttCurrentLayer === 'players' ? 1 : 0.4,
+                        opacity: vttPathActive && draggingToken?.id === token.id ? 0.3 : vttCurrentLayer === 'players' ? 1 : 0.4,
                         transform: `rotate(${token.rotation || 0}deg)`,
                         userSelect: 'none',
                         pointerEvents: vttCurrentLayer === 'players' ? 'auto' : 'none',
@@ -27274,6 +27636,167 @@ function App() {
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
         {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {/* Menu Flutuante VTT */}
+        {currentUser && battleView === 'mapa' && (currentArea === 'Batalha Pkm' || currentArea === 'Batalha') && (() => {
+          const isTrainer = currentUser.type === 'treinador'
+          const isOnRight = vttFloatingMenuPos.x > window.innerWidth / 2
+          return (
+            <div
+              style={{ position: 'fixed', left: vttFloatingMenuPos.x, top: vttFloatingMenuPos.y, zIndex: 400, userSelect: 'none' }}
+              className={`rounded-xl shadow-2xl border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}
+            >
+              <div
+                className={`flex items-center justify-center px-4 py-1.5 cursor-move rounded-t-xl border-b ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-200'}`}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  vttFloatingMenuDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, origX: vttFloatingMenuPos.x, origY: vttFloatingMenuPos.y }
+                  const onMove = (ev) => {
+                    if (!vttFloatingMenuDragRef.current.dragging) return
+                    setVttFloatingMenuPos({
+                      x: vttFloatingMenuDragRef.current.origX + ev.clientX - vttFloatingMenuDragRef.current.startX,
+                      y: vttFloatingMenuDragRef.current.origY + ev.clientY - vttFloatingMenuDragRef.current.startY,
+                    })
+                  }
+                  const onUp = () => {
+                    vttFloatingMenuDragRef.current.dragging = false
+                    window.removeEventListener('mousemove', onMove)
+                    window.removeEventListener('mouseup', onUp)
+                  }
+                  window.addEventListener('mousemove', onMove)
+                  window.addEventListener('mouseup', onUp)
+                }}
+              >
+                <span className={`text-sm leading-none ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>⠿⠿</span>
+              </div>
+              <div className="flex flex-col gap-1 p-2">
+                <div className="relative">
+                  <button
+                    onClick={() => setVttToolDropdownOpen(prev => !prev)}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttActiveTool ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    title="Ferramentas de Desenho"
+                  >
+                    <Wrench size={16} />
+                    {vttActiveTool && <span className="text-xs">{vttActiveTool === 'pincel' ? 'Pincel' : vttActiveTool === 'pincel-circulo' ? 'Círculo' : vttActiveTool === 'pincel-quadrado' ? 'Quadrado' : vttActiveTool === 'regua' ? 'Régua' : vttActiveTool === 'regua-raio' ? 'Raio' : vttActiveTool === 'coluna' ? 'Coluna' : 'Explosão'}</span>}
+                  </button>
+                  {vttToolDropdownOpen && (
+                    <div className={`absolute ${isOnRight ? 'right-full mr-1' : 'left-full ml-1'} top-0 z-[450] rounded-xl shadow-2xl border p-2 min-w-[180px] ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <p className={`text-xs font-bold mb-2 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>FERRAMENTAS</p>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel' ? null : 'pincel'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Pencil size={15} /> Pincel
+                      </button>
+                      {vttActiveTool === 'pincel' && (
+                        <div className="flex items-center gap-2 px-3 py-1 mb-1">
+                          <input type="color" value={vttPincelColor} onChange={e => setVttPincelColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 p-0" title="Cor" />
+                          <input type="range" min="1" max="20" value={vttPincelWidth} onChange={e => setVttPincelWidth(Number(e.target.value))} className="flex-1" title="Espessura" />
+                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{vttPincelWidth}px</span>
+                        </div>
+                      )}
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel-circulo' ? null : 'pincel-circulo'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel-circulo' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Circle size={15} /> Círculo
+                      </button>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel-quadrado' ? null : 'pincel-quadrado'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel-quadrado' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Square size={15} /> Quadrado
+                      </button>
+                      {(vttActiveTool === 'pincel-circulo' || vttActiveTool === 'pincel-quadrado') && (
+                        <div className="flex items-center gap-2 px-3 py-1 mb-1">
+                          <input type="color" value={vttPincelColor} onChange={e => setVttPincelColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 p-0" title="Cor" />
+                          <input type="range" min="1" max="20" value={vttPincelWidth} onChange={e => setVttPincelWidth(Number(e.target.value))} className="flex-1" title="Espessura" />
+                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{vttPincelWidth}px</span>
+                        </div>
+                      )}
+                      <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                      <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MEDIÇÃO</p>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'regua' ? null : 'regua'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'regua' ? 'bg-yellow-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Sigma size={15} /> Régua
+                      </button>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'regua-raio' ? null : 'regua-raio'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'regua-raio' ? 'bg-yellow-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Sigma size={15} /> Régua de Raio
+                      </button>
+                      <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                      <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MARCADORES</p>
+                      <button onClick={() => { setVttColunaInputVal(String(vttColunaThickness)); setVttColunaPopupOpen(true); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'coluna' ? 'bg-orange-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Target size={15} /> Coluna {vttActiveTool === 'coluna' && `(${vttColunaThickness}m)`}
+                      </button>
+                      <button onClick={() => { setVttExplosaoInputVal(String(vttExplosaoRadius)); setVttExplosaoPopupOpen(true); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${vttActiveTool === 'explosao' ? 'bg-red-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Zap size={15} /> Explosão {vttActiveTool === 'explosao' && `(${vttExplosaoRadius}m)`}
+                      </button>
+                      {vttActiveTool && (
+                        <>
+                          <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                          <button onClick={() => { setVttActiveTool(null); setVttToolDropdownOpen(false) }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-red-400 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                            <X size={15} /> Desativar ferramenta
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {vttToolDropdownOpen && <div className="fixed inset-0 z-[449]" onClick={() => setVttToolDropdownOpen(false)} />}
+                </div>
+                {isTrainer && (
+                  <div className="relative">
+                    <button
+                      onClick={() => { setVttCaptureDropdownOpen(prev => !prev); setVttToolDropdownOpen(false) }}
+                      className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttCaptureMode ? 'bg-red-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      title="Captura Pokémon VTT"
+                    >
+                      <img src="/pokeball-icon.png" alt="Captura" className="w-5 h-5" />
+                      {vttCaptureMode && vttCapturePokeball && <span className="text-xs max-w-[60px] truncate">{vttCapturePokeball}</span>}
+                    </button>
+                    {vttCaptureDropdownOpen && (() => {
+                      const pokeballsInBag = keyItems.filter(item => POKEBALLS_LIST.includes(item.name) && item.quantity > 0)
+                      return (
+                        <div className={`absolute ${isOnRight ? 'right-full mr-1' : 'left-full ml-1'} top-0 z-[450] rounded-xl shadow-2xl border p-2 min-w-[210px] ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                          <p className={`text-xs font-bold mb-2 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>POKÉBOLAS NA MOCHILA</p>
+                          {pokeballsInBag.length === 0 ? (
+                            <p className={`text-xs px-2 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma pokébola na mochila</p>
+                          ) : pokeballsInBag.map(item => (
+                            <button key={item.name} onClick={() => { setVttCapturePokeball(item.name); setVttCaptureMode(true); setVttCaptureDropdownOpen(false) }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttCapturePokeball === item.name ? 'bg-red-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                              <img src={getPokeballImage(item.name)} alt={item.name} className="w-5 h-5 object-contain" />
+                              <span className="flex-1 text-left">{item.name}</span>
+                              <span className="text-xs opacity-70">×{item.quantity}</span>
+                            </button>
+                          ))}
+                          {vttCaptureMode && (
+                            <>
+                              <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                              <button onClick={() => { setVttCaptureMode(false); setVttCapturePokeball(null); setVttCaptureDropdownOpen(false) }}
+                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-red-400 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                                <X size={15} /> Desativar captura
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })()}
+                    {vttCaptureDropdownOpen && <div className="fixed inset-0 z-[449]" onClick={() => setVttCaptureDropdownOpen(false)} />}
+                  </div>
+                )}
+                {isTrainer && (
+                  <button
+                    onClick={() => setVttScanMode(prev => !prev)}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttScanMode ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    title="Escanear Pkm Vtt"
+                  >
+                    <img
+                      src={classes.includes('Engenheiro') ? '/coisasengenheiro/miniengedex.png' : '/pokedexpq.png'}
+                      alt="Escanear"
+                      className="w-5 h-5 object-contain"
+                    />
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
       </>
     )
   }
@@ -46059,115 +46582,9 @@ function App() {
             {battleView === 'mapa' && (
               <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-3 sm:p-5 md:p-8`}>
                 <div className="flex items-center justify-center gap-2 mb-6">
-                  <h3 className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  <h3 ref={vttTitleRef} className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                     Mapa de Batalha
                   </h3>
-                  {/* Dropdown de Ferramentas - Treinador */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setVttToolDropdownOpen(prev => !prev)}
-                      className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttActiveTool ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      title="Ferramentas de Desenho"
-                    >
-                      <Wrench size={16} />
-                      {vttActiveTool && <span className="text-xs">{vttActiveTool === 'pincel' ? 'Pincel' : vttActiveTool === 'regua' ? 'Régua' : vttActiveTool === 'coluna' ? 'Coluna' : 'Explosão'}</span>}
-                    </button>
-                    {vttToolDropdownOpen && (
-                      <div className={`absolute left-0 top-full mt-1 z-[200] rounded-xl shadow-2xl border p-2 min-w-[180px] ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
-                        <p className={`text-xs font-bold mb-2 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>FERRAMENTAS</p>
-                        <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel' ? null : 'pincel'); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Pencil size={15} /> Pincel
-                        </button>
-                        {vttActiveTool === 'pincel' && (
-                          <div className="flex items-center gap-2 px-3 py-1 mb-1">
-                            <input type="color" value={vttPincelColor} onChange={e => setVttPincelColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 p-0" title="Cor" />
-                            <input type="range" min="1" max="20" value={vttPincelWidth} onChange={e => setVttPincelWidth(Number(e.target.value))} className="flex-1" title="Espessura" />
-                            <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{vttPincelWidth}px</span>
-                          </div>
-                        )}
-                        <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                        <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MEDIÇÃO</p>
-                        <button onClick={() => { setVttActiveTool(vttActiveTool === 'regua' ? null : 'regua'); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'regua' ? 'bg-yellow-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Sigma size={15} /> Régua
-                        </button>
-                        <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                        <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MARCADORES</p>
-                        <button onClick={() => { setVttColunaInputVal(String(vttColunaThickness)); setVttColunaPopupOpen(true); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'coluna' ? 'bg-orange-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Target size={15} /> Coluna {vttActiveTool === 'coluna' && `(${vttColunaThickness}m)`}
-                        </button>
-                        <button onClick={() => { setVttExplosaoInputVal(String(vttExplosaoRadius)); setVttExplosaoPopupOpen(true); setVttToolDropdownOpen(false) }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${vttActiveTool === 'explosao' ? 'bg-red-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                          <Zap size={15} /> Explosão {vttActiveTool === 'explosao' && `(${vttExplosaoRadius}m)`}
-                        </button>
-                        {vttActiveTool && (
-                          <>
-                            <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                            <button onClick={() => { setVttActiveTool(null); setVttToolDropdownOpen(false) }}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-red-400 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                              <X size={15} /> Desativar ferramenta
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                    {vttToolDropdownOpen && <div className="fixed inset-0 z-[199]" onClick={() => setVttToolDropdownOpen(false)} />}
-                  </div>
-
-                  {/* Botão Captura Pokémon VTT - Treinador */}
-                  <div className="relative">
-                    <button
-                      onClick={() => { setVttCaptureDropdownOpen(prev => !prev); setVttToolDropdownOpen(false) }}
-                      className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttCaptureMode ? 'bg-red-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      title="Captura Pokémon VTT"
-                    >
-                      <img src="/pokeball-icon.png" alt="Captura" className="w-5 h-5" />
-                      {vttCaptureMode && vttCapturePokeball && <span className="text-xs max-w-[60px] truncate">{vttCapturePokeball}</span>}
-                    </button>
-                    {vttCaptureDropdownOpen && (() => {
-                      const pokeballsInBag = keyItems.filter(item => POKEBALLS_LIST.includes(item.name) && item.quantity > 0)
-                      return (
-                        <div className={`absolute left-0 top-full mt-1 z-[200] rounded-xl shadow-2xl border p-2 min-w-[210px] ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
-                          <p className={`text-xs font-bold mb-2 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>POKÉBOLAS NA MOCHILA</p>
-                          {pokeballsInBag.length === 0 ? (
-                            <p className={`text-xs px-2 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma pokébola na mochila</p>
-                          ) : pokeballsInBag.map(item => (
-                            <button key={item.name} onClick={() => { setVttCapturePokeball(item.name); setVttCaptureMode(true); setVttCaptureDropdownOpen(false) }}
-                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttCapturePokeball === item.name ? 'bg-red-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
-                              <img src={getPokeballImage(item.name)} alt={item.name} className="w-5 h-5 object-contain" />
-                              <span className="flex-1 text-left">{item.name}</span>
-                              <span className="text-xs opacity-70">×{item.quantity}</span>
-                            </button>
-                          ))}
-                          {vttCaptureMode && (
-                            <>
-                              <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
-                              <button onClick={() => { setVttCaptureMode(false); setVttCapturePokeball(null); setVttCaptureDropdownOpen(false) }}
-                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-red-400 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
-                                <X size={15} /> Desativar captura
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )
-                    })()}
-                    {vttCaptureDropdownOpen && <div className="fixed inset-0 z-[199]" onClick={() => setVttCaptureDropdownOpen(false)} />}
-                  </div>
-
-                  {/* Botão Escanear Pkm Vtt - Treinador */}
-                  <button
-                    onClick={() => setVttScanMode(prev => !prev)}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttScanMode ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                    title="Escanear Pkm Vtt"
-                  >
-                    <img
-                      src={classes.includes('Engenheiro') ? '/coisasengenheiro/miniengedex.png' : '/pokedexpq.png'}
-                      alt="Escanear"
-                      className="w-5 h-5 object-contain"
-                    />
-                  </button>
                 </div>
 
                 {/* Seção Modificadores VTT - Treinador */}
@@ -46322,72 +46739,187 @@ function App() {
                       )
                     })()}
 
-                    {/* Régua de Medição */}
+                    {/* Régua de Medição com Waypoints */}
                     {vttRulerActive && (() => {
                       const cellWidth = vttCanvasWidth / vttGridColumns
                       const cellHeight = vttCanvasHeight / vttGridRows
-                      // Calcular distância em pixels
-                      const dx = vttRulerEnd.x - vttRulerStart.x
-                      const dy = vttRulerEnd.y - vttRulerStart.y
-                      const distancePixels = Math.sqrt(dx * dx + dy * dy)
-                      // Converter para metros (1 quadrado = 1 metro)
                       const avgCellSize = (cellWidth + cellHeight) / 2
-                      const distanceMeters = distancePixels / avgCellSize
-                      // Posição do texto (meio da linha)
-                      const midX = (vttRulerStart.x + vttRulerEnd.x) / 2
-                      const midY = (vttRulerStart.y + vttRulerEnd.y) / 2
+                      // Caminho completo: início → waypoints → fim
+                      const allPoints = [vttRulerStart, ...vttRulerWaypoints, vttRulerEnd]
+                      // Calcular distância total acumulada
+                      let totalPixels = 0
+                      for (let i = 0; i < allPoints.length - 1; i++) {
+                        const pdx = allPoints[i+1].x - allPoints[i].x
+                        const pdy = allPoints[i+1].y - allPoints[i].y
+                        totalPixels += Math.sqrt(pdx*pdx + pdy*pdy)
+                      }
+                      const totalMeters = totalPixels / avgCellSize
                       return (
                         <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1000 }}>
-                          {/* Linha da régua */}
-                          <line
-                            x1={vttRulerStart.x}
-                            y1={vttRulerStart.y}
-                            x2={vttRulerEnd.x}
-                            y2={vttRulerEnd.y}
-                            stroke="#ffcc00"
-                            strokeWidth="3"
-                            strokeDasharray="8,4"
-                          />
+                          {/* Segmentos da régua */}
+                          {allPoints.slice(0, -1).map((p, i) => {
+                            const next = allPoints[i+1]
+                            const sdx = next.x - p.x
+                            const sdy = next.y - p.y
+                            const segPixels = Math.sqrt(sdx*sdx + sdy*sdy)
+                            const segMeters = segPixels / avgCellSize
+                            const lmX = (p.x + next.x) / 2
+                            const lmY = (p.y + next.y) / 2
+                            return (
+                              <g key={i}>
+                                <line x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke="#ffcc00" strokeWidth="3" strokeDasharray="8,4" />
+                                {segPixels > 20 && (
+                                  <>
+                                    <rect x={lmX - 28} y={lmY - 12} width="56" height="22" rx="3" fill="rgba(0,0,0,0.75)" />
+                                    <text x={lmX} y={lmY + 5} textAnchor="middle" fill="#ffcc00" fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>{segMeters.toFixed(1)}m</text>
+                                  </>
+                                )}
+                              </g>
+                            )
+                          })}
                           {/* Círculo no início */}
-                          <circle
-                            cx={vttRulerStart.x}
-                            cy={vttRulerStart.y}
-                            r="6"
-                            fill="#ffcc00"
-                            stroke="#000"
-                            strokeWidth="2"
-                          />
+                          <circle cx={vttRulerStart.x} cy={vttRulerStart.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                          {/* Círculos nos waypoints */}
+                          {vttRulerWaypoints.map((wp, i) => (
+                            <circle key={i} cx={wp.x} cy={wp.y} r="5" fill="#ff8800" stroke="#000" strokeWidth="2" />
+                          ))}
                           {/* Círculo no fim */}
-                          <circle
-                            cx={vttRulerEnd.x}
-                            cy={vttRulerEnd.y}
-                            r="6"
-                            fill="#ffcc00"
-                            stroke="#000"
-                            strokeWidth="2"
-                          />
-                          {/* Fundo do texto */}
-                          <rect
-                            x={midX - 35}
-                            y={midY - 14}
-                            width="70"
-                            height="28"
-                            rx="4"
-                            fill="rgba(0,0,0,0.8)"
-                          />
-                          {/* Texto com distância */}
-                          <text
-                            x={midX}
-                            y={midY + 5}
-                            textAnchor="middle"
-                            fill="#ffcc00"
-                            fontSize="16"
-                            fontWeight="bold"
-                            style={{ userSelect: 'none' }}
-                          >
-                            {distanceMeters.toFixed(1)}m
-                          </text>
+                          <circle cx={vttRulerEnd.x} cy={vttRulerEnd.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                          {/* Total acumulado no fim (só se há waypoints) */}
+                          {vttRulerWaypoints.length > 0 && (
+                            <>
+                              <rect x={vttRulerEnd.x + 10} y={vttRulerEnd.y - 22} width="74" height="22" rx="3" fill="rgba(0,0,0,0.85)" />
+                              <text x={vttRulerEnd.x + 47} y={vttRulerEnd.y - 5} textAnchor="middle" fill="#ff8800" fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>Total: {totalMeters.toFixed(1)}m</text>
+                            </>
+                          )}
                         </svg>
+                      )
+                    })()}
+
+                    {/* Réguas persistidas (tecla E) — clique direito para remover */}
+                    {vttPersistedRulers.length > 0 && (() => {
+                      const cellW = vttCanvasWidth / vttGridColumns
+                      const cellH = vttCanvasHeight / vttGridRows
+                      const avgCell = (cellW + cellH) / 2
+                      return (
+                        <svg className="absolute inset-0" style={{ width: vttCanvasWidth, height: vttCanvasHeight, zIndex: 998, pointerEvents: 'none' }}>
+                          {vttPersistedRulers.map(ruler => {
+                            const onRightClick = (e) => { e.preventDefault(); e.stopPropagation(); deletePersistedRuler(ruler.id) }
+                            const c = ruler.color || '#ffcc00'
+                            if (ruler.type === 'regua-q') {
+                              const allPts = [ruler.start, ...(ruler.waypoints || []), ruler.end]
+                              let totalPx = 0
+                              for (let i = 0; i < allPts.length - 1; i++) {
+                                const pdx = allPts[i+1].x - allPts[i].x, pdy = allPts[i+1].y - allPts[i].y
+                                totalPx += Math.sqrt(pdx*pdx + pdy*pdy)
+                              }
+                              const totalMeters = totalPx / avgCell
+                              return (
+                                <g key={ruler.id} style={{ pointerEvents: 'all', cursor: 'context-menu' }} onContextMenu={onRightClick}>
+                                  {allPts.slice(0, -1).map((p, i) => {
+                                    const next = allPts[i+1]
+                                    const sdx = next.x - p.x, sdy = next.y - p.y
+                                    const segPx = Math.sqrt(sdx*sdx + sdy*sdy)
+                                    const lmX = (p.x + next.x) / 2, lmY = (p.y + next.y) / 2
+                                    return (
+                                      <g key={i}>
+                                        <line x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke="transparent" strokeWidth="12" />
+                                        <line x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke={c} strokeWidth="3" strokeDasharray="8,4" />
+                                        {segPx > 20 && (<>
+                                          <rect x={lmX - 28} y={lmY - 12} width="56" height="22" rx="3" fill="rgba(0,0,0,0.75)" />
+                                          <text x={lmX} y={lmY + 5} textAnchor="middle" fill={c} fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>{(segPx / avgCell).toFixed(1)}m</text>
+                                        </>)}
+                                      </g>
+                                    )
+                                  })}
+                                  <circle cx={ruler.start.x} cy={ruler.start.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                  {(ruler.waypoints || []).map((wp, i) => <circle key={i} cx={wp.x} cy={wp.y} r="5" fill={c} stroke="#000" strokeWidth="2" />)}
+                                  <circle cx={ruler.end.x} cy={ruler.end.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                  {(ruler.waypoints || []).length > 0 && (<>
+                                    <rect x={ruler.end.x + 10} y={ruler.end.y - 22} width="74" height="22" rx="3" fill="rgba(0,0,0,0.85)" />
+                                    <text x={ruler.end.x + 47} y={ruler.end.y - 5} textAnchor="middle" fill={c} fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>Total: {totalMeters.toFixed(1)}m</text>
+                                  </>)}
+                                </g>
+                              )
+                            }
+                            if (ruler.type === 'regua') {
+                              const dx = ruler.end.x - ruler.start.x, dy = ruler.end.y - ruler.start.y
+                              const dist = Math.sqrt(dx*dx + dy*dy)
+                              const meters = (dist / avgCell).toFixed(1)
+                              const mx = (ruler.start.x + ruler.end.x) / 2, my = (ruler.start.y + ruler.end.y) / 2
+                              return (
+                                <g key={ruler.id} style={{ pointerEvents: 'all', cursor: 'context-menu' }} onContextMenu={onRightClick}>
+                                  <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke="transparent" strokeWidth="12" />
+                                  <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke={c} strokeWidth="3" strokeDasharray="8,4" />
+                                  <circle cx={ruler.start.x} cy={ruler.start.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                  <circle cx={ruler.end.x} cy={ruler.end.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                  <rect x={mx - 35} y={my - 14} width="70" height="28" rx="4" fill="rgba(0,0,0,0.8)" />
+                                  <text x={mx} y={my + 5} textAnchor="middle" fill={c} fontSize="16" fontWeight="bold" style={{ userSelect: 'none' }}>{meters}m</text>
+                                </g>
+                              )
+                            }
+                            if (ruler.type === 'regua-raio') {
+                              const dx = ruler.end.x - ruler.start.x, dy = ruler.end.y - ruler.start.y
+                              const r = Math.sqrt(dx*dx + dy*dy)
+                              const meters = (r / avgCell).toFixed(1)
+                              return (
+                                <g key={ruler.id} style={{ pointerEvents: 'all', cursor: 'context-menu' }} onContextMenu={onRightClick}>
+                                  <circle cx={ruler.start.x} cy={ruler.start.y} r={r} fill={c + '1a'} stroke={c} strokeWidth="2" strokeDasharray="10,5" />
+                                  <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke="transparent" strokeWidth="12" />
+                                  <line x1={ruler.start.x} y1={ruler.start.y} x2={ruler.end.x} y2={ruler.end.y} stroke={c} strokeWidth="2" strokeDasharray="6,3" />
+                                  <circle cx={ruler.start.x} cy={ruler.start.y} r="6" fill={c} stroke="#000" strokeWidth="2" />
+                                  <circle cx={ruler.end.x} cy={ruler.end.y} r="5" fill={c} stroke="#000" strokeWidth="2" />
+                                  <rect x={ruler.end.x + 10} y={ruler.end.y - 14} width="64" height="24" rx="4" fill="rgba(0,0,0,0.8)" />
+                                  <text x={ruler.end.x + 42} y={ruler.end.y + 4} textAnchor="middle" fill={c} fontSize="14" fontWeight="bold" style={{ userSelect: 'none' }}>r:{meters}m</text>
+                                </g>
+                              )
+                            }
+                            return null
+                          })}
+                        </svg>
+                      )
+                    })()}
+
+                    {/* Rota Planejada (tecla W) — âncora sólida + linha de caminho */}
+                    {vttPathActive && draggingToken && (() => {
+                      const tokens = draggingToken.layer === 'map' ? vttMapTokens : vttTokens
+                      const token = tokens.find(t => t.id === draggingToken.id)
+                      if (!token) return null
+                      const cellWidth = vttCanvasWidth / vttGridColumns
+                      const cellHeight = vttCanvasHeight / vttGridRows
+                      const avgCellSize = (cellWidth + cellHeight) / 2
+                      const curPos = vttPathCurrentRef.current
+                      const allPoints = [vttPathStart, ...vttPathWaypoints, curPos]
+                      let totalPixels = 0
+                      for (let i = 0; i < allPoints.length - 1; i++) {
+                        const pdx = allPoints[i+1].x - allPoints[i].x
+                        const pdy = allPoints[i+1].y - allPoints[i].y
+                        totalPixels += Math.sqrt(pdx*pdx + pdy*pdy)
+                      }
+                      const totalMeters = totalPixels / avgCellSize
+                      const centerPoints = allPoints.map(p => ({ x: p.x + token.size / 2, y: p.y + token.size / 2 }))
+                      return (
+                        <>
+                          <div style={{ position: 'absolute', left: vttPathStart.x, top: vttPathStart.y, width: token.size, height: token.size, zIndex: 998, borderRadius: '50%', border: '3px solid #22c55e', overflow: 'hidden', pointerEvents: 'none', boxShadow: '0 0 8px #22c55e' }}>
+                            {token.image
+                              ? <img src={token.image} alt={token.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `center ${token.offsetY || 50}%`, transform: `scale(${(token.imageScale || 100) / 100})`, transformOrigin: 'center' }} />
+                              : <div style={{ width: '100%', height: '100%', background: token.color || '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: token.size * 0.4, fontWeight: 'bold' }}>{token.name?.[0]?.toUpperCase() || '?'}</div>
+                            }
+                          </div>
+                          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 999 }}>
+                            {centerPoints.slice(0, -1).map((p, i) => {
+                              const next = centerPoints[i+1]
+                              return <line key={i} x1={p.x} y1={p.y} x2={next.x} y2={next.y} stroke="#22c55e" strokeWidth="3" strokeDasharray="10,5" />
+                            })}
+                            <circle cx={vttPathStart.x + token.size/2} cy={vttPathStart.y + token.size/2} r="7" fill="#22c55e" stroke="#000" strokeWidth="2" />
+                            {vttPathWaypoints.map((wp, i) => (
+                              <circle key={i} cx={wp.x + token.size/2} cy={wp.y + token.size/2} r="5" fill="#f97316" stroke="#000" strokeWidth="2" />
+                            ))}
+                            <circle cx={curPos.x + token.size/2} cy={curPos.y + token.size/2} r="6" fill="#22c55e" stroke="#000" strokeWidth="2" />
+                            <rect x={curPos.x + token.size/2 + 10} y={curPos.y + token.size/2 - 22} width="74" height="22" rx="3" fill="rgba(0,0,0,0.85)" />
+                            <text x={curPos.x + token.size/2 + 47} y={curPos.y + token.size/2 - 5} textAnchor="middle" fill="#22c55e" fontSize="13" fontWeight="bold" style={{ userSelect: 'none' }}>{totalMeters.toFixed(1)}m</text>
+                          </svg>
+                        </>
                       )
                     })()}
 
@@ -46403,12 +46935,34 @@ function App() {
                           {visibleStrokes.map(stroke => {
                             const dx = vttDraggingStroke?.id === stroke.id ? (vttDraggingStroke.curDx || 0) : 0
                             const dy = vttDraggingStroke?.id === stroke.id ? (vttDraggingStroke.curDy || 0) : 0
-                            const pts = stroke.points.map(p => `${p.x + dx},${p.y + dy}`).join(' ')
                             const isSelected = vttSelectedStroke === stroke.id
+                            const col = stroke.color || '#ff4444'
+                            const sw = stroke.width || 3
+                            if (stroke.shape === 'circle') {
+                              return (
+                                <g key={stroke.id}>
+                                  <circle cx={stroke.cx + dx} cy={stroke.cy + dy} r={stroke.r} fill="none" stroke={col} strokeWidth={sw} />
+                                  {isSelected && <circle cx={stroke.cx + dx} cy={stroke.cy + dy} r={stroke.r} fill="none" stroke="white" strokeWidth={sw + 4} strokeDasharray="6,4" style={{ opacity: 0.6 }} />}
+                                </g>
+                              )
+                            }
+                            if (stroke.shape === 'rect') {
+                              const rx = Math.min(stroke.x1, stroke.x2) + dx
+                              const ry = Math.min(stroke.y1, stroke.y2) + dy
+                              const rw = Math.abs(stroke.x2 - stroke.x1)
+                              const rh = Math.abs(stroke.y2 - stroke.y1)
+                              return (
+                                <g key={stroke.id}>
+                                  <rect x={rx} y={ry} width={rw} height={rh} fill="none" stroke={col} strokeWidth={sw} />
+                                  {isSelected && <rect x={rx} y={ry} width={rw} height={rh} fill="none" stroke="white" strokeWidth={sw + 4} strokeDasharray="6,4" style={{ opacity: 0.6 }} />}
+                                </g>
+                              )
+                            }
+                            const pts = (stroke.points || []).map(p => `${p.x + dx},${p.y + dy}`).join(' ')
                             return (
                               <g key={stroke.id}>
-                                <polyline points={pts} fill="none" stroke={stroke.color || '#ff4444'} strokeWidth={stroke.width || 3} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
-                                {isSelected && <polyline points={pts} fill="none" stroke="white" strokeWidth={(stroke.width || 3) + 4} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6,4" style={{ pointerEvents: 'none', opacity: 0.6 }} />}
+                                <polyline points={pts} fill="none" stroke={col} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+                                {isSelected && <polyline points={pts} fill="none" stroke="white" strokeWidth={sw + 4} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6,4" style={{ pointerEvents: 'none', opacity: 0.6 }} />}
                               </g>
                             )
                           })}
@@ -46416,6 +46970,17 @@ function App() {
                             <polyline points={vttCurrentStroke.points.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke={vttCurrentStroke.color} strokeWidth={vttCurrentStroke.width} strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
                           )}
                           {vttActiveTool && vttActiveTool !== 'pincel' && vttToolDrawing && vttToolStart && vttToolEnd && (() => {
+                            if (vttActiveTool === 'pincel-circulo') {
+                              const r = Math.hypot(vttToolEnd.x - vttToolStart.x, vttToolEnd.y - vttToolStart.y)
+                              return <circle cx={vttToolStart.x} cy={vttToolStart.y} r={r} fill="none" stroke={vttPincelColor} strokeWidth={vttPincelWidth} />
+                            }
+                            if (vttActiveTool === 'pincel-quadrado') {
+                              const rx = Math.min(vttToolStart.x, vttToolEnd.x)
+                              const ry = Math.min(vttToolStart.y, vttToolEnd.y)
+                              const rw = Math.abs(vttToolEnd.x - vttToolStart.x)
+                              const rh = Math.abs(vttToolEnd.y - vttToolStart.y)
+                              return <rect x={rx} y={ry} width={rw} height={rh} fill="none" stroke={vttPincelColor} strokeWidth={vttPincelWidth} />
+                            }
                             if (vttActiveTool === 'regua') {
                               const dx2 = vttToolEnd.x - vttToolStart.x, dy2 = vttToolEnd.y - vttToolStart.y
                               const meters = (Math.sqrt(dx2*dx2+dy2*dy2)/avgCell).toFixed(1)
@@ -46426,6 +46991,19 @@ function App() {
                                 <circle cx={vttToolEnd.x} cy={vttToolEnd.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
                                 <rect x={mx-35} y={my-14} width="70" height="28" rx="4" fill="rgba(0,0,0,0.8)" />
                                 <text x={mx} y={my+5} textAnchor="middle" fill="#ffcc00" fontSize="16" fontWeight="bold" style={{userSelect:'none'}}>{meters}m</text>
+                              </>)
+                            }
+                            if (vttActiveTool === 'regua-raio') {
+                              const dx2 = vttToolEnd.x-vttToolStart.x, dy2 = vttToolEnd.y-vttToolStart.y
+                              const r = Math.sqrt(dx2*dx2+dy2*dy2)
+                              const meters = (r/avgCell).toFixed(1)
+                              return (<>
+                                <circle cx={vttToolStart.x} cy={vttToolStart.y} r={r} fill="rgba(255,204,0,0.1)" stroke="#ffcc00" strokeWidth="2" strokeDasharray="10,5" />
+                                <line x1={vttToolStart.x} y1={vttToolStart.y} x2={vttToolEnd.x} y2={vttToolEnd.y} stroke="#ffcc00" strokeWidth="2" strokeDasharray="6,3" />
+                                <circle cx={vttToolStart.x} cy={vttToolStart.y} r="6" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                                <circle cx={vttToolEnd.x} cy={vttToolEnd.y} r="5" fill="#ffcc00" stroke="#000" strokeWidth="2" />
+                                <rect x={vttToolEnd.x+10} y={vttToolEnd.y-14} width="64" height="24" rx="4" fill="rgba(0,0,0,0.8)" />
+                                <text x={vttToolEnd.x+42} y={vttToolEnd.y+4} textAnchor="middle" fill="#ffcc00" fontSize="14" fontWeight="bold" style={{userSelect:'none'}}>r:{meters}m</text>
                               </>)
                             }
                             if (vttActiveTool === 'coluna') {
@@ -46458,11 +47036,33 @@ function App() {
                             const color = '#00ccff'
                             if (toolData.type === 'pincel' && toolData.points?.length > 1)
                               return <polyline key={uname} points={toolData.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke={toolData.color||color} strokeWidth={toolData.width||3} strokeLinecap="round" strokeLinejoin="round" style={{pointerEvents:'none'}} />
+                            if (toolData.type === 'pincel-circulo' && toolData.start && toolData.end) {
+                              const r = Math.hypot(toolData.end.x - toolData.start.x, toolData.end.y - toolData.start.y)
+                              return <circle key={uname} cx={toolData.start.x} cy={toolData.start.y} r={r} fill="none" stroke={color} strokeWidth={toolData.width || 3} />
+                            }
+                            if (toolData.type === 'pincel-quadrado' && toolData.start && toolData.end) {
+                              const rx = Math.min(toolData.start.x, toolData.end.x), ry = Math.min(toolData.start.y, toolData.end.y)
+                              const rw = Math.abs(toolData.end.x - toolData.start.x), rh = Math.abs(toolData.end.y - toolData.start.y)
+                              return <rect key={uname} x={rx} y={ry} width={rw} height={rh} fill="none" stroke={color} strokeWidth={toolData.width || 3} />
+                            }
                             if (toolData.type === 'regua' && toolData.start && toolData.end) {
                               const dx2=toolData.end.x-toolData.start.x, dy2=toolData.end.y-toolData.start.y
                               const meters=(Math.sqrt(dx2*dx2+dy2*dy2)/avgCell).toFixed(1)
                               const mx=(toolData.start.x+toolData.end.x)/2, my=(toolData.start.y+toolData.end.y)/2
                               return (<g key={uname}><line x1={toolData.start.x} y1={toolData.start.y} x2={toolData.end.x} y2={toolData.end.y} stroke={color} strokeWidth="3" strokeDasharray="8,4"/><circle cx={toolData.start.x} cy={toolData.start.y} r="6" fill={color} stroke="#000" strokeWidth="2"/><circle cx={toolData.end.x} cy={toolData.end.y} r="6" fill={color} stroke="#000" strokeWidth="2"/><rect x={mx-50} y={my-22} width="100" height="28" rx="4" fill="rgba(0,0,0,0.8)"/><text x={mx} y={my-3} textAnchor="middle" fill={color} fontSize="13" fontWeight="bold" style={{userSelect:'none'}}>{uname}: {meters}m</text></g>)
+                            }
+                            if (toolData.type === 'regua-raio' && toolData.start && toolData.end) {
+                              const dx2=toolData.end.x-toolData.start.x, dy2=toolData.end.y-toolData.start.y
+                              const r=Math.sqrt(dx2*dx2+dy2*dy2)
+                              const meters=(r/avgCell).toFixed(1)
+                              return (<g key={uname}>
+                                <circle cx={toolData.start.x} cy={toolData.start.y} r={r} fill="rgba(0,204,255,0.1)" stroke={color} strokeWidth="2" strokeDasharray="10,5"/>
+                                <line x1={toolData.start.x} y1={toolData.start.y} x2={toolData.end.x} y2={toolData.end.y} stroke={color} strokeWidth="2" strokeDasharray="6,3"/>
+                                <circle cx={toolData.start.x} cy={toolData.start.y} r="6" fill={color} stroke="#000" strokeWidth="2"/>
+                                <circle cx={toolData.end.x} cy={toolData.end.y} r="5" fill={color} stroke="#000" strokeWidth="2"/>
+                                <rect x={toolData.end.x+10} y={toolData.end.y-20} width="110" height="22" rx="4" fill="rgba(0,0,0,0.8)"/>
+                                <text x={toolData.end.x+65} y={toolData.end.y-4} textAnchor="middle" fill={color} fontSize="12" fontWeight="bold" style={{userSelect:'none'}}>{uname}: r:{meters}m</text>
+                              </g>)
                             }
                             if (toolData.type === 'coluna' && toolData.start && toolData.end) {
                               const dx2=toolData.end.x-toolData.start.x, dy2=toolData.end.y-toolData.start.y
@@ -46485,7 +47085,7 @@ function App() {
 
                     {/* Tokens da camada MAPA (visível para todos, embaixo de tudo) */}
                     {vttMapTokens.map(token => (
-                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: vttContextMenuToken === token.id ? 1000 : 1 }}>
+                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, opacity: vttPathActive && draggingToken?.id === token.id ? 0.3 : 1, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: vttContextMenuToken === token.id ? 1000 : 1 }}>
                         <div style={{ width: '100%', height: '100%', cursor: 'default', border: '2px solid #b45309', borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
                           {token.image ? (
                             <img src={token.image} alt={token.name} className="w-full h-full object-cover"
@@ -46499,7 +47099,7 @@ function App() {
 
                     {/* Tokens da camada de JOGADORES (visível para todos) */}
                     {vttTokens.map(token => (
-                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: vttContextMenuToken === token.id ? 1000 : 3 }}>
+                      <div key={token.id} className="absolute" style={{ left: `${token.x}px`, top: `${token.y}px`, width: `${token.size}px`, height: `${token.size}px`, opacity: vttPathActive && draggingToken?.id === token.id ? 0.3 : 1, transform: `rotate(${token.rotation || 0}deg)`, userSelect: 'none', zIndex: vttContextMenuToken === token.id ? 1000 : 3 }}>
                         <div
                           onMouseDown={(e) => { if (startToolFromToken(token, e)) return; if (vttScanMode && (token.pokemonId || token.npcId)) { e.stopPropagation(); handleVttScanToken(token); return } if (vttCaptureMode && token.npcType === 'pokemon' && token.npcId) { e.stopPropagation(); handleVttCaptureToken(token); return } handleVttTokenClick(token.id, 'tokens'); handleTokenMouseDown(token.id, 'tokens', e) }}
                           onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); const _permKeyCtx = getTokenPermKey(token); const _canMenu = currentUser?.type === 'mestre' || token.owner === currentUser?.username || vttTokenPermissions[_permKeyCtx]?.includes(currentUser?.username); if (_canMenu && selectedToken === token.id) setVttContextMenuToken(prev => prev === token.id ? null : token.id) }}
@@ -49630,6 +50230,167 @@ function App() {
         {mostrarTriunfosOverlay}
         {pokezapPanel}{pokeAgendaPanel}
         {floatingPkmTracker}{floatingTrainerTracker}{batalhaChatPanel}{mapaContinentalModal}{rpsModal}
+        {/* Menu Flutuante VTT */}
+        {currentUser && battleView === 'mapa' && (currentArea === 'Batalha Pkm' || currentArea === 'Batalha') && (() => {
+          const isTrainer = currentUser.type === 'treinador'
+          const isOnRight = vttFloatingMenuPos.x > window.innerWidth / 2
+          return (
+            <div
+              style={{ position: 'fixed', left: vttFloatingMenuPos.x, top: vttFloatingMenuPos.y, zIndex: 400, userSelect: 'none' }}
+              className={`rounded-xl shadow-2xl border ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}
+            >
+              <div
+                className={`flex items-center justify-center px-4 py-1.5 cursor-move rounded-t-xl border-b ${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-200'}`}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  vttFloatingMenuDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, origX: vttFloatingMenuPos.x, origY: vttFloatingMenuPos.y }
+                  const onMove = (ev) => {
+                    if (!vttFloatingMenuDragRef.current.dragging) return
+                    setVttFloatingMenuPos({
+                      x: vttFloatingMenuDragRef.current.origX + ev.clientX - vttFloatingMenuDragRef.current.startX,
+                      y: vttFloatingMenuDragRef.current.origY + ev.clientY - vttFloatingMenuDragRef.current.startY,
+                    })
+                  }
+                  const onUp = () => {
+                    vttFloatingMenuDragRef.current.dragging = false
+                    window.removeEventListener('mousemove', onMove)
+                    window.removeEventListener('mouseup', onUp)
+                  }
+                  window.addEventListener('mousemove', onMove)
+                  window.addEventListener('mouseup', onUp)
+                }}
+              >
+                <span className={`text-sm leading-none ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>⠿⠿</span>
+              </div>
+              <div className="flex flex-col gap-1 p-2">
+                <div className="relative">
+                  <button
+                    onClick={() => setVttToolDropdownOpen(prev => !prev)}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttActiveTool ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    title="Ferramentas de Desenho"
+                  >
+                    <Wrench size={16} />
+                    {vttActiveTool && <span className="text-xs">{vttActiveTool === 'pincel' ? 'Pincel' : vttActiveTool === 'pincel-circulo' ? 'Círculo' : vttActiveTool === 'pincel-quadrado' ? 'Quadrado' : vttActiveTool === 'regua' ? 'Régua' : vttActiveTool === 'regua-raio' ? 'Raio' : vttActiveTool === 'coluna' ? 'Coluna' : 'Explosão'}</span>}
+                  </button>
+                  {vttToolDropdownOpen && (
+                    <div className={`absolute ${isOnRight ? 'right-full mr-1' : 'left-full ml-1'} top-0 z-[450] rounded-xl shadow-2xl border p-2 min-w-[180px] ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                      <p className={`text-xs font-bold mb-2 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>FERRAMENTAS</p>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel' ? null : 'pincel'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Pencil size={15} /> Pincel
+                      </button>
+                      {vttActiveTool === 'pincel' && (
+                        <div className="flex items-center gap-2 px-3 py-1 mb-1">
+                          <input type="color" value={vttPincelColor} onChange={e => setVttPincelColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 p-0" title="Cor" />
+                          <input type="range" min="1" max="20" value={vttPincelWidth} onChange={e => setVttPincelWidth(Number(e.target.value))} className="flex-1" title="Espessura" />
+                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{vttPincelWidth}px</span>
+                        </div>
+                      )}
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel-circulo' ? null : 'pincel-circulo'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel-circulo' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Circle size={15} /> Círculo
+                      </button>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'pincel-quadrado' ? null : 'pincel-quadrado'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'pincel-quadrado' ? 'bg-blue-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Square size={15} /> Quadrado
+                      </button>
+                      {(vttActiveTool === 'pincel-circulo' || vttActiveTool === 'pincel-quadrado') && (
+                        <div className="flex items-center gap-2 px-3 py-1 mb-1">
+                          <input type="color" value={vttPincelColor} onChange={e => setVttPincelColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border-0 p-0" title="Cor" />
+                          <input type="range" min="1" max="20" value={vttPincelWidth} onChange={e => setVttPincelWidth(Number(e.target.value))} className="flex-1" title="Espessura" />
+                          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{vttPincelWidth}px</span>
+                        </div>
+                      )}
+                      <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                      <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MEDIÇÃO</p>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'regua' ? null : 'regua'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'regua' ? 'bg-yellow-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Sigma size={15} /> Régua
+                      </button>
+                      <button onClick={() => { setVttActiveTool(vttActiveTool === 'regua-raio' ? null : 'regua-raio'); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'regua-raio' ? 'bg-yellow-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Sigma size={15} /> Régua de Raio
+                      </button>
+                      <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                      <p className={`text-xs font-bold mb-1 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>MARCADORES</p>
+                      <button onClick={() => { setVttColunaInputVal(String(vttColunaThickness)); setVttColunaPopupOpen(true); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttActiveTool === 'coluna' ? 'bg-orange-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Target size={15} /> Coluna {vttActiveTool === 'coluna' && `(${vttColunaThickness}m)`}
+                      </button>
+                      <button onClick={() => { setVttExplosaoInputVal(String(vttExplosaoRadius)); setVttExplosaoPopupOpen(true); setVttToolDropdownOpen(false) }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${vttActiveTool === 'explosao' ? 'bg-red-500 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                        <Zap size={15} /> Explosão {vttActiveTool === 'explosao' && `(${vttExplosaoRadius}m)`}
+                      </button>
+                      {vttActiveTool && (
+                        <>
+                          <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                          <button onClick={() => { setVttActiveTool(null); setVttToolDropdownOpen(false) }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-red-400 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                            <X size={15} /> Desativar ferramenta
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {vttToolDropdownOpen && <div className="fixed inset-0 z-[449]" onClick={() => setVttToolDropdownOpen(false)} />}
+                </div>
+                {isTrainer && (
+                  <div className="relative">
+                    <button
+                      onClick={() => { setVttCaptureDropdownOpen(prev => !prev); setVttToolDropdownOpen(false) }}
+                      className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttCaptureMode ? 'bg-red-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      title="Captura Pokémon VTT"
+                    >
+                      <img src="/pokeball-icon.png" alt="Captura" className="w-5 h-5" />
+                      {vttCaptureMode && vttCapturePokeball && <span className="text-xs max-w-[60px] truncate">{vttCapturePokeball}</span>}
+                    </button>
+                    {vttCaptureDropdownOpen && (() => {
+                      const pokeballsInBag = keyItems.filter(item => POKEBALLS_LIST.includes(item.name) && item.quantity > 0)
+                      return (
+                        <div className={`absolute ${isOnRight ? 'right-full mr-1' : 'left-full ml-1'} top-0 z-[450] rounded-xl shadow-2xl border p-2 min-w-[210px] ${darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'}`}>
+                          <p className={`text-xs font-bold mb-2 px-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>POKÉBOLAS NA MOCHILA</p>
+                          {pokeballsInBag.length === 0 ? (
+                            <p className={`text-xs px-2 py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nenhuma pokébola na mochila</p>
+                          ) : pokeballsInBag.map(item => (
+                            <button key={item.name} onClick={() => { setVttCapturePokeball(item.name); setVttCaptureMode(true); setVttCaptureDropdownOpen(false) }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold mb-1 transition-all ${vttCapturePokeball === item.name ? 'bg-red-600 text-white' : darkMode ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100 text-gray-700'}`}>
+                              <img src={getPokeballImage(item.name)} alt={item.name} className="w-5 h-5 object-contain" />
+                              <span className="flex-1 text-left">{item.name}</span>
+                              <span className="text-xs opacity-70">×{item.quantity}</span>
+                            </button>
+                          ))}
+                          {vttCaptureMode && (
+                            <>
+                              <div className={`border-t my-1 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`} />
+                              <button onClick={() => { setVttCaptureMode(false); setVttCapturePokeball(null); setVttCaptureDropdownOpen(false) }}
+                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all text-red-400 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
+                                <X size={15} /> Desativar captura
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )
+                    })()}
+                    {vttCaptureDropdownOpen && <div className="fixed inset-0 z-[449]" onClick={() => setVttCaptureDropdownOpen(false)} />}
+                  </div>
+                )}
+                {isTrainer && (
+                  <button
+                    onClick={() => setVttScanMode(prev => !prev)}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${vttScanMode ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    title="Escanear Pkm Vtt"
+                  >
+                    <img
+                      src={classes.includes('Engenheiro') ? '/coisasengenheiro/miniengedex.png' : '/pokedexpq.png'}
+                      alt="Escanear"
+                      className="w-5 h-5 object-contain"
+                    />
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
       </>
     )
   }
