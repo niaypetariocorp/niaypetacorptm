@@ -3479,6 +3479,8 @@ function App() {
   const pokemonBattleRefs = useRef([]) // Refs para os elementos dos pokémons em batalha
   const floatingPkmDragRef = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 })
   const floatingTrainerDragRef = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 })
+  const floatingAbilityDragRef = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 })
+  const floatingGolpeDragRef = useRef({ dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 })
   const [selectedTeamPokemon, setSelectedTeamPokemon] = useState(null) // Pokémon selecionado do time principal para ver detalhes
 
   // Estados para Dano/Cura Treinador em Batalha
@@ -3536,6 +3538,8 @@ function App() {
   const [floatingTrainerExpanded, setFloatingTrainerExpanded] = useState(false)
   const [floatingPkmPos, setFloatingPkmPos] = useState({ x: 310, y: 10 })
   const [floatingTrainerPos, setFloatingTrainerPos] = useState({ x: 20, y: 10 })
+  const [floatingAbilityPos, setFloatingAbilityPos] = useState({ x: 200, y: 140 })
+  const [floatingGolpePos, setFloatingGolpePos] = useState({ x: 260, y: 180 })
   const [floatingNpcTrainerCard, setFloatingNpcTrainerCard] = useState(null)
   const [showModifiersSection, setShowModifiersSection] = useState(false) // Controla expansão da seção Modificadores
   const [showCaptureSection, setShowCaptureSection] = useState(false) // Controla expansão da seção Lançar Pokébola
@@ -4375,11 +4379,12 @@ function App() {
   const [battleView, setBattleView] = useState('rolagens') // 'rolagens' ou 'mapa'
   const [vttFloatingMenuPos, setVttFloatingMenuPos] = useState({ x: 20, y: 120 })
   const vttFloatingMenuDragRef = useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 })
-  const vttTitleRef = useRef(null)
+  const vttScrollContainerRef = useRef(null)
+  const vttMapCardRef = useRef(null)
   useEffect(() => {
-    if (battleView === 'mapa' && vttTitleRef.current) {
-      const rect = vttTitleRef.current.getBoundingClientRect()
-      setVttFloatingMenuPos({ x: rect.right + 16, y: rect.top })
+    if (battleView === 'mapa' && vttMapCardRef.current) {
+      const rect = vttMapCardRef.current.getBoundingClientRect()
+      setVttFloatingMenuPos({ x: rect.right + 8, y: rect.top + 8 })
     }
   }, [battleView])
   const [vttLocations, setVttLocations] = useState([]) // Array de localidades/mapas
@@ -12620,6 +12625,20 @@ function App() {
     setShowBattleMoveModal(true)
   }, [])
 
+  useEffect(() => {
+    if (!showBattleMoveModal) return
+    const handler = (e) => { if (e.key === 'Escape') setShowBattleMoveModal(false) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [showBattleMoveModal])
+
+  useEffect(() => {
+    if (!showCapacityInfoModal) return
+    const handler = (e) => { if (e.key === 'Escape') setShowCapacityInfoModal(false) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [showCapacityInfoModal])
+
   // Abrir modal de característica ou talento a partir do nome
   const handleOpenCaracTalento = useCallback((nome) => {
     let found = null
@@ -17979,10 +17998,28 @@ function App() {
           y: Math.min(Math.max(0, floatingTrainerDragRef.current.originY + dy), window.innerHeight - trackerH)
         })
       }
+      if (floatingAbilityDragRef.current.dragging) {
+        const dx = e.clientX - floatingAbilityDragRef.current.startX
+        const dy = e.clientY - floatingAbilityDragRef.current.startY
+        setFloatingAbilityPos({
+          x: Math.min(Math.max(0, floatingAbilityDragRef.current.originX + dx), window.innerWidth - 320),
+          y: Math.min(Math.max(0, floatingAbilityDragRef.current.originY + dy), window.innerHeight - 40)
+        })
+      }
+      if (floatingGolpeDragRef.current.dragging) {
+        const dx = e.clientX - floatingGolpeDragRef.current.startX
+        const dy = e.clientY - floatingGolpeDragRef.current.startY
+        setFloatingGolpePos({
+          x: Math.min(Math.max(0, floatingGolpeDragRef.current.originX + dx), window.innerWidth - 384),
+          y: Math.min(Math.max(0, floatingGolpeDragRef.current.originY + dy), window.innerHeight - 40)
+        })
+      }
     }
     const handleMouseUp = () => {
       floatingPkmDragRef.current.dragging = false
       floatingTrainerDragRef.current.dragging = false
+      floatingAbilityDragRef.current.dragging = false
+      floatingGolpeDragRef.current.dragging = false
     }
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handleMouseUp)
@@ -19566,6 +19603,171 @@ function App() {
                   </div>
                 </div>
               </div>
+            )
+          })()}
+        </div>
+      </div>
+    )}
+    {/* Modal de Informação de Capacidade — global */}
+    {showCapacityInfoModal && selectedCapacityForInfo && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 sm:p-5 md:p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
+            <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
+              <X size={24} />
+            </button>
+          </div>
+          <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
+            {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'string'
+              ? CAPACIDADES_DATA[selectedCapacityForInfo]
+              : CAPACIDADES_DATA[selectedCapacityForInfo].descricao}
+            {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'object' && CAPACIDADES_DATA[selectedCapacityForInfo].tabela && (
+              <div className="mt-4 overflow-x-auto">
+                <table className={`w-full text-sm border-collapse ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                  <thead>
+                    <tr className={darkMode ? 'bg-gray-700' : 'bg-gray-100'}>
+                      {Object.keys(CAPACIDADES_DATA[selectedCapacityForInfo].tabela[0]).map(key => (
+                        <th key={key} className={`border p-2 font-semibold text-left ${darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-gray-800'}`}>
+                          {key === 'força' ? 'Força' : key === 'peso' ? 'Peso Erguido' : key === 'inteligência' ? 'Inteligência' : key === 'intelecto' ? 'Intelecto' : key === 'pensamentos' ? 'Pensamentos' : key === 'salto' ? 'Salto' : key === 'altura' ? 'Altura' : key === 'resultado' ? 'Resultado' : key === 'área' ? 'Área' : key === 'par' ? 'Par de Espécies' : key === 'condição' ? 'Condição' : key.charAt(0).toUpperCase() + key.slice(1)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {CAPACIDADES_DATA[selectedCapacityForInfo].tabela.map((linha, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? (darkMode ? 'bg-gray-800' : 'bg-white') : (darkMode ? 'bg-gray-750' : 'bg-gray-50')}>
+                        {Object.keys(linha).map(key => (
+                          <td key={key} className={`border p-2 ${['força', 'inteligência', 'salto', 'resultado'].includes(key) ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}` : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}`}>
+                            {linha[key]}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end mt-6">
+            <button onClick={() => setShowCapacityInfoModal(false)} className="bg-blue-500 text-white px-3 sm:px-5 md:px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold">
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {/* Painel Flutuante de Detalhes da Habilidade — global, arrastável */}
+    {showAbilityModal && selectedAbility && (
+      <div
+        className={`fixed z-[1001] ${darkMode ? 'bg-gray-800 border-blue-700' : 'bg-white border-blue-300'} border-2 rounded-2xl shadow-2xl select-none`}
+        style={{ left: floatingAbilityPos.x, top: floatingAbilityPos.y, width: '320px' }}
+      >
+        {/* Header / Drag handle */}
+        <div
+          className={`flex items-center justify-between px-3 py-2 rounded-t-2xl cursor-move ${darkMode ? 'bg-blue-900/60' : 'bg-blue-100'}`}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            floatingAbilityDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, originX: floatingAbilityPos.x, originY: floatingAbilityPos.y }
+          }}
+        >
+          <span className={`font-bold text-sm truncate ${darkMode ? 'text-blue-200' : 'text-blue-800'}`}>✨ {selectedAbility}</span>
+          <button onClick={() => setShowAbilityModal(false)} className={`ml-2 flex-shrink-0 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'}`}><X size={16} /></button>
+        </div>
+        {/* Body */}
+        <div className="overflow-y-auto p-3 space-y-3" style={{ maxHeight: '70vh' }}>
+          {(() => {
+            const abilityData = HABILIDADES_DATA_IMPORTED[selectedAbility]
+            if (!abilityData) return <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Informações da habilidade não encontradas.</p></div>
+            return (
+              <>
+                {abilityData.ativacao && (
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Ativação</h4>
+                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-line`}>{abilityData.ativacao}</p>
+                  </div>
+                )}
+                {abilityData.efeito && (
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>Efeito</h4>
+                    <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-line`}>{abilityData.efeito}</p>
+                  </div>
+                )}
+                {abilityData.tabela && (
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <div className="overflow-x-auto">
+                      <table className={`w-full text-[10px] border-collapse ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                        <thead>
+                          <tr className={darkMode ? 'bg-gray-800' : 'bg-teal-100'}>
+                            {Object.keys(abilityData.tabela[0]).map(key => (
+                              <th key={key} className={`border p-1.5 font-semibold text-left ${darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'}`}>
+                                {key === 'resultado' ? 'Resultado' : key === 'efeito' ? 'Efeito' : key === 'item' ? 'Item' : key === 'clima' ? 'Clima' : key === 'tipo' ? 'Tipo' : key === 'dado' ? 'Dado' : key.charAt(0).toUpperCase() + key.slice(1)}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {abilityData.tabela.map((linha, idx) => (
+                            <tr key={idx} className={idx % 2 === 0 ? (darkMode ? 'bg-gray-750' : 'bg-white') : (darkMode ? 'bg-gray-700' : 'bg-teal-50')}>
+                              {Object.keys(linha).map(key => (
+                                <td key={key} className={`border p-1.5 ${key === 'resultado' ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}` : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`}`}>{linha[key]}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+        </div>
+      </div>
+    )}
+    {/* Painel Flutuante de Detalhes do Golpe — global, arrastável */}
+    {showGolpeDetailModal && selectedGolpeForDetail && (
+      <div
+        className={`fixed z-[1001] ${darkMode ? 'bg-gray-800 border-purple-700' : 'bg-white border-purple-300'} border-2 rounded-2xl shadow-2xl select-none`}
+        style={{ left: floatingGolpePos.x, top: floatingGolpePos.y, width: '360px' }}
+      >
+        {/* Header / Drag handle */}
+        <div
+          className={`flex items-center justify-between px-3 py-2 rounded-t-2xl cursor-move ${darkMode ? 'bg-purple-900/60' : 'bg-purple-100'}`}
+          onMouseDown={(e) => {
+            e.preventDefault()
+            floatingGolpeDragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, originX: floatingGolpePos.x, originY: floatingGolpePos.y }
+          }}
+        >
+          <span className={`font-bold text-sm truncate ${darkMode ? 'text-purple-200' : 'text-purple-800'}`}>⚔️ {selectedGolpeForDetail}</span>
+          <button onClick={() => setShowGolpeDetailModal(false)} className={`ml-2 flex-shrink-0 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-800'}`}><X size={16} /></button>
+        </div>
+        {/* Body */}
+        <div className="overflow-y-auto p-3 space-y-3" style={{ maxHeight: '70vh' }}>
+          {(() => {
+            const golpeData = GOLPES_DATA_IMPORTED[selectedGolpeForDetail]
+            if (!golpeData) return <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Informações do golpe não encontradas.</p></div>
+            return (
+              <>
+                <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {golpeData.tipo && <div><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo</h4><p className={`text-xs font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{golpeData.tipo}</p></div>}
+                    {golpeData.aptidao && <div><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aptidão</h4><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.aptidao}</p></div>}
+                    {golpeData.danoBasal && <div><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal</h4><p className={`text-xs font-semibold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{golpeData.danoBasal}</p></div>}
+                    {golpeData.acuracia && <div><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia</h4><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.acuracia}</p></div>}
+                    {golpeData.alcance && <div><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alcance</h4><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.alcance}</p></div>}
+                    {golpeData.frequencia && <div><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência</h4><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.frequencia}</p></div>}
+                    {golpeData.descritores && <div className="col-span-2"><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descritores</h4><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.descritores}</p></div>}
+                    {golpeData.tagConcurso && <div className="col-span-2"><h4 className={`text-[10px] font-bold mb-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tag Concurso</h4><p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.tagConcurso}</p></div>}
+                  </div>
+                </div>
+                {golpeData.efeito && (
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>Efeito</h4>
+                    <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{renderGolpeEfeito(golpeData.efeito, darkMode)}</div>
+                  </div>
+                )}
+              </>
             )
           })()}
         </div>
@@ -22959,233 +23161,6 @@ function App() {
           </div>
         )}
 
-        {/* Modal de Detalhes da Habilidade */}
-        {showAbilityModal && selectedAbility && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setShowAbilityModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-[95vw] sm:max-w-lg w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-              <div className="p-3 sm:p-5 md:p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {selectedAbility}
-                  </h3>
-                  <button onClick={() => setShowAbilityModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
-                    <X size={24} />
-                  </button>
-                </div>
-
-                {/* Informações da Habilidade */}
-                {(() => {
-                  const abilityData = HABILIDADES_DATA_IMPORTED[selectedAbility]
-
-                  if (!abilityData) {
-                    return (
-                      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Informações da habilidade não encontradas.
-                        </p>
-                      </div>
-                    )
-                  }
-
-                  return (
-                    <div className="space-y-4">
-                      {/* Ativação */}
-                      {abilityData.ativacao && (
-                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <h4 className={`text-sm font-bold mb-2 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
-                            Ativação
-                          </h4>
-                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-line`}>
-                            {abilityData.ativacao}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Efeito */}
-                      {abilityData.efeito && (
-                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <h4 className={`text-sm font-bold mb-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                            Efeito
-                          </h4>
-                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} whitespace-pre-line`}>
-                            {abilityData.efeito}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Tabela da Habilidade (se houver) */}
-                      {abilityData.tabela && (
-                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-                            <table className={`w-full text-xs sm:text-sm border-collapse min-w-[280px] ${
-                              darkMode ? 'border-gray-600' : 'border-gray-300'
-                            }`}>
-                              <thead>
-                                <tr className={darkMode ? 'bg-gray-800' : 'bg-teal-100'}>
-                                  {Object.keys(abilityData.tabela[0]).map(key => (
-                                    <th key={key} className={`border p-2 font-semibold text-left ${
-                                      darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-teal-900'
-                                    }`}>
-                                      {key === 'resultado' ? 'Resultado' :
-                                       key === 'efeito' ? 'Efeito' :
-                                       key === 'item' ? 'Item' :
-                                       key === 'clima' ? 'Clima' :
-                                       key === 'tipo' ? 'Tipo' :
-                                       key === 'dado' ? 'Dado' :
-                                       key.charAt(0).toUpperCase() + key.slice(1)}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {abilityData.tabela.map((linha, idx) => (
-                                  <tr key={idx} className={idx % 2 === 0
-                                    ? (darkMode ? 'bg-gray-750' : 'bg-white')
-                                    : (darkMode ? 'bg-gray-700' : 'bg-teal-50')
-                                  }>
-                                    {Object.keys(linha).map(key => (
-                                      <td key={key} className={`border p-2 ${
-                                        key === 'resultado'
-                                          ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
-                                          : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
-                                      }`}>
-                                        {linha[key]}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Detalhes do Golpe */}
-        {showGolpeDetailModal && selectedGolpeForDetail && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-[95vw] sm:max-w-md md:max-w-2xl w-full max-h-[90vh] flex flex-col`}>
-              {/* Header Fixo */}
-              <div className="p-3 sm:p-5 md:p-6 border-b border-gray-700">
-                <div className="flex justify-between items-center">
-                  <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {selectedGolpeForDetail}
-                  </h3>
-                  <button
-                    onClick={() => setShowGolpeDetailModal(false)}
-                    className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}
-                  >
-                    <X size={24} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Conteúdo Scrollável */}
-              <div className="overflow-y-auto flex-1 p-3 sm:p-5 md:p-6">
-                {(() => {
-                  const golpeData = GOLPES_DATA_IMPORTED[selectedGolpeForDetail]
-
-                  if (!golpeData) {
-                    return (
-                      <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Informações do golpe não encontradas.
-                        </p>
-                      </div>
-                    )
-                  }
-
-                  return (
-                    <div className="space-y-4">
-                      {/* Informações Básicas */}
-                      <div className={`p-3 sm:p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                        <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3">
-                          {golpeData.tipo && (
-                            <div>
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo</h4>
-                              <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{golpeData.tipo}</p>
-                            </div>
-                          )}
-                          {golpeData.aptidao && (
-                            <div>
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aptidão</h4>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.aptidao}</p>
-                            </div>
-                          )}
-                          {golpeData.danoBasal && (
-                            <div>
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal</h4>
-                              <p className={`text-sm font-semibold ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{golpeData.danoBasal}</p>
-                            </div>
-                          )}
-                          {golpeData.acuracia && (
-                            <div>
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia</h4>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.acuracia}</p>
-                            </div>
-                          )}
-                          {golpeData.alcance && (
-                            <div>
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alcance</h4>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.alcance}</p>
-                            </div>
-                          )}
-                          {golpeData.frequencia && (
-                            <div>
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência</h4>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.frequencia}</p>
-                            </div>
-                          )}
-                          {golpeData.descritores && (
-                            <div className="col-span-2">
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descritores</h4>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.descritores}</p>
-                            </div>
-                          )}
-                          {golpeData.tagConcurso && (
-                            <div>
-                              <h4 className={`text-xs font-bold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tag Concurso</h4>
-                              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{golpeData.tagConcurso}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Efeito */}
-                      {golpeData.efeito && (
-                        <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                          <h4 className={`text-sm font-bold mb-2 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                            Efeito
-                          </h4>
-                          <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            {renderGolpeEfeito(golpeData.efeito, darkMode)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-
-              {/* Footer Fixo */}
-              <div className="p-3 sm:p-5 md:p-6 border-t border-gray-700">
-                <button
-                  onClick={() => setShowGolpeDetailModal(false)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-700 text-white py-3 rounded-lg hover:from-blue-700 hover:to-purple-800 font-semibold"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Modal de Envio para Treinador */}
         {showSendToTrainerModal && pokemonToSend && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setShowSendToTrainerModal(false)}>
@@ -25807,10 +25782,10 @@ function App() {
 
           {/* ÁREA DO MAPA (VTT) - MESTRE */}
           {battleView === 'mapa' && (
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-3 sm:p-5 md:p-8 mx-auto`} style={{ width: 'fit-content' }}>
+            <div ref={vttMapCardRef} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-3 sm:p-5 md:p-8 mx-auto`} style={{ width: 'fit-content' }}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2">
                 <div className="flex items-center gap-2">
-                  <h3 ref={vttTitleRef} className={`text-xl sm:text-2xl md:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  <h3 className={`text-xl sm:text-2xl md:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                     Mapa de Batalha 👑
                   </h3>
                 </div>
@@ -26087,6 +26062,7 @@ function App() {
 
               {/* Container com scroll para o Canvas */}
               <div
+                ref={vttScrollContainerRef}
                 className={`overflow-auto mb-4 rounded-lg border-2 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
                 style={{
                   width: `${vttCanvasWidth}px`,
@@ -26758,13 +26734,14 @@ function App() {
                               if (!moveName) return null
                               return (
                                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
-                                  <span style={{ color: '#e5e7eb', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{moveName}</span>
+                                  <span onClick={() => handleOpenBattleMove(moveName)} style={{ color: '#93c5fd', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }}>{moveName}</span>
                                   <button onClick={() => handleRollAccuracy(moveName, null, null, pkm)} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>Acu</button>
                                   <button onClick={() => handleRollMoveDamage(moveName, pkm)} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>Dano</button>
                                 </div>
                               )
                             })}
                             {(() => { const desloc = pkm.displacement || POKEMON_DESLOCAMENTO_MAP?.[pkm.species || pkm.name]; if (!desloc) return null; const LABELS = { terrestre: 'Ter', nadar: 'Nad', voar: 'Voa', cavar: 'Cav', submerso: 'Sub' }; const parts = Object.entries(LABELS).filter(([k]) => desloc[k] !== '' && desloc[k] != null).map(([k, l]) => `${l} ${desloc[k]}`); if (!parts.length) return null; return <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{parts.join(' · ')}</div> })()}
+                            {(() => { const cap = pkm.capacities || (POKEMON_CAPACIDADE_MAP?.[pkm.species || pkm.name] ? { ...POKEMON_CAPACIDADE_MAP[pkm.species || pkm.name], others: getOutrasCapacidadesArray(pkm.species || pkm.name) } : null); if (!cap) return null; const numParts = [cap.forca !== '' && cap.forca != null ? `Força ${cap.forca}` : null, cap.inteligencia !== '' && cap.inteligencia != null ? `Int ${cap.inteligencia}` : null, cap.salto !== '' && cap.salto != null ? `Salto ${cap.salto}` : null].filter(Boolean); const otherParts = (cap.others || []).filter(Boolean); if (!numParts.length && !otherParts.length) return null; const allItems = [...numParts.map(p => ({ t: p, c: false })), ...otherParts.map(p => ({ t: p, c: true }))]; return <div style={{ marginTop: '3px', fontSize: '9px' }}>{allItems.map((item, i) => <span key={i} onClick={item.c ? () => { setSelectedCapacityForInfo(item.t); setShowCapacityInfoModal(true) } : undefined} style={{ color: '#fb923c', cursor: item.c ? 'pointer' : 'default', textDecoration: item.c ? 'underline' : 'none' }}>{i > 0 ? ' · ' : ''}{item.t}</span>)}</div> })()}
                           </div>
                         )
                       })()}
@@ -26944,13 +26921,14 @@ function App() {
                               if (!moveName) return null
                               return (
                                 <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
-                                  <span style={{ color: '#e5e7eb', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{moveName}</span>
+                                  <span onClick={() => handleOpenBattleMove(moveName)} style={{ color: '#93c5fd', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }}>{moveName}</span>
                                   <button onClick={() => handleRollAccuracy(moveName, null, null, pkm)} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>Acu</button>
                                   <button onClick={() => handleRollMoveDamage(moveName, pkm)} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>Dano</button>
                                 </div>
                               )
                             })}
                             {(() => { const desloc = pkm.displacement || POKEMON_DESLOCAMENTO_MAP?.[pkm.species || pkm.name]; if (!desloc) return null; const LABELS = { terrestre: 'Ter', nadar: 'Nad', voar: 'Voa', cavar: 'Cav', submerso: 'Sub' }; const parts = Object.entries(LABELS).filter(([k]) => desloc[k] !== '' && desloc[k] != null).map(([k, l]) => `${l} ${desloc[k]}`); if (!parts.length) return null; return <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{parts.join(' · ')}</div> })()}
+                            {(() => { const cap = pkm.capacities || (POKEMON_CAPACIDADE_MAP?.[pkm.species || pkm.name] ? { ...POKEMON_CAPACIDADE_MAP[pkm.species || pkm.name], others: getOutrasCapacidadesArray(pkm.species || pkm.name) } : null); if (!cap) return null; const numParts = [cap.forca !== '' && cap.forca != null ? `Força ${cap.forca}` : null, cap.inteligencia !== '' && cap.inteligencia != null ? `Int ${cap.inteligencia}` : null, cap.salto !== '' && cap.salto != null ? `Salto ${cap.salto}` : null].filter(Boolean); const otherParts = (cap.others || []).filter(Boolean); if (!numParts.length && !otherParts.length) return null; const allItems = [...numParts.map(p => ({ t: p, c: false })), ...otherParts.map(p => ({ t: p, c: true }))]; return <div style={{ marginTop: '3px', fontSize: '9px' }}>{allItems.map((item, i) => <span key={i} onClick={item.c ? () => { setSelectedCapacityForInfo(item.t); setShowCapacityInfoModal(true) } : undefined} style={{ color: '#fb923c', cursor: item.c ? 'pointer' : 'default', textDecoration: item.c ? 'underline' : 'none' }}>{i > 0 ? ' · ' : ''}{item.t}</span>)}</div> })()}
                           </div>
                         )
                       })()}
@@ -34809,7 +34787,7 @@ function App() {
               {/* Painel esquerdo: informações */}
               <div
                 className="absolute overflow-y-auto overflow-x-hidden"
-                style={{ top: '22%', left: '7%', right: '55%', bottom: '40%', background: '#c0d8f0' }}
+                style={{ top: '22%', left: '7%', right: '57%', bottom: '40%', background: '#c0d8f0' }}
               >
                 <div className="p-1.5 text-xs text-gray-800">
                   {/* Nome */}
@@ -35125,76 +35103,6 @@ function App() {
                     Salvar Golpes
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Detalhes do Golpe */}
-        {showGolpeDetailModal && selectedGolpeForDetail && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowGolpeDetailModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col`} onClick={(e) => e.stopPropagation()}>
-              <div className="p-3 sm:p-5 md:p-6 border-b border-gray-700">
-                <div className="flex justify-between items-center">
-                  <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {selectedGolpeForDetail}
-                  </h3>
-                  <button onClick={() => setShowGolpeDetailModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
-                    <X size={24} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="overflow-y-auto flex-1 p-3 sm:p-5 md:p-6">
-                <div className={`space-y-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tipo</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].tipo}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Aptidão</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].aptidao}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Dano Basal</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].danoBasal || '-'}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Acurácia</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].acuracia}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Frequência</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].frequencia}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alcance</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].alcance}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Descritores</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].descritores || '-'}</div>
-                    </div>
-                    <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className={`text-sm font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Tag de Concurso</div>
-                      <div className="text-lg font-bold">{GOLPES_DATA[selectedGolpeForDetail].tagConcurso}</div>
-                    </div>
-                  </div>
-                  <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <div className={`text-sm font-semibold mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efeito</div>
-                    <div className="text-base">{renderGolpeEfeito(GOLPES_DATA[selectedGolpeForDetail].efeito, darkMode)}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 sm:p-5 md:p-6 border-t border-gray-700">
-                <button
-                  onClick={() => setShowGolpeDetailModal(false)}
-                  className={`w-full py-3 rounded-lg font-semibold ${darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
-                >
-                  Fechar
-                </button>
               </div>
             </div>
           </div>
@@ -35637,83 +35545,6 @@ function App() {
                 <button
                   onClick={() => setShowHabilidadeDetailModal(false)}
                   className="bg-teal-500 text-white px-3 sm:px-5 md:px-6 py-2 rounded-lg hover:bg-teal-600 font-semibold"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Informação de Capacidade - Treinador */}
-        {showCapacityInfoModal && selectedCapacityForInfo && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 sm:p-5 md:p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
-                <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
-                  <X size={24} />
-                </button>
-              </div>
-              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
-                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'string'
-                  ? CAPACIDADES_DATA[selectedCapacityForInfo]
-                  : CAPACIDADES_DATA[selectedCapacityForInfo].descricao}
-
-                {/* Tabela da Capacidade (se houver) */}
-                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'object' && CAPACIDADES_DATA[selectedCapacityForInfo].tabela && (
-                  <div className="mt-4 overflow-x-auto">
-                    <table className={`w-full text-sm border-collapse ${
-                      darkMode ? 'border-gray-600' : 'border-gray-300'
-                    }`}>
-                      <thead>
-                        <tr className={darkMode ? 'bg-gray-700' : 'bg-gray-100'}>
-                          {Object.keys(CAPACIDADES_DATA[selectedCapacityForInfo].tabela[0]).map(key => (
-                            <th key={key} className={`border p-2 font-semibold text-left ${
-                              darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-gray-800'
-                            }`}>
-                              {key === 'força' ? 'Força' :
-                               key === 'peso' ? 'Peso Erguido' :
-                               key === 'inteligência' ? 'Inteligência' :
-                               key === 'intelecto' ? 'Intelecto' :
-                               key === 'pensamentos' ? 'Pensamentos' :
-                               key === 'salto' ? 'Salto' :
-                               key === 'altura' ? 'Altura' :
-                               key === 'resultado' ? 'Resultado' :
-                               key === 'área' ? 'Área' :
-                               key === 'par' ? 'Par de Espécies' :
-                               key === 'condição' ? 'Condição' :
-                               key.charAt(0).toUpperCase() + key.slice(1)}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {CAPACIDADES_DATA[selectedCapacityForInfo].tabela.map((linha, idx) => (
-                          <tr key={idx} className={idx % 2 === 0
-                            ? (darkMode ? 'bg-gray-800' : 'bg-white')
-                            : (darkMode ? 'bg-gray-750' : 'bg-gray-50')
-                          }>
-                            {Object.keys(linha).map(key => (
-                              <td key={key} className={`border p-2 ${
-                                ['força', 'inteligência', 'salto', 'resultado'].includes(key)
-                                  ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
-                                  : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
-                              }`}>
-                                {linha[key]}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setShowCapacityInfoModal(false)}
-                  className="bg-blue-500 text-white px-3 sm:px-5 md:px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
                 >
                   Fechar
                 </button>
@@ -36373,7 +36204,7 @@ function App() {
               {/* Painel esquerdo: informações */}
               <div
                 className="absolute overflow-y-auto overflow-x-hidden"
-                style={{ top: '22%', left: '7%', right: '55%', bottom: '40%', background: '#c0d8f0' }}
+                style={{ top: '22%', left: '7%', right: '57%', bottom: '40%', background: '#c0d8f0' }}
               >
                 <div className="p-1.5 text-xs text-gray-800">
                   {/* Nome */}
@@ -37668,83 +37499,6 @@ function App() {
           </div>
         )}
 
-        {/* Modal de Informação de Capacidade - PC */}
-        {showCapacityInfoModal && selectedCapacityForInfo && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCapacityInfoModal(false)}>
-            <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} p-3 sm:p-5 md:p-8 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedCapacityForInfo}</h3>
-                <button onClick={() => setShowCapacityInfoModal(false)} className={darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}>
-                  <X size={24} />
-                </button>
-              </div>
-              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} text-base leading-relaxed`}>
-                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'string'
-                  ? CAPACIDADES_DATA[selectedCapacityForInfo]
-                  : CAPACIDADES_DATA[selectedCapacityForInfo].descricao}
-
-                {/* Tabela da Capacidade (se houver) */}
-                {typeof CAPACIDADES_DATA[selectedCapacityForInfo] === 'object' && CAPACIDADES_DATA[selectedCapacityForInfo].tabela && (
-                  <div className="mt-4 overflow-x-auto">
-                    <table className={`w-full text-sm border-collapse ${
-                      darkMode ? 'border-gray-600' : 'border-gray-300'
-                    }`}>
-                      <thead>
-                        <tr className={darkMode ? 'bg-gray-700' : 'bg-gray-100'}>
-                          {Object.keys(CAPACIDADES_DATA[selectedCapacityForInfo].tabela[0]).map(key => (
-                            <th key={key} className={`border p-2 font-semibold text-left ${
-                              darkMode ? 'border-gray-600 text-teal-300' : 'border-gray-300 text-gray-800'
-                            }`}>
-                              {key === 'força' ? 'Força' :
-                               key === 'peso' ? 'Peso Erguido' :
-                               key === 'inteligência' ? 'Inteligência' :
-                               key === 'intelecto' ? 'Intelecto' :
-                               key === 'pensamentos' ? 'Pensamentos' :
-                               key === 'salto' ? 'Salto' :
-                               key === 'altura' ? 'Altura' :
-                               key === 'resultado' ? 'Resultado' :
-                               key === 'área' ? 'Área' :
-                               key === 'par' ? 'Par de Espécies' :
-                               key === 'condição' ? 'Condição' :
-                               key.charAt(0).toUpperCase() + key.slice(1)}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {CAPACIDADES_DATA[selectedCapacityForInfo].tabela.map((linha, idx) => (
-                          <tr key={idx} className={idx % 2 === 0
-                            ? (darkMode ? 'bg-gray-800' : 'bg-white')
-                            : (darkMode ? 'bg-gray-750' : 'bg-gray-50')
-                          }>
-                            {Object.keys(linha).map(key => (
-                              <td key={key} className={`border p-2 ${
-                                ['força', 'inteligência', 'salto', 'resultado'].includes(key)
-                                  ? `font-bold ${darkMode ? 'border-gray-600 text-teal-400' : 'border-gray-300 text-teal-700'}`
-                                  : `${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-300 text-gray-700'}`
-                              }`}>
-                                {linha[key]}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={() => setShowCapacityInfoModal(false)}
-                  className="bg-blue-500 text-white px-3 sm:px-5 md:px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Modal Move Pokémon */}
         {showSwapPokemonModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => {
@@ -38648,7 +38402,7 @@ function App() {
               {/* Painel esquerdo: info ou verdades */}
               <div
                 className="absolute overflow-y-auto overflow-x-hidden"
-                style={{ top: '28%', left: '7%', right: '55%', bottom: '40%', background: '#c0d8f0' }}
+                style={{ top: '28%', left: '7%', right: '57%', bottom: '40%', background: '#c0d8f0' }}
               >
                 {pokedexDetailView === 'info' ? (
                   <div className="p-1.5 text-xs text-gray-800">
@@ -46580,9 +46334,9 @@ function App() {
 
             {/* ÁREA DO MAPA (VTT) - TREINADOR */}
             {battleView === 'mapa' && (
-              <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-3 sm:p-5 md:p-8`}>
+              <div ref={vttMapCardRef} className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl p-3 sm:p-5 md:p-8`}>
                 <div className="flex items-center justify-center gap-2 mb-6">
-                  <h3 ref={vttTitleRef} className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  <h3 className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
                     Mapa de Batalha
                   </h3>
                 </div>
@@ -46649,6 +46403,7 @@ function App() {
 
                 {/* Container com scroll para o Canvas */}
                 <div
+                  ref={vttScrollContainerRef}
                   className={`overflow-auto rounded-lg border-2 ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
                   style={{
                     width: '100%',
@@ -47142,13 +46897,14 @@ function App() {
                                 if (!moveName) return null
                                 return (
                                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
-                                    <span style={{ color: '#e5e7eb', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{moveName}</span>
+                                    <span onClick={() => handleOpenBattleMove(moveName)} style={{ color: '#93c5fd', fontSize: '10px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline' }}>{moveName}</span>
                                     <button onClick={() => handleRollAccuracy(moveName, null, null, pkm)} style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>Acu</button>
                                     <button onClick={() => handleRollMoveDamage(moveName, pkm)} style={{ background: '#dc2626', color: 'white', border: 'none', borderRadius: '3px', padding: '1px 5px', fontSize: '9px', cursor: 'pointer', flexShrink: 0 }}>Dano</button>
                                   </div>
                                 )
                               })}
                               {(() => { const desloc = pkm.displacement || POKEMON_DESLOCAMENTO_MAP?.[pkm.species || pkm.name]; if (!desloc) return null; const LABELS = { terrestre: 'Ter', nadar: 'Nad', voar: 'Voa', cavar: 'Cav', submerso: 'Sub' }; const parts = Object.entries(LABELS).filter(([k]) => desloc[k] !== '' && desloc[k] != null).map(([k, l]) => `${l} ${desloc[k]}`); if (!parts.length) return null; return <div style={{ marginTop: '4px', paddingTop: '3px', borderTop: '1px solid rgba(255,255,255,0.12)', color: '#6ee7b7', fontSize: '9px' }}>{parts.join(' · ')}</div> })()}
+                              {(() => { const cap = pkm.capacities || (POKEMON_CAPACIDADE_MAP?.[pkm.species || pkm.name] ? { ...POKEMON_CAPACIDADE_MAP[pkm.species || pkm.name], others: getOutrasCapacidadesArray(pkm.species || pkm.name) } : null); if (!cap) return null; const numParts = [cap.forca !== '' && cap.forca != null ? `Força ${cap.forca}` : null, cap.inteligencia !== '' && cap.inteligencia != null ? `Int ${cap.inteligencia}` : null, cap.salto !== '' && cap.salto != null ? `Salto ${cap.salto}` : null].filter(Boolean); const otherParts = (cap.others || []).filter(Boolean); if (!numParts.length && !otherParts.length) return null; const allItems = [...numParts.map(p => ({ t: p, c: false })), ...otherParts.map(p => ({ t: p, c: true }))]; return <div style={{ marginTop: '3px', fontSize: '9px' }}>{allItems.map((item, i) => <span key={i} onClick={item.c ? () => { setSelectedCapacityForInfo(item.t); setShowCapacityInfoModal(true) } : undefined} style={{ color: '#fb923c', cursor: item.c ? 'pointer' : 'default', textDecoration: item.c ? 'underline' : 'none' }}>{i > 0 ? ' · ' : ''}{item.t}</span>)}</div> })()}
                             </div>
                           )
                         })()}
@@ -54570,52 +54326,6 @@ function App() {
                   </div>
                 )}
 
-                {/* Modal Detalhes do Golpe */}
-                {showGolpeDetailModal && selectedGolpeForDetail && (() => {
-                  const golpeData = GOLPES_DATA_IMPORTED[selectedGolpeForDetail]
-                  return golpeData ? (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowGolpeDetailModal(false)}>
-                      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
-                        <div className="p-3 sm:p-5 md:p-6">
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{selectedGolpeForDetail}</h3>
-                            <button onClick={() => setShowGolpeDetailModal(false)} className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}>✕</button>
-                          </div>
-                          <div className="space-y-3">
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tipo:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.tipo}</span></div>
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Aptidão:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.aptidao}</span></div>
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Dano Basal:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.danoBasal || '-'}</span></div>
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Acurácia:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.acuracia}</span></div>
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Alcance:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.alcance}</span></div>
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Frequência:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.frequencia}</span></div>
-                            {golpeData.descritores && <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Descritores:</span> <span className={darkMode ? 'text-white' : 'text-gray-800'}>{golpeData.descritores}</span></div>}
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Efeito:</span> <div className={`mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{renderGolpeEfeito(golpeData.efeito, darkMode)}</div></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null
-                })()}
-
-                {/* Modal Detalhes da Habilidade */}
-                {showAbilityModal && selectedAbility && (() => {
-                  const abilityData = HABILIDADES_DATA_IMPORTED.find(h => h.nome === selectedAbility)
-                  return abilityData ? (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowAbilityModal(false)}>
-                      <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-2xl shadow-2xl max-w-2xl w-full`} onClick={(e) => e.stopPropagation()}>
-                        <div className="p-3 sm:p-5 md:p-6">
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{abilityData.nome}</h3>
-                            <button onClick={() => setShowAbilityModal(false)} className={`${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}>✕</button>
-                          </div>
-                          <div className="space-y-3">
-                            <div><span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Descrição:</span> <p className={`mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{abilityData.descricao}</p></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null
-                })()}
               </div>
             )}
           </div>
