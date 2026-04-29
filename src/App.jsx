@@ -4426,6 +4426,7 @@ function App() {
   const [vttRulerEnd, setVttRulerEnd] = useState({ x: 0, y: 0 }) // Posição atual/final da régua
   const [vttRulerWaypoints, setVttRulerWaypoints] = useState([]) // Waypoints intermediários da régua
   const vttRulerActiveRef = useRef(false) // Ref síncrona para vttRulerActive (evita closure stale)
+  const npcTrainersLoadedRef = useRef(false) // Impede save antes dos NPCs serem carregados do Firebase
   const vttRulerEndRef = useRef({ x: 0, y: 0 }) // Ref síncrona para vttRulerEnd
   const [vttPathActive, setVttPathActive] = useState(false) // Modo de planejamento de rota (tecla W)
   const [vttPathStart, setVttPathStart] = useState({ x: 0, y: 0 }) // Posição âncora (início da rota)
@@ -11876,7 +11877,7 @@ function App() {
       if (originalNpcId) {
         setNpcTrainers(prev => prev.map(trainer => {
           if (trainer.id === originalNpcId) {
-            return { ...trainer, hp: newHP }
+            return { ...trainer, currentHP: newHP }
           }
           return trainer
         }))
@@ -13354,7 +13355,7 @@ function App() {
               defesaEspecial: data.skills?.defesaEspecial || [],
               velocidade: data.skills?.velocidade || []
             })
-            setCurrentHP(data.currentHP || 44)
+            setCurrentHP(data.currentHP ?? 44)
             setPokemonsCanalizados(data.pokemonsCanalizados || [])
             setGolpesCanalizar(data.golpesCanalizar || [])
             setMainTeam(data.mainTeam || [])
@@ -14104,10 +14105,14 @@ function App() {
         try {
           if (useFirebase) {
             const npcs = await loadNpcTrainers(currentUser.username)
-            if (npcs && npcs.length > 0) {
+            // Para Firebase o subscribe também carrega — só seta se vier antes do subscribe
+            if (npcs && npcs.length > 0 && !npcTrainersLoadedRef.current) {
+              npcTrainersLoadedRef.current = true
               setNpcTrainers(npcs)
             }
           } else {
+            // LocalStorage não tem subscribe; marcar como carregado aqui
+            npcTrainersLoadedRef.current = true
             const saved = localStorage.getItem(`npcTrainers_${currentUser.username}`)
             if (saved) {
               setNpcTrainers(JSON.parse(saved))
@@ -14125,8 +14130,12 @@ function App() {
   useEffect(() => {
     if (!useFirebase || !currentUser) return
 
+    // Resetar guarda ao trocar de usuário (novo login)
+    npcTrainersLoadedRef.current = false
+
     // Inscrever para receber atualizações em tempo real
     const unsubscribe = subscribeToNpcTrainers(currentUser.username, (npcs) => {
+      npcTrainersLoadedRef.current = true
       setNpcTrainers(npcs || [])
     })
 
@@ -14212,7 +14221,8 @@ function App() {
 
   useEffect(() => {
     const saveNpcs = async () => {
-      if (currentUser) {
+      // Não salvar antes dos NPCs serem carregados do Firebase (evita sobrescrever com [] no login)
+      if (currentUser && npcTrainersLoadedRef.current) {
         try {
           if (useFirebase) {
             await saveNpcTrainers(currentUser.username, npcTrainers)

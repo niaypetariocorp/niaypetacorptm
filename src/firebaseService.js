@@ -235,13 +235,15 @@ export const saveNpcTrainers = async (username, npcs) => {
       return saveToFirebase(basePath, sanitizedData)
     }
 
-    // Se é grande, salvar cada NPC individualmente
+    // Se é grande, salvar cada NPC individualmente (sem set(null) no path pai — evita subscriber receber null)
     console.warn(`[Firebase NPC] Array grande (${(totalSize / (1024 * 1024)).toFixed(2)} MB), salvando individualmente...`)
 
-    // Primeiro, limpar o path inteiro para remover NPCs removidos
-    await set(ref(database, basePath), null)
+    // Ler estado atual para saber quantos índices existiam antes (necessário para remover os excedentes)
+    const snapshot = await get(ref(database, basePath))
+    const prevLength = snapshot.exists() ? Object.keys(snapshot.val()).length : 0
 
-    const results = await Promise.allSettled(
+    // Salvar cada NPC atual pelo seu índice (em paralelo)
+    const saveResults = await Promise.allSettled(
       sanitizedData.map(async (npc, index) => {
         try {
           await set(ref(database, `${basePath}/${index}`), npc)
@@ -252,7 +254,17 @@ export const saveNpcTrainers = async (username, npcs) => {
       })
     )
 
-    const failed = results.filter(r => r.status === 'rejected')
+    // Remover apenas os índices excedentes individualmente (NPCs deletados)
+    // set(null) individual num filho não dispara o subscriber do pai com null global
+    if (prevLength > sanitizedData.length) {
+      await Promise.allSettled(
+        Array.from({ length: prevLength - sanitizedData.length }, (_, i) =>
+          set(ref(database, `${basePath}/${sanitizedData.length + i}`), null)
+        )
+      )
+    }
+
+    const failed = saveResults.filter(r => r.status === 'rejected')
     if (failed.length > 0) {
       console.error(`[Firebase NPC] ${failed.length} NPC(s) falharam ao salvar`)
       return false
